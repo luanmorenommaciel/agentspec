@@ -1,0 +1,23 @@
+{
+  "name": "{{TEST_SUITE_NAME}}",
+  "description": "{{TEST_SUITE_DESCRIPTION}}",
+  "domain": "{{DOMAIN_NAME}}",
+  "confidence_required": 0.98,
+  "last_validated": "{{VALIDATION_DATE}}",
+  "cases": [
+    {
+      "id": "TC001",
+      "description": "{{TEST_CASE_1_DESCRIPTION}}",
+      "input": "{{TEST_CASE_1_INPUT}}",
+      "expected": "{{TEST_CASE_1_EXPECTED}}",
+      "expected_type": "{{TYPE}}"
+    },
+    {
+      "id": "TC002",
+      "description": "{{TEST_CASE_2_DESCRIPTION}}",
+      "input": "{{TEST_CASE_2_INPUT}}",
+      "expected": "{{TEST_CASE_2_EXPECTED}}",
+      "expected_type": "{{TYPE}}"
+    }
+  ]
+}

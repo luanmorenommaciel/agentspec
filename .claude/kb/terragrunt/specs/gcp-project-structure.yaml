@@ -1,0 +1,126 @@
+# GCP Terragrunt Project Structure Specification
+# MCP Validated: 2026-01-25
+
+version: "1.0"
+description: Standard directory structure for GCP infrastructure with Terragrunt
+
+structure:
+  infrastructure:
+    description: Root infrastructure directory
+    files:
+      terragrunt.hcl:
+        purpose: Root configuration with backend and provider generation
+        required: true
+      empty.hcl:
+        purpose: Fallback for find_in_parent_folders when env.hcl not found
+        required: false
+        content: "# Empty fallback file"
+
+    directories:
+      modules:
+        description: Reusable Terraform modules (environment-agnostic)
+        subdirectories:
+          cloud-run:
+            files: [main.tf, variables.tf, outputs.tf]
+          pubsub:
+            files: [main.tf, variables.tf, outputs.tf]
+          gcs:
+            files: [main.tf, variables.tf, outputs.tf]
+          bigquery:
+            files: [main.tf, variables.tf, outputs.tf]
+          iam:
+            files: [main.tf, variables.tf, outputs.tf]
+          vpc:
+            files: [main.tf, variables.tf, outputs.tf]
+
+      environments:
+        description: Environment-specific configurations
+        subdirectories:
+          _env:
+            description: Shared module configurations (optional DRY pattern)
+            files:
+              cloud-run.hcl:
+                purpose: Default Cloud Run settings
+              pubsub.hcl:
+                purpose: Default Pub/Sub settings
+
+          dev:
+            files:
+              env.hcl:
+                purpose: Dev environment variables
+                required: true
+                locals:
+                  - environment: "dev"
+                  - project_id: "{company}-{app}-dev"
+                  - region: "us-central1"
+            subdirectories:
+              cloud-run:
+                files: [terragrunt.hcl]
+              pubsub:
+                files: [terragrunt.hcl]
+              gcs:
+                files: [terragrunt.hcl]
+              bigquery:
+                files: [terragrunt.hcl]
+              iam:
+                files: [terragrunt.hcl]
+              vpc:
+                files: [terragrunt.hcl]
+
+          prod:
+            files:
+              env.hcl:
+                purpose: Prod environment variables
+                required: true
+                locals:
+                  - environment: "prod"
+                  - project_id: "{company}-{app}-prod"
+                  - region: "us-central1"
+            subdirectories:
+              cloud-run:
+                files: [terragrunt.hcl]
+              pubsub:
+                files: [terragrunt.hcl]
+              gcs:
+                files: [terragrunt.hcl]
+              bigquery:
+                files: [terragrunt.hcl]
+              iam:
+                files: [terragrunt.hcl]
+              vpc:
+                files: [terragrunt.hcl]
+
+dependency_graph:
+  description: Standard module dependency order for GCP invoice pipeline
+  order:
+    - vpc         # No dependencies
+    - iam         # Depends on vpc
+    - gcs         # Depends on iam
+    - pubsub      # Depends on iam
+    - bigquery    # Depends on iam
+    - cloud-run   # Depends on vpc, iam, pubsub
+
+state_configuration:
+  pattern: per-environment-bucket
+  dev:
+    bucket: "{project_id}-tfstate"
+    prefix: "environments/dev/{module}"
+  prod:
+    bucket: "{project_id}-tfstate"
+    prefix: "environments/prod/{module}"
+
+naming_conventions:
+  modules: lowercase-kebab-case
+  environments: lowercase
+  resources: "{env}-{app}-{resource}"
+  state_buckets: "{project_id}-tfstate"
+
+validation_rules:
+  - name: no_hardcoded_projects
+    description: Project ID must come from env.hcl
+  - name: state_isolation
+    description: Each environment uses separate state bucket
+  - name: dependency_declaration
+    description: All cross-module references use dependency blocks
+  - name: mock_outputs_required
+    description: All dependencies must have mock_outputs for plan

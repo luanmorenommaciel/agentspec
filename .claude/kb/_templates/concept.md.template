@@ -1,0 +1,40 @@
+# {{CONCEPT_NAME}}
+
+> **Purpose**: {{ONE_LINE_DESCRIPTION}}
+> **Confidence**: {{CONFIDENCE_LEVEL}}
+> **MCP Validated**: {{VALIDATION_DATE}}
+
+## Overview
+
+{{OVERVIEW_2_3_SENTENCES}}
+
+## The Pattern
+
+```{{LANGUAGE}}
+{{CODE_EXAMPLE_10_30_LINES}}
+```
+
+## Quick Reference
+
+| Input | Output | Notes |
+|-------|--------|-------|
+| `{{EXAMPLE_INPUT}}` | `{{EXAMPLE_OUTPUT}}` | {{NOTES}} |
+
+## Common Mistakes
+
+### Wrong
+
+```{{LANGUAGE}}
+{{ANTI_PATTERN}}
+```
+
+### Correct
+
+```{{LANGUAGE}}
+{{CORRECT_PATTERN}}
+```
+
+## Related
+
+- [{{RELATED_CONCEPT}}](../concepts/{{RELATED_CONCEPT_FILE}}.md)
+- [{{RELATED_PATTERN}}](../patterns/{{RELATED_PATTERN_FILE}}.md)

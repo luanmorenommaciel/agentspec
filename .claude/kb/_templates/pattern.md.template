@@ -1,0 +1,33 @@
+# {{PATTERN_NAME}}
+
+> **Purpose**: {{WHAT_PROBLEM_THIS_SOLVES}}
+> **MCP Validated**: {{VALIDATION_DATE}}
+
+## When to Use
+
+- {{USE_CASE_1}}
+- {{USE_CASE_2}}
+- {{USE_CASE_3}}
+
+## Implementation
+
+```{{LANGUAGE}}
+{{PRODUCTION_READY_CODE_30_100_LINES}}
+```
+
+## Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `{{SETTING_NAME}}` | `{{DEFAULT_VALUE}}` | {{DESCRIPTION}} |
+
+## Example Usage
+
+```{{LANGUAGE}}
+{{USAGE_EXAMPLE}}
+```
+
+## See Also
+
+- [{{RELATED_PATTERN}}](../patterns/{{RELATED_PATTERN_FILE}}.md)
+- [{{RELATED_CONCEPT}}](../concepts/{{RELATED_CONCEPT_FILE}}.md)
