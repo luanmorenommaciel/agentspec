@@ -1,0 +1,32 @@
+# Add this section to .claude/kb/_index.yaml under 'domains:'
+
+{{DOMAIN_KEY}}:
+  name: {{DOMAIN_DISPLAY_NAME}}
+  description: {{DOMAIN_DESCRIPTION}}
+  path: {{DOMAIN_KEY}}/
+  entry_points:
+    index: index.md
+    quick_reference: quick-reference.md
+  concepts:
+    - name: {{CONCEPT_1}}
+      path: concepts/{{CONCEPT_1}}.md
+      confidence: 0.95
+  patterns:
+    - name: {{PATTERN_1}}
+      path: patterns/{{PATTERN_1}}.md
+  specs:
+    - name: {{SPEC_1}}
+      path: specs/{{SPEC_1}}.yaml
+  reference:
+    - name: {{REF_1}}
+      path: reference/{{REF_1}}.md
+  examples:
+    inputs:
+      - name: {{EXAMPLE_INPUT_1}}
+        path: examples/inputs/{{EXAMPLE_INPUT_1_FILE}}
+    outputs:
+      - name: {{EXAMPLE_OUTPUT_1}}
+        path: examples/outputs/{{EXAMPLE_OUTPUT_1_FILE}}
+    tests:
+      - name: {{TEST_1}}
+        path: examples/tests/{{TEST_1_FILE}}.json

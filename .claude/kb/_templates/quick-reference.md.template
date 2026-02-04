@@ -1,0 +1,38 @@
+# {{DOMAIN_NAME}} Quick Reference
+
+> Fast lookup tables. For code examples, see linked files.
+
+## {{SECTION_1_NAME}}
+
+| {{COL1_HEADER}} | {{COL2_HEADER}} | {{COL3_HEADER}} |
+|-----------------|-----------------|-----------------|
+| {{ROW1_COL1}} | {{ROW1_COL2}} | {{ROW1_COL3}} |
+| {{ROW2_COL1}} | {{ROW2_COL2}} | {{ROW2_COL3}} |
+
+## {{SECTION_2_NAME}}
+
+| {{COL1_HEADER}} | {{COL2_HEADER}} |
+|-----------------|-----------------|
+| {{ROW1_COL1}} | {{ROW1_COL2}} |
+| {{ROW2_COL1}} | {{ROW2_COL2}} |
+
+## Decision Matrix
+
+| Use Case | Choose |
+|----------|--------|
+| {{USE_CASE_1}} | {{CHOICE_1}} |
+| {{USE_CASE_2}} | {{CHOICE_2}} |
+
+## Common Pitfalls
+
+| Don't | Do |
+|-------|-----|
+| {{DONT_1}} | {{DO_1}} |
+| {{DONT_2}} | {{DO_2}} |
+
+## Related Documentation
+
+| Topic | Path |
+|-------|------|
+| Getting Started | `concepts/{{GETTING_STARTED}}.md` |
+| Full Index | `index.md` |

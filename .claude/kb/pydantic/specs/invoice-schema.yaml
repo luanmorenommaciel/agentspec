@@ -1,0 +1,160 @@
+# Invoice Extraction JSON Schema
+# MCP Validated: 2026-01-25
+# Use this schema in LLM system prompts to guide extraction output format
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: InvoiceExtraction
+description: Schema for LLM invoice extraction output from delivery platform invoices
+type: object
+
+required:
+  - invoice_id
+  - vendor_name
+  - invoice_date
+  - subtotal
+  - total_amount
+
+properties:
+  invoice_id:
+    type: string
+    description: Unique invoice identifier (e.g., INV-2024-001)
+    minLength: 1
+    examples:
+      - "INV-2024-001"
+      - "UE-12345"
+
+  vendor_name:
+    type: string
+    description: Restaurant or vendor name
+    minLength: 1
+    examples:
+      - "Pizza Palace"
+      - "Burger Joint"
+
+  vendor_type:
+    type: string
+    description: Delivery platform type
+    enum:
+      - ubereats
+      - doordash
+      - grubhub
+      - other
+    default: other
+
+  invoice_date:
+    type: string
+    format: date
+    description: Invoice issue date (YYYY-MM-DD format)
+    examples:
+      - "2024-01-15"
+
+  due_date:
+    type: string
+    format: date
+    description: Payment due date (YYYY-MM-DD format)
+    nullable: true
+    examples:
+      - "2024-02-15"
+
+  subtotal:
+    type: number
+    description: Subtotal before tax and fees
+    minimum: 0
+    examples:
+      - 100.00
+
+  tax_amount:
+    type: number
+    description: Tax amount
+    minimum: 0
+    default: 0
+    examples:
+      - 8.00
+
+  commission_rate:
+    type: number
+    description: Platform commission rate (0.0 to 1.0)
+    minimum: 0
+    maximum: 1
+    nullable: true
+    examples:
+      - 0.15
+      - 0.30
+
+  commission_amount:
+    type: number
+    description: Platform commission amount in currency
+    minimum: 0
+    nullable: true
+    examples:
+      - 15.00
+
+  total_amount:
+    type: number
+    description: Total invoice amount
+    minimum: 0
+    examples:
+      - 108.00
+
+  currency:
+    type: string
+    description: ISO 4217 currency code
+    enum:
+      - USD
+      - EUR
+      - GBP
+      - CAD
+    default: USD
+    maxLength: 3
+
+  line_items:
+    type: array
+    description: Individual line items on the invoice
+    default: []
+    items:
+      type: object
+      required:
+        - description
+        - unit_price
+        - amount
+      properties:
+        description:
+          type: string
+          description: Item or service description
+          minLength: 1
+          maxLength: 500
+        quantity:
+          type: integer
+          description: Quantity of items
+          minimum: 1
+          default: 1
+        unit_price:
+          type: number
+          description: Price per unit
+          minimum: 0
+        amount:
+          type: number
+          description: Total amount (quantity * unit_price)
+          minimum: 0
+
+examples:
+  - invoice_id: "INV-2024-001"
+    vendor_name: "Pizza Palace"
+    vendor_type: "ubereats"
+    invoice_date: "2024-01-15"
+    due_date: "2024-02-15"
+    subtotal: 100.00
+    tax_amount: 8.00
+    commission_rate: 0.15
+    commission_amount: 15.00
+    total_amount: 123.00
+    currency: "USD"
+    line_items:
+      - description: "Large Pepperoni Pizza"
+        quantity: 2
+        unit_price: 25.00
+        amount: 50.00
+      - description: "Delivery Fee"
+        quantity: 1
+        unit_price: 5.00
+        amount: 5.00

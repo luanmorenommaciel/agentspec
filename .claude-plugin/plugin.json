@@ -1,0 +1,46 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin/v1",
+  "name": "agentspec",
+  "version": "1.0.0",
+  "description": "Spec-Driven Development (SDD) framework for Claude Code - Transform ideas into shipped features through a 5-phase AI-powered workflow",
+  "author": "AgentSpec Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/YOUR_ORG/agentspec",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_ORG/agentspec.git"
+  },
+  "keywords": [
+    "claude-code",
+    "spec-driven-development",
+    "ai-agents",
+    "workflow",
+    "software-engineering",
+    "specifications"
+  ],
+  "minClaudeCodeVersion": "1.0.0",
+  "engines": {
+    "claude-code": ">=1.0.0"
+  },
+  "main": {
+    "agents": "./agents",
+    "commands": "./commands"
+  },
+  "capabilities": {
+    "agents": true,
+    "commands": true,
+    "hooks": false,
+    "mcpServers": false
+  },
+  "configuration": {
+    "sdd": {
+      "featuresDir": "./sdd/features",
+      "reportsDir": "./sdd/reports",
+      "archiveDir": "./sdd/archive",
+      "templatesDir": "./sdd/templates"
+    },
+    "kb": {
+      "templatesDir": "./kb/_templates"
+    }
+  }
+}

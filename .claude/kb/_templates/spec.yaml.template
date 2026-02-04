@@ -1,0 +1,20 @@
+schema_version: "1.0"
+domain: {{DOMAIN_NAME}}
+file_type: {{FILE_TYPE}}
+last_validated: "{{VALIDATION_DATE}}"
+source: "{{SOURCE_REFERENCE}}"
+
+records:
+  {{RECORD_TYPE}}:
+    description: "{{RECORD_DESCRIPTION}}"
+    fields:
+      {{FIELD_NAME}}:
+        position: {{START_POS}}-{{END_POS}}
+        length: {{LENGTH}}
+        type: {{TYPE}}  # string|integer|decimal|date|boolean
+        required: {{REQUIRED}}
+        default: "{{DEFAULT_VALUE}}"
+        validation:
+          - "{{VALIDATION_RULE_1}}"
+          - "{{VALIDATION_RULE_2}}"
+        notes: "{{ADDITIONAL_NOTES}}"

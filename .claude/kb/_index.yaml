@@ -1,0 +1,347 @@
+# Knowledge Base Index
+# Machine-readable registry for KB domains
+
+version: "1.0"
+last_updated: "2026-01-28"
+
+# File Size Limits (SINGLE SOURCE OF TRUTH)
+limits:
+  quick_reference: 100
+  concept: 150
+  pattern: 200
+  spec: null
+  reference: null
+
+# Templates
+templates:
+  - name: concept
+    path: _templates/concept.md.template
+  - name: pattern
+    path: _templates/pattern.md.template
+  - name: index
+    path: _templates/index.md.template
+  - name: quick-reference
+    path: _templates/quick-reference.md.template
+  - name: spec
+    path: _templates/spec.yaml.template
+  - name: test-case
+    path: _templates/test-case.json.template
+  - name: domain-manifest
+    path: _templates/domain-manifest.yaml.template
+
+# Domain Registry
+domains:
+  pydantic:
+    name: Pydantic
+    description: Python data validation for LLM output parsing and structured extraction
+    path: pydantic/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: base-model
+        path: concepts/base-model.md
+        confidence: 0.95
+      - name: field-types
+        path: concepts/field-types.md
+        confidence: 0.95
+      - name: validators
+        path: concepts/validators.md
+        confidence: 0.95
+      - name: nested-models
+        path: concepts/nested-models.md
+        confidence: 0.95
+    patterns:
+      - name: llm-output-validation
+        path: patterns/llm-output-validation.md
+      - name: extraction-schema
+        path: patterns/extraction-schema.md
+      - name: error-handling
+        path: patterns/error-handling.md
+      - name: custom-validators
+        path: patterns/custom-validators.md
+    specs:
+      - name: invoice-schema
+        path: specs/invoice-schema.yaml
+
+  gcp:
+    name: GCP Serverless Data Engineering
+    description: Google Cloud Platform serverless services for event-driven data pipelines
+    path: gcp/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: cloud-run
+        path: concepts/cloud-run.md
+        confidence: 0.95
+      - name: pubsub
+        path: concepts/pubsub.md
+        confidence: 0.95
+      - name: gcs
+        path: concepts/gcs.md
+        confidence: 0.95
+      - name: bigquery
+        path: concepts/bigquery.md
+        confidence: 0.95
+      - name: iam
+        path: concepts/iam.md
+        confidence: 0.95
+      - name: secret-manager
+        path: concepts/secret-manager.md
+        confidence: 0.95
+    patterns:
+      - name: event-driven-pipeline
+        path: patterns/event-driven-pipeline.md
+      - name: multi-bucket-pipeline
+        path: patterns/multi-bucket-pipeline.md
+      - name: pubsub-fanout
+        path: patterns/pubsub-fanout.md
+      - name: cloud-run-scaling
+        path: patterns/cloud-run-scaling.md
+      - name: gcs-triggered-workflow
+        path: patterns/gcs-triggered-workflow.md
+
+  gemini:
+    name: Gemini
+    description: Google's multimodal LLM for document extraction and vision tasks
+    path: gemini/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: model-capabilities
+        path: concepts/model-capabilities.md
+        confidence: 0.95
+      - name: vertex-ai-integration
+        path: concepts/vertex-ai-integration.md
+        confidence: 0.95
+      - name: multimodal-prompting
+        path: concepts/multimodal-prompting.md
+        confidence: 0.95
+      - name: token-limits-pricing
+        path: concepts/token-limits-pricing.md
+        confidence: 0.95
+      - name: structured-output
+        path: concepts/structured-output.md
+        confidence: 0.95
+      - name: safety-settings
+        path: concepts/safety-settings.md
+        confidence: 0.95
+    patterns:
+      - name: invoice-extraction
+        path: patterns/invoice-extraction.md
+      - name: structured-json-output
+        path: patterns/structured-json-output.md
+      - name: openrouter-fallback
+        path: patterns/openrouter-fallback.md
+      - name: batch-processing
+        path: patterns/batch-processing.md
+      - name: error-handling-retries
+        path: patterns/error-handling-retries.md
+      - name: prompt-versioning
+        path: patterns/prompt-versioning.md
+
+  langfuse:
+    name: Langfuse
+    description: LLMOps observability platform for tracking LLM calls, costs, latency, and quality
+    path: langfuse/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: traces-spans
+        path: concepts/traces-spans.md
+        confidence: 0.95
+      - name: generations
+        path: concepts/generations.md
+        confidence: 0.95
+      - name: cost-tracking
+        path: concepts/cost-tracking.md
+        confidence: 0.95
+      - name: scoring
+        path: concepts/scoring.md
+        confidence: 0.95
+      - name: prompt-management
+        path: concepts/prompt-management.md
+        confidence: 0.95
+      - name: model-comparison
+        path: concepts/model-comparison.md
+        confidence: 0.95
+    patterns:
+      - name: python-sdk-integration
+        path: patterns/python-sdk-integration.md
+      - name: cloud-run-instrumentation
+        path: patterns/cloud-run-instrumentation.md
+      - name: quality-feedback-loops
+        path: patterns/quality-feedback-loops.md
+      - name: cost-alerting
+        path: patterns/cost-alerting.md
+      - name: trace-linking
+        path: patterns/trace-linking.md
+      - name: dashboard-metrics
+        path: patterns/dashboard-metrics.md
+
+  terraform:
+    name: Terraform for GCP
+    description: Infrastructure as Code for GCP serverless architecture with module patterns
+    path: terraform/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: resources
+        path: concepts/resources.md
+        confidence: 0.95
+      - name: modules
+        path: concepts/modules.md
+        confidence: 0.95
+      - name: providers
+        path: concepts/providers.md
+        confidence: 0.95
+      - name: state
+        path: concepts/state.md
+        confidence: 0.95
+      - name: variables
+        path: concepts/variables.md
+        confidence: 0.95
+      - name: workspaces
+        path: concepts/workspaces.md
+        confidence: 0.95
+    patterns:
+      - name: cloud-run-module
+        path: patterns/cloud-run-module.md
+      - name: pubsub-module
+        path: patterns/pubsub-module.md
+      - name: gcs-module
+        path: patterns/gcs-module.md
+      - name: bigquery-module
+        path: patterns/bigquery-module.md
+      - name: iam-module
+        path: patterns/iam-module.md
+      - name: remote-state
+        path: patterns/remote-state.md
+
+  terragrunt:
+    name: Terragrunt
+    description: Terraform wrapper for multi-environment orchestration, DRY configurations, and dependency management
+    path: terragrunt/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: terragrunt-blocks
+        path: concepts/terragrunt-blocks.md
+        confidence: 0.95
+      - name: root-configuration
+        path: concepts/root-configuration.md
+        confidence: 0.95
+      - name: environment-hierarchy
+        path: concepts/environment-hierarchy.md
+        confidence: 0.95
+      - name: generate-blocks
+        path: concepts/generate-blocks.md
+        confidence: 0.95
+      - name: dependency-graphs
+        path: concepts/dependency-graphs.md
+        confidence: 0.95
+      - name: hooks
+        path: concepts/hooks.md
+        confidence: 0.95
+    patterns:
+      - name: multi-environment-config
+        path: patterns/multi-environment-config.md
+      - name: dry-hierarchies
+        path: patterns/dry-hierarchies.md
+      - name: dependency-management
+        path: patterns/dependency-management.md
+      - name: state-bucket-per-env
+        path: patterns/state-bucket-per-env.md
+      - name: environment-promotion
+        path: patterns/environment-promotion.md
+    specs:
+      - name: gcp-project-structure
+        path: specs/gcp-project-structure.yaml
+
+  crewai:
+    name: CrewAI
+    description: Multi-agent AI orchestration framework for autonomous DataOps monitoring and self-healing pipelines
+    path: crewai/
+    mcp_validated: "2026-01-25"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: agents
+        path: concepts/agents.md
+        confidence: 0.95
+      - name: crews
+        path: concepts/crews.md
+        confidence: 0.95
+      - name: tasks
+        path: concepts/tasks.md
+        confidence: 0.95
+      - name: tools
+        path: concepts/tools.md
+        confidence: 0.95
+      - name: memory
+        path: concepts/memory.md
+        confidence: 0.95
+      - name: processes
+        path: concepts/processes.md
+        confidence: 0.95
+    patterns:
+      - name: triage-investigation-report
+        path: patterns/triage-investigation-report.md
+      - name: log-analysis-agent
+        path: patterns/log-analysis-agent.md
+      - name: escalation-workflow
+        path: patterns/escalation-workflow.md
+      - name: slack-integration
+        path: patterns/slack-integration.md
+      - name: circuit-breaker
+        path: patterns/circuit-breaker.md
+      - name: crew-coordination
+        path: patterns/crew-coordination.md
+
+  openrouter:
+    name: OpenRouter
+    description: Unified LLM API gateway providing access to 400+ AI models with automatic fallback, load balancing, and cost optimization
+    path: openrouter/
+    mcp_validated: "2026-01-28"
+    entry_points:
+      index: index.md
+      quick_reference: quick-reference.md
+    concepts:
+      - name: api-basics
+        path: concepts/api-basics.md
+        confidence: 0.95
+      - name: authentication
+        path: concepts/authentication.md
+        confidence: 0.95
+      - name: model-selection
+        path: concepts/model-selection.md
+        confidence: 0.95
+      - name: streaming
+        path: concepts/streaming.md
+        confidence: 0.95
+      - name: rate-limits
+        path: concepts/rate-limits.md
+        confidence: 0.95
+    patterns:
+      - name: python-sdk-integration
+        path: patterns/python-sdk-integration.md
+      - name: cost-optimization
+        path: patterns/cost-optimization.md
+      - name: error-handling
+        path: patterns/error-handling.md
+      - name: provider-routing
+        path: patterns/provider-routing.md
+      - name: langchain-integration
+        path: patterns/langchain-integration.md
