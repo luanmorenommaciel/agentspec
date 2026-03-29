@@ -1,101 +1,331 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0d1117"/>
-      <stop offset="100%" style="stop-color:#161b22"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#e8a87c"/>
-      <stop offset="100%" style="stop-color:#d4845f"/>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0b88c"/>
+      <stop offset="100%" stop-color="#d4845f"/>
     </linearGradient>
-    <linearGradient id="titleFade" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f0b88c"/>
-      <stop offset="100%" style="stop-color:#d4845f"/>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1a2e"/>
+      <stop offset="100%" stop-color="#0a1225"/>
     </linearGradient>
+    <linearGradient id="accentFade" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e8a87c"/>
+      <stop offset="100%" stop-color="#e8a87c" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="iterateGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#21262d" stroke-width="0.5"/>
+    </pattern>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="480" fill="url(#bgGrad)" rx="12"/>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <rect width="1200" height="720" fill="url(#grid)" opacity="0.25"/>
 
-  <!-- Subtle grid -->
-  <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#21262d" stroke-width="0.5"/>
-  </pattern>
-  <rect width="1200" height="480" fill="url(#grid)" rx="12" opacity="0.3"/>
+  <!-- Star dots -->
+  <circle cx="80" cy="60" r="1" fill="#e8a87c" opacity="0.15"/>
+  <circle cx="220" cy="140" r="0.8" fill="#e8a87c" opacity="0.1"/>
+  <circle cx="450" cy="50" r="1.2" fill="#e8a87c" opacity="0.2"/>
+  <circle cx="350" cy="400" r="0.8" fill="#e8a87c" opacity="0.12"/>
+  <circle cx="500" cy="680" r="1" fill="#e8a87c" opacity="0.15"/>
+  <circle cx="150" cy="550" r="0.9" fill="#e8a87c" opacity="0.1"/>
+  <circle cx="700" cy="80" r="1" fill="#e8a87c" opacity="0.18"/>
+  <circle cx="900" cy="50" r="0.8" fill="#e8a87c" opacity="0.12"/>
+  <circle cx="1100" cy="120" r="1.1" fill="#e8a87c" opacity="0.15"/>
+  <circle cx="1050" cy="650" r="0.9" fill="#e8a87c" opacity="0.1"/>
+  <circle cx="800" cy="700" r="1" fill="#e8a87c" opacity="0.2"/>
+  <circle cx="650" cy="400" r="0.8" fill="#e8a87c" opacity="0.12"/>
 
-  <!-- ==================== LEFT SECTION ==================== -->
+  <!-- ======================== LEFT SIDE ======================== -->
 
-  <!-- Title: AGENT -->
-  <text x="40" y="140" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="130" fill="url(#titleFade)" font-weight="900" letter-spacing="-2">AGENT</text>
+  <!-- Title -->
+  <text x="30" y="108" font-family="system-ui, -apple-system, sans-serif" font-size="108" font-weight="900" fill="url(#titleGrad)">AGENT</text>
+  <text x="30" y="215" font-family="system-ui, -apple-system, sans-serif" font-size="108" font-weight="900" fill="url(#titleGrad)">SPEC</text>
+  <rect x="30" y="232" width="380" height="3" rx="1.5" fill="url(#accentFade)"/>
 
-  <!-- Title: SPEC -->
-  <text x="40" y="270" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="130" fill="url(#titleFade)" font-weight="900" letter-spacing="-2">SPEC</text>
+  <!-- SDD/SDDE Block -->
+  <rect x="30" y="245" width="450" height="62" rx="5" fill="#0b1018" stroke="#1e2a3a" stroke-width="0.5"/>
 
-  <!-- Accent line -->
-  <rect x="40" y="292" width="460" height="3" fill="url(#accentGrad)" rx="1.5"/>
+  <!-- Row 1: SDD -->
+  <rect x="40" y="256" width="4" height="4" rx="1" fill="#e8a87c"/>
+  <text x="50" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="bold" fill="#e8a87c">Spec-Driven Development</text>
+  <text x="50" y="271" font-family="ui-monospace, monospace" font-size="7.5" fill="#5a7a9e">The core 5-phase AI workflow: idea to production</text>
 
-  <!-- Subtitle -->
-  <text x="40" y="340" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" fill="#e8a87c" font-weight="600" letter-spacing="0.5">Spec-Driven Data Engineering</text>
+  <!-- Separator -->
+  <line x1="40" y1="278" x2="470" y2="278" stroke="#1e2a3a" stroke-width="0.3"/>
 
-  <!-- Stats pills -->
-  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14">
-    <rect x="40" y="360" width="100" height="28" fill="#1a1f29" stroke="#30363d" stroke-width="1" rx="14"/>
-    <text x="90" y="379" text-anchor="middle" fill="#8b949e"><tspan fill="#e8a87c" font-weight="bold">41</tspan> agents</text>
+  <!-- Row 2: SDDE -->
+  <rect x="40" y="285" width="4" height="4" rx="1" fill="#3fb950"/>
+  <text x="50" y="289" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="bold" fill="#e8a87c">Spec-Driven Data Engineering</text>
+  <text x="50" y="300" font-family="ui-monospace, monospace" font-size="7.5" fill="#5a7a9e">SDD patterns applied to build AI-Native Data Engineers</text>
 
-    <rect x="152" y="360" width="128" height="28" fill="#1a1f29" stroke="#30363d" stroke-width="1" rx="14"/>
-    <text x="216" y="379" text-anchor="middle" fill="#8b949e"><tspan fill="#e8a87c" font-weight="bold">22</tspan> commands</text>
+  <!-- KEY FEATURES -->
+  <text x="30" y="330" font-family="ui-monospace, monospace" font-size="8" font-weight="bold" fill="#484f58" letter-spacing="2">KEY FEATURES</text>
 
-    <rect x="292" y="360" width="140" height="28" fill="#1a1f29" stroke="#30363d" stroke-width="1" rx="14"/>
-    <text x="362" y="379" text-anchor="middle" fill="#8b949e"><tspan fill="#e8a87c" font-weight="bold">22</tspan> KB domains</text>
-  </g>
+  <!-- Col 1 (spacing 18px) -->
+  <rect x="30" y="346" width="4" height="4" rx="1" fill="#e8a87c"/>
+  <text x="40" y="350" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">KB-First Agent Resolution</text>
 
-  <!-- 5-phase workflow -->
-  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
-    <text x="40" y="424" font-size="11" fill="#484f58" font-weight="bold" letter-spacing="2">5-PHASE SDD WORKFLOW</text>
+  <rect x="30" y="364" width="4" height="4" rx="1" fill="#3fb950"/>
+  <text x="40" y="368" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Clarity Score Gate (12/15)</text>
 
-    <rect x="40" y="436" width="84" height="28" fill="#1a1f29" stroke="#e8a87c" stroke-width="1.2" rx="5"/>
-    <text x="82" y="454" font-size="10" fill="#e8a87c" text-anchor="middle" font-weight="bold">BRAINSTORM</text>
-    <text x="130" y="454" font-size="13" fill="#484f58">&#x2192;</text>
+  <rect x="30" y="382" width="4" height="4" rx="1" fill="#ff6b35"/>
+  <text x="40" y="386" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Cascade-Aware Iteration</text>
 
-    <rect x="142" y="436" width="64" height="28" fill="#1a1f29" stroke="#e8a87c" stroke-width="1.2" rx="5"/>
-    <text x="174" y="454" font-size="10" fill="#e8a87c" text-anchor="middle" font-weight="bold">DEFINE</text>
-    <text x="212" y="454" font-size="13" fill="#484f58">&#x2192;</text>
+  <rect x="30" y="400" width="4" height="4" rx="1" fill="#a78bfa"/>
+  <text x="40" y="404" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">File Manifest + Agent Map</text>
 
-    <rect x="224" y="436" width="64" height="28" fill="#1a1f29" stroke="#e8a87c" stroke-width="1.2" rx="5"/>
-    <text x="256" y="454" font-size="10" fill="#e8a87c" text-anchor="middle" font-weight="bold">DESIGN</text>
-    <text x="294" y="454" font-size="13" fill="#484f58">&#x2192;</text>
+  <rect x="30" y="418" width="4" height="4" rx="1" fill="#00d4ff"/>
+  <text x="40" y="422" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Inline ADR Tracking</text>
 
-    <rect x="306" y="436" width="56" height="28" fill="#1a1f29" stroke="#e8a87c" stroke-width="1.2" rx="5"/>
-    <text x="334" y="454" font-size="10" fill="#e8a87c" text-anchor="middle" font-weight="bold">BUILD</text>
-    <text x="368" y="454" font-size="13" fill="#484f58">&#x2192;</text>
+  <rect x="30" y="436" width="4" height="4" rx="1" fill="#e8b84b"/>
+  <text x="40" y="440" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Status Transition Gates</text>
 
-    <rect x="380" y="436" width="50" height="28" fill="#1a1f29" stroke="#e8a87c" stroke-width="1.2" rx="5"/>
-    <text x="405" y="454" font-size="10" fill="#e8a87c" text-anchor="middle" font-weight="bold">SHIP</text>
-  </g>
+  <!-- Col 2 -->
+  <rect x="280" y="346" width="4" height="4" rx="1" fill="#e8a87c"/>
+  <text x="290" y="350" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">DE Delegation Map</text>
 
-  <!-- ==================== RIGHT: SLASH COMMANDS ==================== -->
+  <rect x="280" y="364" width="4" height="4" rx="1" fill="#3fb950"/>
+  <text x="290" y="368" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Data Contract Authoring</text>
 
-  <line x1="580" y1="25" x2="580" y2="460" stroke="#21262d" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <rect x="280" y="382" width="4" height="4" rx="1" fill="#ff6b35"/>
+  <text x="290" y="386" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">YAGNI Brainstorm Filter</text>
 
-  <!-- SDD Workflow -->
-  <text x="615" y="60" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#484f58" font-weight="bold" letter-spacing="2">SDD WORKFLOW</text>
+  <rect x="280" y="400" width="4" height="4" rx="1" fill="#a78bfa"/>
+  <text x="290" y="404" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Technical Context Section</text>
 
-  <g font-family="'SFMono-Regular', 'Cascadia Code', 'Fira Code', 'Courier New', monospace" font-size="24">
-    <text x="1165" y="100" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/brainstorm</tspan> &lt;idea&gt;</text>
-    <text x="1165" y="134" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/define</tspan> &lt;feature&gt;</text>
-    <text x="1165" y="168" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/design</tspan> &lt;feature&gt;</text>
-    <text x="1165" y="202" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/build</tspan> &lt;feature&gt;</text>
-    <text x="1165" y="236" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/ship</tspan> &lt;feature&gt;</text>
-  </g>
+  <rect x="280" y="418" width="4" height="4" rx="1" fill="#00d4ff"/>
+  <text x="290" y="422" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Confidence Scoring (0.75+)</text>
 
-  <!-- Data Engineering -->
-  <text x="615" y="280" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#484f58" font-weight="bold" letter-spacing="2">DATA ENGINEERING</text>
+  <rect x="280" y="436" width="4" height="4" rx="1" fill="#e8b84b"/>
+  <text x="290" y="440" font-family="ui-monospace, monospace" font-size="8.5" fill="#8b949e">Source Inventory Capture</text>
 
-  <g font-family="'SFMono-Regular', 'Cascadia Code', 'Fira Code', 'Courier New', monospace" font-size="24">
-    <text x="1165" y="316" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/schema</tspan> &lt;model&gt;</text>
-    <text x="1165" y="350" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/pipeline</tspan> &lt;etl&gt;</text>
-    <text x="1165" y="384" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/data-quality</tspan> &lt;sql&gt;</text>
-    <text x="1165" y="418" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/data-contract</tspan> &lt;sla&gt;</text>
-    <text x="1165" y="452" text-anchor="end" fill="#6e7681"><tspan fill="#e8a87c">/lakehouse</tspan> &lt;fmt&gt;</text>
-  </g>
+  <!-- STATS (sharp modern capsules, rx=3) -->
+  <rect x="30" y="468" width="80" height="24" rx="3" fill="#0d1a2e" stroke="#1e2a3a" stroke-width="0.5"/>
+  <text x="70" y="484" font-family="ui-monospace, monospace" font-size="9" fill="#6e7681" text-anchor="middle"><tspan font-weight="bold" fill="#e8a87c">58</tspan> Agents</text>
+
+  <rect x="116" y="468" width="100" height="24" rx="3" fill="#0d1a2e" stroke="#1e2a3a" stroke-width="0.5"/>
+  <text x="166" y="484" font-family="ui-monospace, monospace" font-size="9" fill="#6e7681" text-anchor="middle"><tspan font-weight="bold" fill="#3fb950">21</tspan> Commands</text>
+
+  <rect x="222" y="468" width="108" height="24" rx="3" fill="#0d1a2e" stroke="#1e2a3a" stroke-width="0.5"/>
+  <text x="276" y="484" font-family="ui-monospace, monospace" font-size="9" fill="#6e7681" text-anchor="middle"><tspan font-weight="bold" fill="#ff6b35">22</tspan> KB Domains</text>
+
+  <rect x="336" y="468" width="82" height="24" rx="3" fill="#0d1a2e" stroke="#1e2a3a" stroke-width="0.5"/>
+  <text x="377" y="484" font-family="ui-monospace, monospace" font-size="9" fill="#6e7681" text-anchor="middle"><tspan font-weight="bold" fill="#a78bfa">5</tspan> Phases</text>
+
+  <rect x="424" y="468" width="80" height="24" rx="3" fill="#0d1a2e" stroke="#1e2a3a" stroke-width="0.5"/>
+  <text x="464" y="484" font-family="ui-monospace, monospace" font-size="9" fill="#6e7681" text-anchor="middle"><tspan font-weight="bold" fill="#00d4ff">3</tspan> Clouds</text>
+
+  <!-- SDD LIFECYCLE -->
+  <text x="30" y="520" font-family="ui-monospace, monospace" font-size="8" font-weight="bold" fill="#484f58" letter-spacing="2">SDD LIFECYCLE</text>
+  <text x="30" y="534" font-family="ui-monospace, monospace" font-size="7" fill="#3d5a80">Spec-validated workflow with phase gate contracts and cascade awareness</text>
+
+  <!-- Phase boxes (uniform style, expanded to fill width) -->
+  <rect x="30" y="548" width="72" height="22" rx="3" fill="#0d1a2e" stroke="#e8a87c" stroke-width="0.5"/>
+  <text x="66" y="562" font-family="ui-monospace, monospace" font-size="6.5" fill="#e8a87c" text-anchor="middle">BRAINSTORM</text>
+
+  <text x="106" y="562" font-family="ui-monospace, monospace" font-size="8" fill="#484f58">&#8594;</text>
+
+  <rect x="114" y="548" width="56" height="22" rx="3" fill="#0d1a2e" stroke="#3fb950" stroke-width="0.5"/>
+  <text x="142" y="562" font-family="ui-monospace, monospace" font-size="6.5" fill="#3fb950" text-anchor="middle">DEFINE</text>
+
+  <text x="174" y="562" font-family="ui-monospace, monospace" font-size="8" fill="#484f58">&#8594;</text>
+
+  <rect x="182" y="548" width="56" height="22" rx="3" fill="#0d1a2e" stroke="#ff6b35" stroke-width="0.5"/>
+  <text x="210" y="562" font-family="ui-monospace, monospace" font-size="6.5" fill="#ff6b35" text-anchor="middle">DESIGN</text>
+
+  <text x="242" y="562" font-family="ui-monospace, monospace" font-size="8" fill="#484f58">&#8594;</text>
+
+  <rect x="250" y="548" width="50" height="22" rx="3" fill="#0d1a2e" stroke="#a78bfa" stroke-width="0.5"/>
+  <text x="275" y="562" font-family="ui-monospace, monospace" font-size="6.5" fill="#a78bfa" text-anchor="middle">BUILD</text>
+
+  <text x="304" y="562" font-family="ui-monospace, monospace" font-size="8" fill="#484f58">&#8594;</text>
+
+  <rect x="312" y="548" width="42" height="22" rx="3" fill="#0d1a2e" stroke="#00d4ff" stroke-width="0.5"/>
+  <text x="333" y="562" font-family="ui-monospace, monospace" font-size="6.5" fill="#00d4ff" text-anchor="middle">SHIP</text>
+
+  <text x="358" y="562" font-family="ui-monospace, monospace" font-size="8" fill="#ff6b35">&#8634;</text>
+
+  <rect x="366" y="548" width="64" height="22" rx="3" fill="#0d1a2e" stroke="#ff6b35" stroke-width="0.5"/>
+  <text x="398" y="562" font-family="ui-monospace, monospace" font-size="6.5" font-weight="bold" fill="#ff6b35" text-anchor="middle">ITERATE</text>
+
+  <!-- Sub-descriptions under phases -->
+  <text x="66" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Explore</text>
+  <text x="142" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Scope</text>
+  <text x="210" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Architect</text>
+  <text x="275" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Execute</text>
+  <text x="333" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Archive</text>
+  <text x="398" y="582" font-family="ui-monospace, monospace" font-size="6" fill="#3d5a80" text-anchor="middle">Update</text>
+
+  <!-- Bottom tagline -->
+  <text x="30" y="608" font-family="ui-monospace, monospace" font-size="7" fill="#3d5a80">KB-grounded &#183; Confidence-scored &#183; Cascade-aware &#183; AI-Native</text>
+
+  <!-- AGENT CATEGORIES (fills remaining space) -->
+  <text x="30" y="640" font-family="ui-monospace, monospace" font-size="8" font-weight="bold" fill="#484f58" letter-spacing="2">AGENT CATEGORIES</text>
+
+  <rect x="30" y="652" width="78" height="18" rx="3" fill="#0d1a2e" stroke="#a78bfa" stroke-width="0.4"/>
+  <text x="69" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#a78bfa" text-anchor="middle">8 Architect</text>
+
+  <rect x="114" y="652" width="58" height="18" rx="3" fill="#0d1a2e" stroke="#00d4ff" stroke-width="0.4"/>
+  <text x="143" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#00d4ff" text-anchor="middle">10 Cloud</text>
+
+  <rect x="178" y="652" width="72" height="18" rx="3" fill="#0d1a2e" stroke="#e8b84b" stroke-width="0.4"/>
+  <text x="214" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#e8b84b" text-anchor="middle">6 Platform</text>
+
+  <rect x="256" y="652" width="62" height="18" rx="3" fill="#0d1a2e" stroke="#3fb950" stroke-width="0.4"/>
+  <text x="287" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#3fb950" text-anchor="middle">6 Python</text>
+
+  <rect x="324" y="652" width="78" height="18" rx="3" fill="#0d1a2e" stroke="#ff6b35" stroke-width="0.4"/>
+  <text x="363" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#ff6b35" text-anchor="middle">15 Data Eng</text>
+
+  <rect x="408" y="652" width="72" height="18" rx="3" fill="#0d1a2e" stroke="#e8a87c" stroke-width="0.4"/>
+  <text x="444" y="664" font-family="ui-monospace, monospace" font-size="6" fill="#e8a87c" text-anchor="middle">6 Workflow</text>
+
+  <!-- Version bottom-left -->
+  <text x="30" y="700" font-family="ui-monospace, monospace" font-size="7" fill="#30363d">Claude Code &#183; v2.1</text>
+
+  <!-- ======================== SEPARATOR ======================== -->
+  <line x1="545" y1="20" x2="545" y2="700" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+
+  <!-- ======================== RIGHT SIDE: SDD WORKFLOW ======================== -->
+
+  <text x="565" y="42" font-family="ui-monospace, monospace" font-size="10" font-weight="bold" fill="#484f58" letter-spacing="2">SDD WORKFLOW</text>
+  <text x="565" y="54" font-family="ui-monospace, monospace" font-size="7" fill="#3d5a80">5-phase spec-driven development with agent delegation</text>
+
+  <!-- Card 1: BRAINSTORM -->
+  <rect x="565" y="64" width="600" height="50" rx="6" fill="url(#cardBg)" stroke="#e8a87c" stroke-width="0.5"/>
+  <text x="577" y="78" font-family="ui-monospace, monospace" font-size="7" fill="#e8a87c" opacity="0.5">P0</text>
+  <text x="595" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#e8a87c">BRAINSTORM</text>
+  <text x="595" y="91" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Explore ideas through collaborative dialogue</text>
+  <text x="595" y="102" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Validation checkpoints &#183; YAGNI filter &#183; Sample collection</text>
+  <text x="1155" y="82" font-family="ui-monospace, monospace" font-size="11" fill="#e8a87c" opacity="0.7" text-anchor="end">/brainstorm</text>
+  <text x="1155" y="102" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Sonnet</text>
+
+  <!-- Connector -->
+  <line x1="865" y1="114" x2="865" y2="122" stroke="#21262d" stroke-width="0.5"/>
+
+  <!-- Card 2: DEFINE -->
+  <rect x="565" y="122" width="600" height="50" rx="6" fill="url(#cardBg)" stroke="#3fb950" stroke-width="0.5"/>
+  <text x="577" y="136" font-family="ui-monospace, monospace" font-size="7" fill="#3fb950" opacity="0.5">P1</text>
+  <text x="595" y="136" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#3fb950">DEFINE</text>
+  <text x="595" y="149" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Capture requirements with quantified Clarity Score</text>
+  <text x="595" y="160" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Min 12/15 score &#183; Source inventory &#183; Schema contracts</text>
+  <text x="1155" y="140" font-family="ui-monospace, monospace" font-size="11" fill="#3fb950" opacity="0.7" text-anchor="end">/define</text>
+  <text x="1155" y="160" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Sonnet</text>
+
+  <!-- Connector -->
+  <line x1="865" y1="172" x2="865" y2="180" stroke="#21262d" stroke-width="0.5"/>
+
+  <!-- Card 3: DESIGN -->
+  <rect x="565" y="180" width="600" height="50" rx="6" fill="url(#cardBg)" stroke="#ff6b35" stroke-width="0.5"/>
+  <text x="577" y="194" font-family="ui-monospace, monospace" font-size="7" fill="#ff6b35" opacity="0.5">P2</text>
+  <text x="595" y="194" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#ff6b35">DESIGN</text>
+  <text x="595" y="207" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Architecture with inline decision records (ADRs)</text>
+  <text x="595" y="218" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">File manifest &#183; Agent assignment &#183; Partition strategy</text>
+  <text x="1155" y="198" font-family="ui-monospace, monospace" font-size="11" fill="#ff6b35" opacity="0.7" text-anchor="end">/design</text>
+  <text x="1155" y="218" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Opus</text>
+
+  <!-- Connector -->
+  <line x1="865" y1="230" x2="865" y2="238" stroke="#21262d" stroke-width="0.5"/>
+
+  <!-- Card 4: BUILD -->
+  <rect x="565" y="238" width="600" height="50" rx="6" fill="url(#cardBg)" stroke="#a78bfa" stroke-width="0.5"/>
+  <text x="577" y="252" font-family="ui-monospace, monospace" font-size="7" fill="#a78bfa" opacity="0.5">P3</text>
+  <text x="595" y="252" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#a78bfa">BUILD</text>
+  <text x="595" y="265" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Domain-aware delegation to specialist agents</text>
+  <text x="595" y="276" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">dbt &#8594; dbt-specialist &#183; Spark &#8594; spark-engineer &#183; Lint+test</text>
+  <text x="1155" y="256" font-family="ui-monospace, monospace" font-size="11" fill="#a78bfa" opacity="0.7" text-anchor="end">/build</text>
+  <text x="1155" y="276" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Opus</text>
+
+  <!-- Connector -->
+  <line x1="865" y1="288" x2="865" y2="296" stroke="#21262d" stroke-width="0.5"/>
+
+  <!-- Card 5: SHIP -->
+  <rect x="565" y="296" width="600" height="50" rx="6" fill="url(#cardBg)" stroke="#00d4ff" stroke-width="0.5"/>
+  <text x="577" y="310" font-family="ui-monospace, monospace" font-size="7" fill="#00d4ff" opacity="0.5">P4</text>
+  <text x="595" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#00d4ff">SHIP</text>
+  <text x="595" y="323" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Archive with lessons learned and KB updates</text>
+  <text x="595" y="334" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Status transitions &#183; Version tracking &#183; Knowledge capture</text>
+  <text x="1155" y="314" font-family="ui-monospace, monospace" font-size="11" fill="#00d4ff" opacity="0.7" text-anchor="end">/ship</text>
+  <text x="1155" y="334" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Sonnet</text>
+
+  <!-- Dashed connector to ITERATE -->
+  <line x1="865" y1="346" x2="865" y2="354" stroke="#ff6b35" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.25"/>
+
+  <!-- ITERATE CARD -->
+  <rect x="565" y="354" width="600" height="46" rx="8" fill="url(#iterateGlow)"/>
+  <rect x="565" y="354" width="600" height="46" rx="8" fill="#0d1a2e" stroke="#ff6b35" stroke-width="1"/>
+  <text x="580" y="378" font-family="ui-monospace, monospace" font-size="14" fill="#ff6b35" opacity="0.7">&#8634;</text>
+  <text x="598" y="374" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="bold" fill="#ff6b35">ITERATE</text>
+  <text x="598" y="390" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Cross-phase cascade updater with downstream propagation</text>
+  <text x="1155" y="374" font-family="ui-monospace, monospace" font-size="11" fill="#ff6b35" opacity="0.7" text-anchor="end">/iterate</text>
+  <text x="1155" y="394" font-family="ui-monospace, monospace" font-size="6" fill="#484f58" opacity="0.5" text-anchor="end">Sonnet</text>
+
+  <!-- Dashed UP connectors from ITERATE -->
+  <line x1="650" y1="354" x2="650" y2="346" stroke="#ff6b35" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.2"/>
+  <line x1="950" y1="354" x2="950" y2="346" stroke="#ff6b35" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.2"/>
+
+  <!-- ======================== RIGHT SIDE: DATA ENGINEERING WORKFLOW ======================== -->
+
+  <text x="565" y="422" font-family="ui-monospace, monospace" font-size="10" font-weight="bold" fill="#484f58" letter-spacing="2">DATA ENGINEERING WORKFLOW</text>
+  <text x="565" y="434" font-family="ui-monospace, monospace" font-size="7" fill="#3d5a80">Specialized commands with domain-expert agent delegation</text>
+
+  <!-- Left col card 1: /schema -->
+  <rect x="565" y="440" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#e8a87c" stroke-width="0.5"/>
+  <text x="577" y="455" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#e8a87c">/schema</text>
+  <text x="577" y="467" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Dimensional modeling via schema-designer</text>
+  <text x="577" y="479" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Star schema &#183; Data Vault &#183; SCD patterns</text>
+
+  <!-- Left col card 2: /pipeline -->
+  <rect x="565" y="500" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#3fb950" stroke-width="0.5"/>
+  <text x="577" y="515" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#3fb950">/pipeline</text>
+  <text x="577" y="527" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">DAG scaffolding via pipeline-architect</text>
+  <text x="577" y="539" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Airflow &#183; Dagster &#183; Prefect orchestration</text>
+
+  <!-- Left col card 3: /data-quality -->
+  <rect x="565" y="560" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#ff6b35" stroke-width="0.5"/>
+  <text x="577" y="575" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#ff6b35">/data-quality</text>
+  <text x="577" y="587" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Quality rules via data-quality-analyst</text>
+  <text x="577" y="599" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Great Expectations &#183; Soda &#183; dbt tests</text>
+
+  <!-- Left col card 4: /data-contract -->
+  <rect x="565" y="620" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#a78bfa" stroke-width="0.5"/>
+  <text x="577" y="635" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#a78bfa">/data-contract</text>
+  <text x="577" y="647" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">ODCS authoring with SLA enforcement</text>
+  <text x="577" y="659" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Freshness &#183; Schema contracts &#183; Lineage</text>
+
+  <!-- Right col card 1: /lakehouse -->
+  <rect x="868" y="440" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#00d4ff" stroke-width="0.5"/>
+  <text x="880" y="455" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#00d4ff">/lakehouse</text>
+  <text x="880" y="467" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Table format via lakehouse-architect</text>
+  <text x="880" y="479" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Iceberg &#183; Delta Lake &#183; Hive metastore</text>
+
+  <!-- Right col card 2: /sql-review -->
+  <rect x="868" y="500" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#e8b84b" stroke-width="0.5"/>
+  <text x="880" y="515" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#e8b84b">/sql-review</text>
+  <text x="880" y="527" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">SQL optimization via sql-optimizer</text>
+  <text x="880" y="539" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Query plans &#183; Joins &#183; Window functions</text>
+
+  <!-- Right col card 3: /migrate -->
+  <rect x="868" y="560" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#e8a87c" stroke-width="0.5"/>
+  <text x="880" y="575" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#e8a87c">/migrate</text>
+  <text x="880" y="587" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">Legacy ETL to modern data stack</text>
+  <text x="880" y="599" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">SSIS &#183; Informatica &#183; Stored procedures</text>
+
+  <!-- Right col card 4: /ai-pipeline -->
+  <rect x="868" y="620" width="295" height="55" rx="6" fill="url(#cardBg)" stroke="#3fb950" stroke-width="0.5"/>
+  <text x="880" y="635" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="bold" fill="#3fb950">/ai-pipeline</text>
+  <text x="880" y="647" font-family="ui-monospace, monospace" font-size="7" fill="#5a7a9e">RAG and embedding scaffolding</text>
+  <text x="880" y="659" font-family="ui-monospace, monospace" font-size="6.5" fill="#3d5a80">Vector stores &#183; Chunking &#183; Retrieval</text>
+
+  <!-- VERSION -->
+  <text x="1155" y="700" font-family="ui-monospace, monospace" font-size="8" fill="#30363d" text-anchor="end">v2.1</text>
+
 </svg>

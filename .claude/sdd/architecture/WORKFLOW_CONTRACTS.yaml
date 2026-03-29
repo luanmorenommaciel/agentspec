@@ -828,8 +828,8 @@ version_history:
     date: "2026-03-26"
     changes:
       - "Multi-cloud coverage: 58 agents across 8 categories"
-      - "23 KB domains covering full data engineering stack"
-      - "21 commands (7 SDD + 8 DE + 6 core)"
+      - "22 KB domains covering full data engineering stack"
+      - "29 commands (7 SDD + 8 DE + 8 visual + 6 core)"
       - "Added data engineering quality gates and anti-patterns"
 
   - version: "2.0.0"

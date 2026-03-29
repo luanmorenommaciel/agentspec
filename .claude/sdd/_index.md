@@ -15,7 +15,7 @@ AgentSpec provides Agent Matching (Design phase) and Agent Delegation (Build pha
 | 3 development modes | **1 unified stream** |
 | Generic agents only | **58 specialized agents** across 8 categories |
 | No domain expertise | **22 KB domains** for data engineering |
-| 12+ commands | **21 commands** (7 SDD + 8 DE + 6 core) |
+| 12+ commands | **29 commands** (7 SDD + 8 DE + 8 visual + 6 core) |
 | 11+ artifact types | **5 artifact types** |
 | Separate ADR files | **Inline decisions** |
 | Pre-generated tasks | **On-the-fly execution** |
@@ -299,6 +299,6 @@ BRAINSTORM_*.md
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.1.0 | 2026-03-26 | Multi-cloud coverage: 58 agents, 8 categories, 23 KB domains |
+| 2.1.0 | 2026-03-26 | Multi-cloud coverage: 58 agents, 8 categories, 22 KB domains |
 | 2.0.0 | 2026-03-26 | Data engineering pivot: 11 KB domains, 11 DE agents, 8 DE commands |
 | 1.0.0 | 2026-02-17 | Public release as AgentSpec v1.0.0 |

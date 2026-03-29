@@ -13,7 +13,7 @@
 | **Project** | AgentSpec - Spec-Driven Development Framework |
 | **Tagline** | Spec-Driven Development for Data Engineering |
 | **Business Problem** | Gap between unstructured "vibe coding" and stale traditional specifications |
-| **Solution** | 5-phase workflow with 58 specialized AI agents, 22 KB domains, and 21 commands |
+| **Solution** | 5-phase workflow with 58 specialized AI agents, 22 KB domains, and 29 commands |
 | **Target Audience** | Data engineering teams using Claude Code |
 | **License** | MIT |
 
@@ -270,7 +270,7 @@ AgentSpec leverages an ecosystem of **58 specialized agents** across 8 categorie
 | Category | Count | Key Agents | Specialization |
 |----------|-------|------------|----------------|
 | **Workflow** | 6 | brainstorm, define, design, build, ship, iterate | SDD phase execution |
-| **Architect** | 8 | schema-designer, pipeline-architect, medallion-architect, lakehouse-architect, genai-architect, the-planner, data-platform-engineer, meeting-analyst | System-level design |
+| **Architect** | 8 | schema-designer, pipeline-architect, medallion-architect, lakehouse-architect, genai-architect, the-planner, data-platform-engineer, kb-architect | System-level design |
 | **Cloud** | 10 | aws-data-architect, aws-deployer, aws-lambda-architect, gcp-data-architect, ai-data-engineer-cloud, ai-data-engineer-gcp, ai-prompt-specialist-gcp, lambda-builder, ci-cd-specialist, supabase-specialist | Cloud infrastructure |
 | **Platform** | 6 | fabric-architect, fabric-pipeline-developer, fabric-security-specialist, fabric-cicd-specialist, fabric-logging-specialist, fabric-ai-specialist | Microsoft Fabric |
 | **Python** | 6 | python-developer, code-reviewer, code-cleaner, code-documenter, llm-specialist, ai-prompt-specialist | Code quality and prompts |
@@ -767,7 +767,7 @@ SCHEMA GOVERNANCE
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.1.0 | 2026-03-26 | Multi-cloud coverage: 58 agents across 8 categories, 23 KB domains |
+| 2.1.0 | 2026-03-26 | Multi-cloud coverage: 58 agents across 8 categories, 22 KB domains |
 | 2.0.0 | 2026-03-26 | Data engineering pivot: 11 KB domains, 11 DE agents, 8 DE commands |
 | 1.0.0 | 2026-02-17 | Public release as AgentSpec v1.0.0 with 16 agents |
 

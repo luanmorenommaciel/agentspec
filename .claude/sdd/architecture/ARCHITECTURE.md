@@ -112,10 +112,11 @@
 
 ```text
 .claude/
-+-- commands/                    # 21 slash commands
++-- commands/                    # 29 slash commands
 |   +-- workflow/                # 7 SDD commands
 |   +-- data-engineering/        # 8 DE commands
 |   +-- core/                    # 4 utility commands
+|   +-- visual-explainer/         # 8 visual documentation commands
 |   +-- knowledge/               # 1 KB command
 |   +-- review/                  # 1 review command
 |

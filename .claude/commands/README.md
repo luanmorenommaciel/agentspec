@@ -1,6 +1,6 @@
 # AgentSpec Commands
 
-**21 slash commands** for the SDD workflow, data engineering, and developer productivity.
+**29 slash commands** for the SDD workflow, data engineering, visualization, and developer productivity.
 
 ## Workflow Commands (7)
 
@@ -50,6 +50,23 @@ See [data-engineering/README.md](data-engineering/README.md) for detailed usage.
 |---------|-------------|
 | `/review` | Code review workflow |
 
+## Visual Explainer Commands (8)
+
+Generate self-contained HTML pages for visual documentation. Powered by the `visual-explainer` skill.
+
+| Command | Description |
+|---------|-------------|
+| `/generate-web-diagram` | Generate standalone HTML diagram |
+| `/generate-slides` | Magazine-quality slide deck as HTML |
+| `/generate-visual-plan` | Visual implementation plan with state machines |
+| `/diff-review` | Before/after architecture comparison |
+| `/plan-review` | Current codebase vs. proposed plan |
+| `/project-recap` | Project state, decisions, and cognitive debt |
+| `/fact-check` | Verify document accuracy against codebase |
+| `/share` | Share HTML page via Vercel |
+
+See [visual-explainer/](visual-explainer/) for detailed usage.
+
 ## Usage
 
 Commands are invoked in Claude Code:
@@ -62,4 +79,9 @@ claude> /define USER_AUTH
 claude> /pipeline "Daily orders ETL from Postgres to Snowflake"
 claude> /schema "Star schema for e-commerce analytics"
 claude> /sql-review models/staging/
+
+# Visual explainer
+claude> /generate-web-diagram "Data pipeline architecture"
+claude> /generate-slides "AgentSpec overview for stakeholders"
+claude> /diff-review main
 ```
