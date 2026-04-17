@@ -829,7 +829,7 @@ version_history:
     changes:
       - "Plugin distribution format for Claude Code marketplace"
       - "8 agent categories (58 agents) with full cloud coverage"
-      - "29 commands (7 SDD + 8 DE + 8 visual + 6 core)"
+      - "30 commands (7 SDD + 8 DE + 8 visual + 7 core)"
       - "23 KB domains covering full data engineering stack"
 
   - version: "2.1.0"
@@ -837,7 +837,7 @@ version_history:
     changes:
       - "Multi-cloud coverage: 58 agents across 8 categories"
       - "23 KB domains covering full data engineering stack"
-      - "29 commands (7 SDD + 8 DE + 8 visual + 6 core)"
+      - "30 commands (7 SDD + 8 DE + 8 visual + 7 core)"
       - "Added data engineering quality gates and anti-patterns"
 
   - version: "2.0.0"

@@ -13,7 +13,7 @@
 | **Project** | AgentSpec - Spec-Driven Development Framework |
 | **Tagline** | Spec-Driven Development for Data Engineering |
 | **Business Problem** | Gap between unstructured "vibe coding" and stale traditional specifications |
-| **Solution** | 5-phase workflow with 58 specialized AI agents, 23 KB domains, and 29 commands |
+| **Solution** | 5-phase workflow with 58 specialized AI agents, 23 KB domains, and 30 commands |
 | **Target Audience** | Data engineering teams using Claude Code |
 | **License** | MIT |
 

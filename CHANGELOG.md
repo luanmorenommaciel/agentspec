@@ -33,7 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Command count: 29 → 30 (added `/status`)
-- Skill count: 4 → 5 (added `agent-router`)
+- Skill count: 3 in source / 5 in plugin (added `agent-router` to source; plugin adds `sdd-workflow`, `data-engineering-guide`)
 - KB domain count: 22 → 23 (added `supabase/`) — updated across all docs, SDD files, agents README, CLAUDE.md, README.md, and WORKFLOW_CONTRACTS.yaml
 - `WORKFLOW_CONTRACTS.yaml` version bumped from 2.1.0 → 3.0.0
 - `_index.yaml` version bumped to 2.2, supabase domain registered

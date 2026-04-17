@@ -82,7 +82,7 @@ agentspec/
 │   ├── .claude-plugin/      # Plugin manifest + marketplace config
 │   ├── agents/              # Copied + path-rewritten agents
 │   ├── commands/            # Copied + path-rewritten commands
-│   ├── skills/              # 4 skills (2 from .claude/ + 2 plugin-only)
+│   ├── skills/              # 5 skills (3 from .claude/ + 2 plugin-only)
 │   ├── kb/                  # Copied KB domains
 │   ├── sdd/                 # Templates + architecture (no features/reports/archive)
 │   ├── hooks/               # SessionStart workspace init

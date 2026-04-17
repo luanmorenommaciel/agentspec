@@ -39,7 +39,7 @@ claude plugin marketplace add luanmorenommaciel/agentspec
 claude plugin install agentspec
 ```
 
-Done. Every Claude Code session now has 58 agents, 29 commands, and 23 KB domains. Updates are one command:
+Done. Every Claude Code session now has 58 agents, 30 commands, and 23 KB domains. Updates are one command:
 
 ```bash
 claude plugin update agentspec
@@ -219,7 +219,7 @@ agentspec/
 ├── plugin/                  # Distributable Claude Code plugin
 │   ├── .claude-plugin/      # Manifest + marketplace config
 │   ├── agents/              # Path-rewritten agents
-│   ├── skills/              # 4 skills (2 original + 2 plugin-only)
+│   ├── skills/              # 5 skills (3 from .claude/ + 2 plugin-only)
 │   ├── hooks/               # SessionStart workspace init
 │   └── ...                  # commands, kb, sdd, scripts
 │
@@ -237,7 +237,7 @@ agentspec/
 | [Getting Started](docs/getting-started/) | Install and build your first data pipeline |
 | [Core Concepts](docs/concepts/) | SDD pillars through a data engineering lens |
 | [Tutorials](docs/tutorials/) | dbt, star schema, data quality, Spark, streaming, RAG |
-| [Reference](docs/reference/) | Full catalog: 58 agents, 29 commands, 23 KB domains |
+| [Reference](docs/reference/) | Full catalog: 58 agents, 30 commands, 23 KB domains |
 
 <br/>
 

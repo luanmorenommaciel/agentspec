@@ -2,7 +2,7 @@
 
 **Spec-Driven Development for Data Engineering on Claude Code**
 
-58 agents | 23 KB domains | 29 commands | 4 skills | 5-phase SDD workflow
+58 agents | 23 KB domains | 30 commands | 5 skills | 5-phase SDD workflow
 
 ## Install
 
