@@ -1,0 +1,28 @@
+{
+  "name": "agentspec",
+  "description": "Spec-Driven Development framework for Data Engineering",
+  "owner": {
+    "name": "Luan Moreno",
+    "email": "luan.moreno@owshq.com"
+  },
+  "plugins": [
+    {
+      "name": "agentspec",
+      "version": "3.1.0",
+      "description": "Spec-Driven Development framework for Data Engineering — 58 agents, 23 KB domains, 5-phase SDD workflow, 29 commands",
+      "source": "./plugin",
+      "keywords": [
+        "data-engineering",
+        "sdd",
+        "spec-driven-development",
+        "dbt",
+        "spark",
+        "airflow",
+        "pipeline",
+        "schema-design",
+        "data-quality",
+        "lakehouse"
+      ]
+    }
+  ]
+}

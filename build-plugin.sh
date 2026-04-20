@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# =============================================================================
-# AgentSpec Plugin Builder
-# =============================================================================
-# Packages .claude/ (source of truth) into plugin/ (distributable plugin).
-# Rewrites internal paths from .claude/ to ${CLAUDE_PLUGIN_ROOT}/ while
-# preserving workspace paths (.claude/sdd/features, reports, archive, storage).
-#
-# Usage:
-#   ./build-plugin.sh           # Build the plugin
-#   ./build-plugin.sh --help    # Show this help
-# =============================================================================
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DIR="${SCRIPT_DIR}/.claude"
 PLUGIN_DIR="${SCRIPT_DIR}/plugin"
 EXTRAS_DIR="${SCRIPT_DIR}/plugin-extras"
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -30,13 +17,10 @@ ok()    { printf "${GREEN}[OK]${NC} %s\n" "$1"; }
 warn()  { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; }
 
-# Cleanup trap for interrupted builds
 cleanup() {
     find "${PLUGIN_DIR:-.}" -name "*.tmp" -type f -delete 2>/dev/null || true
 }
 trap cleanup EXIT
-
-# ─── Help ────────────────────────────────────────────────────────────────────
 
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     cat <<'EOF'
@@ -54,8 +38,6 @@ EOF
     exit 0
 fi
 
-# ─── Preflight ───────────────────────────────────────────────────────────────
-
 if [[ ! -d "${SOURCE_DIR}" ]]; then
     error ".claude/ directory not found at ${SOURCE_DIR}"
     exit 1
@@ -68,17 +50,12 @@ fi
 
 info "Building AgentSpec plugin from .claude/ ..."
 
-# ─── Step 1: Clean previous build (preserve .claude-plugin/) ─────────────────
-
 info "Cleaning previous build..."
 find "${PLUGIN_DIR:?}" -mindepth 1 -maxdepth 1 \
     ! -name '.claude-plugin' \
     ! -name 'README.md' \
     -exec rm -rf {} +
-
 ok "Previous build cleaned"
-
-# ─── Step 2: Copy components ─────────────────────────────────────────────────
 
 info "Copying agents..."
 cp -r "${SOURCE_DIR}/agents" "${PLUGIN_DIR}/agents"
@@ -102,13 +79,10 @@ mkdir -p "${PLUGIN_DIR}/sdd"
 cp -r "${SOURCE_DIR}/sdd/templates" "${PLUGIN_DIR}/sdd/templates"
 cp -r "${SOURCE_DIR}/sdd/architecture" "${PLUGIN_DIR}/sdd/architecture"
 
-# Copy SDD index and README if they exist
 [[ -f "${SOURCE_DIR}/sdd/_index.md" ]] && cp "${SOURCE_DIR}/sdd/_index.md" "${PLUGIN_DIR}/sdd/"
 [[ -f "${SOURCE_DIR}/sdd/README.md" ]] && cp "${SOURCE_DIR}/sdd/README.md" "${PLUGIN_DIR}/sdd/"
 
 ok "All components copied"
-
-# ─── Step 2b: Copy plugin-extras (plugin-only content) ───────────────────────
 
 if [[ -d "${EXTRAS_DIR}" ]]; then
     info "Copying plugin-extras (new skills, hooks, scripts)..."
@@ -120,36 +94,13 @@ if [[ -d "${EXTRAS_DIR}" ]]; then
     ok "Plugin-extras copied"
 fi
 
-# ─── Step 3: Remove workspace-specific directories ───────────────────────────
-
 info "Removing workspace-specific directories from plugin..."
 rm -rf "${PLUGIN_DIR:?}/sdd/features"
 rm -rf "${PLUGIN_DIR:?}/sdd/reports"
 rm -rf "${PLUGIN_DIR:?}/sdd/archive"
-
 ok "Workspace directories excluded"
 
-# ─── Step 4: Path rewriting ──────────────────────────────────────────────────
-#
-# REWRITE (plugin-internal references):
-#   .claude/kb/           → ${CLAUDE_PLUGIN_ROOT}/kb/
-#   .claude/agents/       → ${CLAUDE_PLUGIN_ROOT}/agents/
-#   .claude/commands/     → ${CLAUDE_PLUGIN_ROOT}/commands/
-#   .claude/skills/       → ${CLAUDE_PLUGIN_ROOT}/skills/
-#   .claude/sdd/templates/     → ${CLAUDE_PLUGIN_ROOT}/sdd/templates/
-#   .claude/sdd/architecture/  → ${CLAUDE_PLUGIN_ROOT}/sdd/architecture/
-#   .claude/sdd/_index.md      → ${CLAUDE_PLUGIN_ROOT}/sdd/_index.md
-#   .claude/sdd/README.md      → ${CLAUDE_PLUGIN_ROOT}/sdd/README.md
-#
-# PRESERVE (workspace output paths — must NOT be rewritten):
-#   .claude/sdd/features/  → stays as-is (user's project)
-#   .claude/sdd/reports/   → stays as-is (user's project)
-#   .claude/sdd/archive/   → stays as-is (user's project)
-#   .claude/storage/       → stays as-is (user's project)
-# ─────────────────────────────────────────────────────────────────────────────
-
 info "Rewriting paths in .md, .yaml, and .json files..."
-
 while IFS= read -r -d '' file; do
     tmp="${file}.tmp"
     sed \
@@ -164,14 +115,7 @@ while IFS= read -r -d '' file; do
         "$file" > "$tmp" && mv "$tmp" "$file" || { rm -f "$tmp"; exit 1; }
 done < <(find "${PLUGIN_DIR}" \( -name "*.md" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) \
     -type f ! -path "${PLUGIN_DIR}/.claude-plugin/*" -print0)
-
 ok "Paths rewritten"
-
-# ─── Step 5: Rewrite hardcoded absolute paths ────────────────────────────────
-# After Step 4, some paths may look like:
-#   /Users/username/GitHub/agentspec/${CLAUDE_PLUGIN_ROOT}/skills/...
-# We need to strip the absolute prefix, leaving just ${CLAUDE_PLUGIN_ROOT}/...
-# Also catch any remaining /Users/.../agentspec/.claude/ patterns.
 
 info "Rewriting absolute paths..."
 while IFS= read -r -d '' file; do
@@ -183,18 +127,30 @@ while IFS= read -r -d '' file; do
         "$file" > "$tmp" && mv "$tmp" "$file" || { rm -f "$tmp"; exit 1; }
 done < <(find "${PLUGIN_DIR}" -type f \( -name "*.md" -o -name "*.py" -o -name "*.sh" \) \
     ! -path "${PLUGIN_DIR}/.claude-plugin/*" -print0)
-
 ok "Absolute paths rewritten"
-
-# ─── Step 5b: Restore executable permissions (lost during sed tmp→mv) ────────
 
 chmod +x "${PLUGIN_DIR}/scripts/"*.sh 2>/dev/null || true
 
-# ─── Step 6: Verify no stale .claude/ paths remain ──────────────────────────
+# ─── Step 5c: Sync root .claude-plugin/marketplace.json ─────────────────────
+# The 'claude plugin marketplace add' command resolves the manifest from the
+# repository root. Keep the root copy in sync with plugin/.claude-plugin/ so
+# that marketplace installs always work correctly.
+info "Syncing root .claude-plugin/marketplace.json..."
+ROOT_MANIFEST="${SCRIPT_DIR}/.claude-plugin/marketplace.json"
+PLUGIN_MANIFEST="${PLUGIN_DIR}/.claude-plugin/marketplace.json"
+mkdir -p "${SCRIPT_DIR}/.claude-plugin"
+python3 -c "
+import json, pathlib
+src = pathlib.Path('${PLUGIN_MANIFEST}')
+dst = pathlib.Path('${ROOT_MANIFEST}')
+manifest = json.loads(src.read_text())
+for p in manifest.get('plugins', []):
+    p['source'] = './plugin'
+dst.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n')
+"
+ok "Root .claude-plugin/marketplace.json synced"
 
 info "Verifying path migration..."
-
-# Collect stale references (grep returns 1 on no match — use || true)
 _stale_filter() {
     grep -r '\.claude/' "${PLUGIN_DIR}" \
         --include="*.md" --include="*.yaml" --include="*.yml" \
@@ -220,12 +176,10 @@ if [[ "${STALE_COUNT}" -gt 0 ]]; then
     warn "${STALE_COUNT} potentially stale .claude/ references found:"
     printf '%s\n' "${STALE_OUTPUT}" | head -20
     echo ""
-    warn "Review the above references — some may be intentional (workspace paths)."
+    warn "Review the above — some may be intentional (workspace paths)."
 else
     ok "No stale .claude/ paths found"
 fi
-
-# ─── Step 7: Summary ─────────────────────────────────────────────────────────
 
 AGENT_COUNT=$(find "${PLUGIN_DIR}/agents" -name "*.md" -not -name "README.md" -not -name "_template.md" | wc -l | tr -d ' ')
 COMMAND_COUNT=$(find "${PLUGIN_DIR}/commands" -name "*.md" -not -name "README.md" | wc -l | tr -d ' ')
