@@ -46,10 +46,20 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-4o-mini"
 DEFAULT_BUDGET = 10
 
+# Per-phase defaults. Phase-aware system prompts + model selection make the
+# judge useful across SDD phases without forcing users to remember which model
+# fits which phase. Override via --model on any call.
+PHASE_MODEL_DEFAULTS: dict[str, str] = {
+    "generic": "openai/gpt-4o-mini",   # standalone /judge invocations
+    "define":  "openai/gpt-4o",        # reasoning-heavy, spec quality
+    "design":  "openai/gpt-4o",        # reasoning-heavy, architectural soundness
+    "build":   "openai/gpt-4o",        # same default; users may pick openai/codex-mini for pure code
+}
 
-# ── Verdict schema ───────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are a senior reviewer providing a SECOND OPINION on output produced by another AI (Claude). Your job is to catch mistakes Claude's self-review would miss: hallucinated APIs, wrong invariants, silently broken invariants, insecure patterns, logic errors.
+# ── Verdict schemas ──────────────────────────────────────────────────────────
+
+GENERIC_SYSTEM_PROMPT = """You are a senior reviewer providing a SECOND OPINION on output produced by another AI (Claude). Your job is to catch mistakes Claude's self-review would miss: hallucinated APIs, wrong invariants, silently broken invariants, insecure patterns, logic errors.
 
 You MUST respond with a JSON object matching this schema EXACTLY:
 
@@ -69,6 +79,121 @@ Rules:
 - Be specific. Cite line numbers, function names, or exact quoted strings as evidence.
 - If the content is fine, return an empty concerns array and empty suggested_fixes.
 - Do NOT wrap the JSON in markdown fences. Return raw JSON only."""
+
+
+DEFINE_SYSTEM_PROMPT = """You are a senior product engineer judging a REQUIREMENTS DOCUMENT (Phase 1 / DEFINE) produced by another AI (Claude) inside the AgentSpec SDD workflow. Your job is to catch what Claude's self-review would miss on spec quality.
+
+Focus your review on:
+- Missing or vague acceptance criteria (anything untestable or unmeasurable)
+- Ambiguous scope — unclear in/out boundaries
+- Untested assumptions stated as fact
+- Contradictions between sections
+- Missing non-functional requirements (latency, cost, security, compliance) where the domain demands them
+- User/persona gaps — is there a concrete primary user?
+- Success criteria that can't actually be measured
+
+Do NOT review:
+- Technical implementation details (that's DESIGN's job)
+- Code quality
+- Architecture choices
+
+You MUST respond with a JSON object matching this schema EXACTLY:
+
+{
+  "verdict": "PASS" | "FAIL",
+  "confidence": 0.0-1.0,
+  "summary": "One sentence — is this spec ready for /design, or does it have gaps?",
+  "concerns": [
+    {"severity": "high" | "medium" | "low", "issue": "...", "evidence": "section name or quoted text"}
+  ],
+  "suggested_fixes": ["specific, actionable fixes"]
+}
+
+Rules:
+- PASS = spec is clear enough to proceed to /design with confidence.
+- FAIL = any high-severity gap OR confidence < 0.70.
+- Cite section names or quote actual text as evidence.
+- Return raw JSON only, no markdown fences."""
+
+
+DESIGN_SYSTEM_PROMPT = """You are a senior software architect judging a TECHNICAL DESIGN DOCUMENT (Phase 2 / DESIGN) produced by another AI (Claude) inside the AgentSpec SDD workflow. Your job is to catch architectural mistakes Claude's self-review would miss.
+
+Focus your review on:
+- Hallucinated APIs, libraries, or features that don't exist
+- Wrong invariants or silently broken invariants
+- Missing edge cases (nulls, concurrency, failure modes, idempotency)
+- Unsafe defaults (permissive auth, missing retries, no timeouts, unbounded resources)
+- Unjustified decisions — any key choice without a "why" that stands up to scrutiny
+- Missing failure/rollback story for destructive operations
+- Data model concerns — FK order, migration safety, backward compatibility
+- Security concerns — secrets handling, IAM scope, RLS coverage
+- Scalability blind spots relative to the stated requirements
+
+Do NOT review:
+- Requirement clarity (that's DEFINE's job; assume it's locked)
+- Code style or formatting (that's BUILD/review's job)
+
+You MUST respond with a JSON object matching this schema EXACTLY:
+
+{
+  "verdict": "PASS" | "FAIL",
+  "confidence": 0.0-1.0,
+  "summary": "One sentence — is this design safe to /build, or are there architectural risks?",
+  "concerns": [
+    {"severity": "high" | "medium" | "low", "issue": "...", "evidence": "section name or quoted text"}
+  ],
+  "suggested_fixes": ["specific, actionable fixes — reference the section to change"]
+}
+
+Rules:
+- PASS = design is sound enough to proceed to /build with confidence.
+- FAIL = any high-severity concern OR confidence < 0.70.
+- Cite section names or quote actual decisions as evidence.
+- Return raw JSON only, no markdown fences."""
+
+
+BUILD_SYSTEM_PROMPT = """You are a senior engineer judging CODE or a BUILD REPORT (Phase 3 / BUILD) produced by another AI (Claude) inside the AgentSpec SDD workflow. Your job is to catch concrete bugs and correctness issues Claude's self-review would miss.
+
+Focus your review on:
+- Logic errors — off-by-one, wrong conditionals, missing cases
+- Concurrency / race conditions
+- Resource leaks — unclosed files, connections, contexts
+- Error handling — bare except, swallowed errors, missing retries, no timeouts
+- Security — SQL injection, secrets in code, unsafe eval, shell injection
+- SQL-specific — missing partition filters, SELECT * in production, unsafe migrations (NOT NULL without default on large tables)
+- IAM/RLS — overly permissive policies, missing row-level isolation
+- Data loss risks — destructive ops without backup/rollback
+- Incorrect use of APIs (hallucinated method names, wrong signatures, deprecated usage)
+
+Do NOT review:
+- Stylistic preferences that don't affect correctness
+- Naming unless the name is actively misleading
+
+You MUST respond with a JSON object matching this schema EXACTLY:
+
+{
+  "verdict": "PASS" | "FAIL",
+  "confidence": 0.0-1.0,
+  "summary": "One sentence — is this code safe to merge, or are there concrete bugs?",
+  "concerns": [
+    {"severity": "high" | "medium" | "low", "issue": "...", "evidence": "file:line or quoted code"}
+  ],
+  "suggested_fixes": ["specific, actionable fixes with file:line references"]
+}
+
+Rules:
+- PASS = code is free of high-severity correctness issues.
+- FAIL = any high-severity bug OR confidence < 0.70.
+- Cite file paths, line numbers, or quote actual code as evidence.
+- Return raw JSON only, no markdown fences."""
+
+
+PHASE_SYSTEM_PROMPTS: dict[str, str] = {
+    "generic": GENERIC_SYSTEM_PROMPT,
+    "define":  DEFINE_SYSTEM_PROMPT,
+    "design":  DESIGN_SYSTEM_PROMPT,
+    "build":   BUILD_SYSTEM_PROMPT,
+}
 
 
 # ── Budget ledger ────────────────────────────────────────────────────────────
@@ -146,14 +271,25 @@ def show_ledger() -> int:
 
 # ── OpenRouter call ──────────────────────────────────────────────────────────
 
-def call_openrouter(api_key: str, model: str, content: str, context: str) -> dict:
-    """POST to OpenRouter, return parsed verdict dict."""
+def call_openrouter(
+    api_key: str,
+    model: str,
+    content: str,
+    context: str,
+    phase: str = "generic",
+) -> dict:
+    """POST to OpenRouter, return parsed verdict dict.
+
+    The ``phase`` argument selects the system prompt so the judge is tuned to
+    the kind of artifact it is reviewing (define / design / build / generic).
+    """
+    system_prompt = PHASE_SYSTEM_PROMPTS.get(phase, GENERIC_SYSTEM_PROMPT)
     user_prompt = f"Context: {context}\n\n--- CONTENT TO JUDGE ---\n{content}\n--- END CONTENT ---"
 
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.1,
@@ -262,16 +398,39 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Judge Layer V0 — OpenRouter second opinion")
     ap.add_argument("target", nargs="?", help="Path to file to judge (or use --stdin)")
     ap.add_argument("--stdin", action="store_true", help="Read content from stdin instead of a file")
-    ap.add_argument("--model", default=os.environ.get("JUDGE_MODEL", DEFAULT_MODEL),
-                    help=f"OpenRouter model slug (default: {DEFAULT_MODEL})")
+    ap.add_argument(
+        "--phase",
+        choices=sorted(PHASE_SYSTEM_PROMPTS.keys()),
+        default="generic",
+        help="SDD phase (tunes system prompt + default model). Use 'generic' for standalone /judge calls.",
+    )
+    ap.add_argument(
+        "--model",
+        default=None,
+        help="OpenRouter model slug. If omitted, resolved from --phase (see PHASE_MODEL_DEFAULTS) "
+             "or JUDGE_MODEL env var.",
+    )
     ap.add_argument("--context", default="General code/content review — flag anything Claude may have gotten wrong.",
                     help="Short description of what Claude was trying to accomplish")
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="Strict mode — exit 1 on FAIL even in advisory flow; used by --judge=strict on phase commands.",
+    )
     ap.add_argument("--ledger", action="store_true", help="Show today's budget usage and exit")
     ap.add_argument("--json", action="store_true", help="Emit raw JSON verdict instead of markdown")
     args = ap.parse_args()
 
     if args.ledger:
         return show_ledger()
+
+    # Resolve model: explicit --model wins, then JUDGE_MODEL env, then phase default.
+    if args.model:
+        resolved_model = args.model
+    elif os.environ.get("JUDGE_MODEL"):
+        resolved_model = os.environ["JUDGE_MODEL"]
+    else:
+        resolved_model = PHASE_MODEL_DEFAULTS.get(args.phase, DEFAULT_MODEL)
 
     # Config checks
     api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -316,16 +475,23 @@ def main() -> int:
         return 3
 
     # Judge call
-    verdict = call_openrouter(api_key, args.model, content, args.context)
+    verdict = call_openrouter(api_key, resolved_model, content, args.context, phase=args.phase)
     v = verdict.get("verdict", "FAIL").upper()
 
-    append_ledger(model=args.model, target=target_label, verdict=v)
+    append_ledger(model=resolved_model, target=target_label, verdict=v)
 
     if args.json:
         print(json.dumps(verdict, indent=2))
     else:
-        print(render_markdown(verdict, target_label, args.model))
+        print(render_markdown(verdict, target_label, resolved_model))
 
+    # Exit semantics:
+    #   PASS  → 0
+    #   FAIL  → 1 (same in advisory and strict; advisory callers ignore the code)
+    # --strict exists as a marker for phase commands so they can distinguish
+    # "advisory run — surface but continue" from "gated run — block on FAIL".
+    # The script itself always returns 1 on FAIL; the caller decides what to do.
+    _ = args.strict  # preserved in argparse namespace for introspection
     return 0 if v == "PASS" else 1
 
 
