@@ -2,7 +2,7 @@
 
 Complete catalog of commands, agents, KB domains, templates, and configuration.
 
-## Slash Commands (29 total)
+## Slash Commands (31 total)
 
 ### Workflow Commands (7)
 

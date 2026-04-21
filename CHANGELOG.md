@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **`--judge` flag on `/define`, `/design`, `/build`** — progressive-enhancement integration of Judge V0 into the SDD workflow:
+  - `/define FEATURE --judge` → cross-model spec-quality review (default: openai/gpt-4o)
+  - `/design FEATURE --judge` → architectural-soundness review (default: openai/gpt-4o)
+  - `/build FEATURE --judge` → BUILD_REPORT correctness review (default: openai/gpt-4o; consider openai/codex-mini for pure-code builds)
+  - Three modes per command: advisory (`--judge`), gated (`--judge=strict`), model-override (`--judge=MODEL` or `--judge=strict:MODEL`)
+  - Phase-aware system prompts in `scripts/judge.py` tuned to each artifact type (DEFINE for requirements, DESIGN for architecture, BUILD for code)
+  - Defaults preserved — running the commands without `--judge` behaves identically to v3.1.0
+  - Budget exhaustion, config errors, and network errors never block the phase — judge failures degrade to "as if `--judge` was not passed"
+- **Stale-count syncs** (from Audit 3): CLAUDE.md, commands/README.md, docs/reference/README.md, and root README.md now consistently reflect 58 agents / 31 commands / 3 skills / 23 KB domains / v3.1.0 current status
+- `/status` added to Core Commands table in `.claude/commands/README.md` (was missing since v3.1.0)
+- `/judge` added to Review Commands table in `.claude/commands/README.md`
 - **Agent Router v2 — Phase 1 (Build-Time Generation)** — the `agent-router` skill is now auto-generated from agent frontmatter, eliminating hand-maintained routing tables:
   - `scripts/generate-agent-router.py` — parses frontmatter across all 58 agents and derives category/tier/model/kb_domains/escalations without any new frontmatter fields required
   - Generates both `.claude/skills/agent-router/SKILL.md` (human-readable) and `.claude/skills/agent-router/routing.json` (machine-readable, foundation for future semantic layer)
@@ -32,6 +43,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `build-plugin.sh` gained **Step 0** — runs the agent-router generator before copying artifacts into `plugin/`, ensuring the plugin ships the current routing tables
 - `CLAUDE.md` repository tree updated to reflect the new `scripts/` directory
 - `tasks/backlog.md` marks Agent Router v2 Phase 1 as 🟢 shipped and tracks Phases 2-4 as future work
+
+### Fixed
+
+- Broken link in `.claude/commands/README.md`: `[data-engineering/README.md](data-engineering/README.md)` → `[data-engineering/](data-engineering/)` (referenced file didn't exist; directory does)
 
 ### Philosophy
 

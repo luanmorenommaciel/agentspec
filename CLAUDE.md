@@ -6,9 +6,9 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 30 commands, 23 KB domains, and 2 skills.
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 31 commands, 23 KB domains, and 3 skills.
 
-**Current Status:** v3.0.0 — Claude Code plugin distribution complete. Linear is the project tracker (source of truth).
+**Current Status:** v3.1.0 shipped; v3.2 in flight (Agent Router v2 Phase 1, Judge V0, `--judge` flag integration). Linear is the project tracker (source of truth).
 
 ---
 
@@ -259,6 +259,6 @@ Data engineering example:
 
 ## Version
 
-- **Version:** 3.0.0
+- **Version:** 3.1.0 (v3.2 in flight)
 - **Status:** Release
 - **Last Updated:** 2026-03-29
