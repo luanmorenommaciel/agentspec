@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Stale-count syncs** (from Audit 3): CLAUDE.md, commands/README.md, docs/reference/README.md, and root README.md now consistently reflect 58 agents / 31 commands / 3 skills / 23 KB domains / v3.1.0 current status
 - `/status` added to Core Commands table in `.claude/commands/README.md` (was missing since v3.1.0)
 - `/judge` added to Review Commands table in `.claude/commands/README.md`
+- **`Makefile`** as the primary contributor entry point — one-line access to build, test, check, lint, generate, clean. `make help` lists all targets with descriptions.
+- **`.shellcheckrc`** at repo root — `shell=bash`, disables SC1091/SC2155 (noisy for our repo). Used by both local `make lint` and CI.
+- **`.github/workflows/quality-checks.yml`** — new GitHub Actions workflow split into two jobs:
+  - `python`: pytest suite + `generate-agent-router.py --check` drift guard
+  - `shellcheck`: shellcheck -S warning on all three first-party shell scripts
+- **`init-workspace.sh` mandatory header block** (audit-tier-3): shebang, Prerequisites, Usage sections, `--help` flag
 - **Agent Router v2 — Phase 1 (Build-Time Generation)** — the `agent-router` skill is now auto-generated from agent frontmatter, eliminating hand-maintained routing tables:
   - `scripts/generate-agent-router.py` — parses frontmatter across all 58 agents and derives category/tier/model/kb_domains/escalations without any new frontmatter fields required
   - Generates both `.claude/skills/agent-router/SKILL.md` (human-readable) and `.claude/skills/agent-router/routing.json` (machine-readable, foundation for future semantic layer)
