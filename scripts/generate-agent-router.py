@@ -25,7 +25,7 @@ import hashlib
 import json
 import re
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
@@ -36,7 +36,7 @@ SKILL_MD = SKILL_DIR / "SKILL.md"
 ROUTING_JSON = SKILL_DIR / "routing.json"
 
 # Skip these filenames in the agents tree
-SKIP_FILES = {"README.md", "_template.md"}
+SKIP_FILES: frozenset[str] = frozenset({"README.md", "_template.md"})
 
 # Category label + description per directory
 CATEGORIES = {
@@ -51,17 +51,23 @@ CATEGORIES = {
 }
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AgentSpec:
-    """Parsed, normalized view of one agent frontmatter."""
+    """Parsed, normalized view of one agent frontmatter.
+
+    Frozen + slots — AgentSpecs are pure value objects: we build them once
+    from disk, serialize them to JSON, and never mutate. Frozen guards that
+    invariant; slots eliminates the per-instance ``__dict__`` overhead.
+    """
+
     name: str
     category: str
     path: str
     tier: str
     model: str
     description: str              # first meaningful line of description
-    kb_domains: list[str] = field(default_factory=list)
-    escalates_to: list[str] = field(default_factory=list)
+    kb_domains: tuple[str, ...] = ()
+    escalates_to: tuple[str, ...] = ()
 
 
 # ── Frontmatter parsing ──────────────────────────────────────────────────────
@@ -69,7 +75,7 @@ class AgentSpec:
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
-def parse_frontmatter(text: str) -> dict:
+def parse_frontmatter(text: str) -> dict[str, object]:
     """Extract the YAML-ish frontmatter block as raw text + a few fields.
 
     Full YAML parsing would pull a dependency; we only need a handful of keys
@@ -159,14 +165,14 @@ def discover_agents() -> list[AgentSpec]:
             continue
 
         specs.append(AgentSpec(
-            name=fm["name"],
+            name=str(fm["name"]),
             category=category,
             path=str(rel),
-            tier=fm.get("tier", "T1"),
-            model=fm.get("model", "sonnet"),
-            description=extract_one_liner(fm.get("description", "")),
-            kb_domains=fm.get("kb_domains", []),
-            escalates_to=fm.get("escalates_to", []),
+            tier=str(fm.get("tier", "T1")),
+            model=str(fm.get("model", "sonnet")),
+            description=extract_one_liner(str(fm.get("description", ""))),
+            kb_domains=tuple(fm.get("kb_domains", []) or []),   # pyright: ignore[reportArgumentType]
+            escalates_to=tuple(fm.get("escalates_to", []) or []),  # pyright: ignore[reportArgumentType]
         ))
     return specs
 

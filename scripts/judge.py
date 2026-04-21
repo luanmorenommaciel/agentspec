@@ -38,7 +38,60 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from dataclasses import asdict, dataclass
 from pathlib import Path
+
+
+# ── Typed errors ─────────────────────────────────────────────────────────────
+
+class JudgeError(RuntimeError):
+    """Raised by library functions when the caller must surface an exit code.
+
+    Using a typed exception (instead of ``sys.exit()`` deep inside helpers)
+    keeps the call sites testable and lets ``main()`` own the exit semantics.
+    """
+
+    def __init__(self, message: str, exit_code: int) -> None:
+        super().__init__(message)
+        self.exit_code = exit_code
+
+
+# ── Typed ledger entry ───────────────────────────────────────────────────────
+
+@dataclass(frozen=True, slots=True)
+class LedgerEntry:
+    """A single row in the append-only judge ledger.
+
+    Frozen + slots because rows are value objects: we never mutate one after
+    writing, and slots avoids the per-instance ``__dict__`` overhead.
+    """
+
+    date: str
+    ts: str
+    model: str
+    target: str
+    verdict: str
+    cost_usd: float | None = None
+
+    @classmethod
+    def from_json(cls, raw: str) -> LedgerEntry | None:
+        """Parse a ledger line; returns None for malformed rows."""
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+        # Tolerate extra keys from older ledger entries
+        return cls(
+            date=str(data.get("date", "")),
+            ts=str(data.get("ts", "")),
+            model=str(data.get("model", "")),
+            target=str(data.get("target", "")),
+            verdict=str(data.get("verdict", "")),
+            cost_usd=data.get("cost_usd"),
+        )
+
+    def to_dict(self) -> dict[str, str | float | None]:
+        return {k: v for k, v in asdict(self).items() if v is not None or k == "cost_usd"}
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LEDGER = REPO_ROOT / ".claude" / "storage" / "judge-ledger.jsonl"
@@ -202,70 +255,61 @@ def today_utc() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
 
 
-def load_today_count() -> int:
+def _read_ledger_entries() -> list[LedgerEntry]:
+    """Read all valid ledger rows; skip malformed lines silently."""
     if not LEDGER.exists():
-        return 0
-    today = today_utc()
-    count = 0
+        return []
+    entries: list[LedgerEntry] = []
     with LEDGER.open() as f:
         for line in f:
-            line = line.strip()
-            if not line:
+            stripped = line.strip()
+            if not stripped:
                 continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if entry.get("date") == today:
-                count += 1
-    return count
+            entry = LedgerEntry.from_json(stripped)
+            if entry is not None:
+                entries.append(entry)
+    return entries
 
 
-def append_ledger(model: str, target: str, verdict: str, cost_usd: float | None = None) -> None:
+def load_today_count() -> int:
+    today = today_utc()
+    return sum(1 for e in _read_ledger_entries() if e.date == today)
+
+
+def append_ledger(
+    model: str,
+    target: str,
+    verdict: str,
+    cost_usd: float | None = None,
+) -> None:
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
-    entry = {
-        "date": today_utc(),
-        "ts": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "model": model,
-        "target": target,
-        "verdict": verdict,
-    }
-    if cost_usd is not None:
-        entry["cost_usd"] = cost_usd
+    entry = LedgerEntry(
+        date=today_utc(),
+        ts=dt.datetime.now(dt.timezone.utc).isoformat(),
+        model=model,
+        target=target,
+        verdict=verdict,
+        cost_usd=cost_usd,
+    )
     with LEDGER.open("a") as f:
-        f.write(json.dumps(entry) + "\n")
+        f.write(json.dumps(entry.to_dict()) + "\n")
 
 
 def show_ledger() -> int:
-    if not LEDGER.exists():
+    entries = _read_ledger_entries()
+    if not entries:
         print("No judge calls recorded yet.")
         return 0
     today = today_utc()
-    today_calls = []
-    total_calls = 0
-    with LEDGER.open() as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            total_calls += 1
-            if entry.get("date") == today:
-                today_calls.append(entry)
+    today_calls = [e for e in entries if e.date == today]
     budget = int(os.environ.get("JUDGE_BUDGET", DEFAULT_BUDGET))
     print(f"Judge Ledger — {LEDGER.relative_to(REPO_ROOT)}")
     print(f"  Today ({today}):  {len(today_calls)} / {budget} calls")
-    print(f"  All-time:         {total_calls} calls")
+    print(f"  All-time:         {len(entries)} calls")
     if today_calls:
         print("\n  Today's calls:")
-        for e in today_calls:
-            verdict = e.get("verdict", "?")
-            model = e.get("model", "?")
-            target = e.get("target", "?")
-            print(f"    [{verdict:4}] {model}  {target}")
+        for entry in today_calls:
+            print(f"    [{entry.verdict:4}] {entry.model}  {entry.target}")
     return 0
 
 
@@ -277,11 +321,14 @@ def call_openrouter(
     content: str,
     context: str,
     phase: str = "generic",
-) -> dict:
+) -> dict[str, object]:
     """POST to OpenRouter, return parsed verdict dict.
 
     The ``phase`` argument selects the system prompt so the judge is tuned to
     the kind of artifact it is reviewing (define / design / build / generic).
+
+    Raises ``JudgeError`` on network/API/parse failures — the caller owns exit
+    code mapping. This keeps the function testable (no hard ``sys.exit()``).
     """
     system_prompt = PHASE_SYSTEM_PROMPTS.get(phase, GENERIC_SYSTEM_PROMPT)
     user_prompt = f"Context: {context}\n\n--- CONTENT TO JUDGE ---\n{content}\n--- END CONTENT ---"
@@ -313,28 +360,28 @@ def call_openrouter(
             raw = resp.read().decode()
     except urllib.error.HTTPError as e:
         body = e.read().decode() if e.fp else ""
-        print(f"[ERROR] OpenRouter HTTP {e.code}: {body[:300]}", file=sys.stderr)
-        sys.exit(4)
+        raise JudgeError(f"OpenRouter HTTP {e.code}: {body[:300]}", exit_code=4) from e
     except urllib.error.URLError as e:
-        print(f"[ERROR] Network error: {e.reason}", file=sys.stderr)
-        sys.exit(4)
+        raise JudgeError(f"Network error: {e.reason}", exit_code=4) from e
 
-    api_resp = json.loads(raw)
+    try:
+        api_resp = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise JudgeError(f"OpenRouter returned non-JSON envelope: {raw[:200]}", exit_code=4) from e
+
     try:
         content_str = api_resp["choices"][0]["message"]["content"]
-    except (KeyError, IndexError):
-        print(f"[ERROR] Unexpected OpenRouter response shape: {raw[:400]}", file=sys.stderr)
-        sys.exit(4)
+    except (KeyError, IndexError) as e:
+        raise JudgeError(f"Unexpected OpenRouter response shape: {raw[:400]}", exit_code=4) from e
 
     # Strip accidental markdown fences
     content_str = re.sub(r"^```(?:json)?\s*\n?", "", content_str.strip())
     content_str = re.sub(r"\n?```\s*$", "", content_str)
 
     try:
-        verdict = json.loads(content_str)
-    except json.JSONDecodeError:
-        print(f"[ERROR] Judge returned non-JSON:\n{content_str[:500]}", file=sys.stderr)
-        sys.exit(4)
+        verdict: dict[str, object] = json.loads(content_str)
+    except json.JSONDecodeError as e:
+        raise JudgeError(f"Judge returned non-JSON:\n{content_str[:500]}", exit_code=4) from e
 
     # Usage/cost best-effort
     usage = api_resp.get("usage", {})
@@ -345,7 +392,7 @@ def call_openrouter(
 
 # ── Markdown renderer ────────────────────────────────────────────────────────
 
-def render_markdown(verdict: dict, target: str, model: str) -> str:
+def render_markdown(verdict: dict[str, object], target: str, model: str) -> str:
     v = verdict.get("verdict", "?").upper()
     conf = verdict.get("confidence", 0)
     summary = verdict.get("summary", "")
@@ -474,9 +521,15 @@ def main() -> int:
         print(f"  Inspect via: python3 scripts/judge.py --ledger", file=sys.stderr)
         return 3
 
-    # Judge call
-    verdict = call_openrouter(api_key, resolved_model, content, args.context, phase=args.phase)
-    v = verdict.get("verdict", "FAIL").upper()
+    # Judge call — map typed errors to the documented exit codes
+    try:
+        verdict = call_openrouter(api_key, resolved_model, content, args.context, phase=args.phase)
+    except JudgeError as err:
+        print(f"[ERROR] {err}", file=sys.stderr)
+        return err.exit_code
+
+    verdict_raw = verdict.get("verdict", "FAIL")
+    v = str(verdict_raw).upper() if verdict_raw is not None else "FAIL"
 
     append_ledger(model=resolved_model, target=target_label, verdict=v)
 
