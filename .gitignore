@@ -22,6 +22,11 @@ dist/
 build/
 .venv/
 venv/
+**/.venv/
+**/venv/
+
+# Judge layer — invocation history (contains model, targets, verdicts)
+.claude/storage/judge-ledger.jsonl
 
 # Node
 node_modules/

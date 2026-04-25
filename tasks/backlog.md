@@ -61,20 +61,58 @@
 
 ---
 
-### 🔵 P1: Judge Layer via OpenRouter
+### 🔵 P1: Flag System (Progressive Enhancement Framework)
+
+**Description:** Unified flag vocabulary across all phase commands — preserves AgentSpec's simple surface while enabling opt-in depth (judges, autonomy, model overrides, parallel composition). Defaults reproduce today's behavior exactly; flags layer on power when requested.
+
+**Philosophy:** Same dimmer-switch model as `git commit` → `git commit --amend --signoff -S`. Users never forced into complexity; opt in per run.
+
+**Tasks:**
+- [ ] Author `.claude/sdd/architecture/FLAGS.yaml` — single source of truth (namespace, type, values, default, applies_to, added_in)
+- [ ] Write `scripts/parse-flags.py` — reusable flag resolver consumed by every phase command
+- [ ] Write `scripts/generate-flag-docs.py` — emits `docs/reference/FLAGS.md` (same generator pattern as agent-router)
+- [ ] Add flag handling section to `/brainstorm`, `/define`, `/design`, `/build`, `/ship` (read normalized config, pass to delegated agents)
+- [ ] Ship first real flag: `--model=opus|sonnet|haiku` (trivial, proves pipeline)
+- [ ] Wire `generate-flag-docs.py` into `build-plugin.sh` (Step 0b)
+- [ ] Document flag namespaces: `--judge`, `--autonomous`, `--model`, `--depth`, `--evidence`, `--parallel`, `--budget`, `--format`
+- [ ] Forward-compat rule: unknown flags → warn, don't error
+
+**Future flags this unblocks (add as separate backlog items):**
+- `--judge[=model]` — consumes Judge Layer (below)
+- `--autonomous=safe|full` — consumes Overnight SubAgent
+- `--parallel=a,b,c` — consumes Agents Composition
+- `--evidence=fresh-only` — consumes KB Freshness
+- `--memory=read|write|off` — consumes Memory Echo
+
+**Why build this:** turns 15 future backlog items into **one grammar**. Every new capability becomes a flag, not a new command.
+
+---
+
+### 🟡 P1: Judge Layer via OpenRouter (V0 shipped, V1+ in flight)
 
 **Description:** Cross-model verification — use OpenRouter (GPT, Gemini) to validate agent output against Claude's output. Detects hallucinations and bias that single-model judges miss.
 
-**Tasks:**
-- [ ] Design OpenRouter MCP server architecture (`.mcp.json` in plugin root)
-- [ ] Implement `judge` MCP server in TypeScript/Python
-- [ ] Add PostToolUse agent hook that routes high-stakes outputs to judge
-- [ ] Define "high-stakes" criteria (schema DDL, production configs, security policies)
-- [ ] Add configurable `OPENROUTER_API_KEY` env var
-- [ ] Implement PASS/FAIL/REVIEW verdicts with confidence scores
-- [ ] Add cost budget controls (per-run cap)
-- [ ] Document setup in docs/getting-started/
-- [ ] Add CHANGELOG entry
+**V0 Shipped:**
+- [x] New `/judge <file>` standalone command — user opts in per invocation
+- [x] `scripts/judge.py` — reads file, calls OpenRouter HTTP API with one model (default `openai/gpt-4o-mini`), returns PASS/FAIL + reasoning
+- [x] `OPENROUTER_API_KEY` env var with clear error if missing
+- [x] Hard per-day budget ceiling (10 calls default, `JUDGE_BUDGET` override) with append-only ledger at `.claude/storage/judge-ledger.jsonl`
+- [x] Verdict format: markdown block with PASS/FAIL, confidence 0-1, severity-ranked concerns with evidence citations, suggested fixes
+- [x] Distinct exit codes (0/1/2/3/4) for shell/CI composition
+- [x] Setup docs in `docs/getting-started/judge-setup.md`
+- [x] No MCP server, no classifier, no PostToolUse hook in V0
+
+**V1 (after V0 validates the concept):**
+- [ ] Graduate to `--judge[=model]` flag once Flag System ships
+- [ ] Multi-model ensemble (`--judge=ensemble` queries GPT + Gemini, requires consensus)
+- [ ] Opt-in PostToolUse hook for specific file patterns (e.g., `migrations/**/*.sql`)
+
+**V2 (when usage data justifies it):**
+- [ ] MCP server wrapper (reduces latency via connection reuse)
+- [ ] High-stakes classifier using `routing.json` agent tier signal
+- [ ] Cost dashboard + per-project budget controls
+
+**Why V0 first:** validates the core hypothesis ("does a second model actually catch things Claude misses on DE tasks?") in ~150 lines of bash/python. If V0 doesn't deliver value after 10 real uses, we've lost a day. If it does, V1 is an incremental upgrade, not a rewrite.
 
 **References:** llm-council-action GitHub Action, SEAR research paper, Openlayer LLM-as-Judge guide
 

@@ -94,8 +94,9 @@ agentspec/
 │   └── scripts/             # init-workspace.sh
 │
 ├── build-plugin.sh          # Builds plugin/ from .claude/ (invokes scripts/generate-agent-router.py)
-├── scripts/
-│   └── generate-agent-router.py  # Regenerates agent-router SKILL.md + routing.json from agent frontmatter
+├── scripts/                  # Build tooling (not shipped in plugin)
+│   ├── generate-agent-router.py  # Regenerates agent-router SKILL.md + routing.json from agent frontmatter
+│   └── judge.py              # Judge V0: OpenRouter second opinion (backend for /judge command)
 ├── CHANGELOG.md             # Version history
 ├── CONTRIBUTING.md          # Contribution guide
 ├── SECURITY.md              # Security policy
@@ -149,7 +150,9 @@ Data engineering example:
 | Adapt SDD templates for DE | Done | BRAINSTORM, DEFINE, DESIGN, BUILD_REPORT templates |
 | Documentation overhaul | Done | Getting started, concepts, tutorials, reference, README |
 | Create CLAUDE.md.template | Pending | Template for user projects |
-| Implement Judge layer | Planned | Spec validation via external LLM |
+| Judge Layer V0 (`/judge`) | Done | OpenRouter cross-model second opinion with budget ledger |
+| Judge Layer V1+ | Planned | `--judge` flag, multi-model ensemble, PostToolUse hook |
+| Flag System (progressive enhancement) | Planned | Unified flag vocabulary across phase commands |
 | Add telemetry | Planned | Local usage tracking |
 
 ---
@@ -206,13 +209,14 @@ Data engineering example:
 | `/data-contract` | Contract authoring (ODCS) |
 | `/migrate` | Legacy ETL migration |
 
-### Core & Utilities (7)
+### Core & Utilities (8)
 
 | Command | Purpose |
 |---------|---------|
 | `/status` | Project status report |
 | `/create-kb` | Create KB domain |
-| `/review` | Code review |
+| `/review` | Dual-AI code review (CodeRabbit + Claude) |
+| `/judge` | Cross-model second opinion via OpenRouter (V0) |
 | `/meeting` | Meeting transcript analysis |
 | `/memory` | Save session insights |
 | `/sync-context` | Update CLAUDE.md |
