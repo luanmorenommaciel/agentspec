@@ -1,6 +1,6 @@
 # AgentSpec Commands
 
-**29 slash commands** for the SDD workflow, data engineering, visualization, and developer productivity.
+**31 slash commands** for the SDD workflow, data engineering, visualization, and developer productivity.
 
 ## Workflow Commands (7)
 
@@ -27,12 +27,13 @@
 | `/data-contract` | Contract authoring (ODCS) | data-contracts-engineer |
 | `/migrate` | Legacy ETL migration | dbt-specialist + spark-engineer |
 
-See [data-engineering/README.md](data-engineering/README.md) for detailed usage.
+See [data-engineering/](data-engineering/) for detailed usage.
 
-## Core Commands (4)
+## Core Commands (5)
 
 | Command | Description |
 |---------|-------------|
+| `/status` | Project status report (health, SDD state, recommendations) |
 | `/meeting` | Meeting transcript analysis |
 | `/memory` | Save session insights |
 | `/sync-context` | Update CLAUDE.md |
@@ -44,11 +45,12 @@ See [data-engineering/README.md](data-engineering/README.md) for detailed usage.
 |---------|-------------|
 | `/create-kb` | Create KB domain |
 
-## Review Commands (1)
+## Review Commands (2)
 
 | Command | Description |
 |---------|-------------|
-| `/review` | Code review workflow |
+| `/review` | Dual-AI code review (CodeRabbit + Claude) |
+| `/judge` | Cross-model second opinion via OpenRouter (V0) |
 
 ## Visual Explainer Commands (8)
 

@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **`--judge` flag on `/define`, `/design`, `/build`** — progressive-enhancement integration of Judge V0 into the SDD workflow:
+  - `/define FEATURE --judge` → cross-model spec-quality review (default: openai/gpt-4o)
+  - `/design FEATURE --judge` → architectural-soundness review (default: openai/gpt-4o)
+  - `/build FEATURE --judge` → BUILD_REPORT correctness review (default: openai/gpt-4o; consider openai/codex-mini for pure-code builds)
+  - Three modes per command: advisory (`--judge`), gated (`--judge=strict`), model-override (`--judge=MODEL` or `--judge=strict:MODEL`)
+  - Phase-aware system prompts in `scripts/judge.py` tuned to each artifact type (DEFINE for requirements, DESIGN for architecture, BUILD for code)
+  - Defaults preserved — running the commands without `--judge` behaves identically to v3.1.0
+  - Budget exhaustion, config errors, and network errors never block the phase — judge failures degrade to "as if `--judge` was not passed"
+- **Stale-count syncs** (from Audit 3): CLAUDE.md, commands/README.md, docs/reference/README.md, and root README.md now consistently reflect 58 agents / 31 commands / 3 skills / 23 KB domains / v3.1.0 current status
+- `/status` added to Core Commands table in `.claude/commands/README.md` (was missing since v3.1.0)
+- `/judge` added to Review Commands table in `.claude/commands/README.md`
+- **`Makefile`** as the primary contributor entry point — one-line access to build, test, check, lint, generate, clean. `make help` lists all targets with descriptions.
+- **`.shellcheckrc`** at repo root — `shell=bash`, disables SC1091/SC2155 (noisy for our repo). Used by both local `make lint` and CI.
+- **`.github/workflows/quality-checks.yml`** — new GitHub Actions workflow split into two jobs:
+  - `python`: pytest suite + `generate-agent-router.py --check` drift guard
+  - `shellcheck`: shellcheck -S warning on all three first-party shell scripts
+- **`init-workspace.sh` mandatory header block** (audit-tier-3): shebang, Prerequisites, Usage sections, `--help` flag
 - **Agent Router v2 — Phase 1 (Build-Time Generation)** — the `agent-router` skill is now auto-generated from agent frontmatter, eliminating hand-maintained routing tables:
   - `scripts/generate-agent-router.py` — parses frontmatter across all 58 agents and derives category/tier/model/kb_domains/escalations without any new frontmatter fields required
   - Generates both `.claude/skills/agent-router/SKILL.md` (human-readable) and `.claude/skills/agent-router/routing.json` (machine-readable, foundation for future semantic layer)
@@ -15,12 +32,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Content hash stamped in SKILL.md (currently `d2970b1b988f`) for drift detection
   - `DO NOT EDIT` header pointing contributors back to the script
 - `scripts/` directory at repo root for build tooling (distinct from `plugin-extras/scripts/` which ships in the plugin)
+- **Judge Layer V0** — opt-in cross-model second opinion via OpenRouter:
+  - New `/judge <file>` slash command at `.claude/commands/review/judge.md`
+  - `scripts/judge.py` — calls OpenRouter's OpenAI-compatible API with zero SDK dependencies (pure stdlib `urllib`)
+  - Default model `openai/gpt-4o-mini`; overridable via `JUDGE_MODEL` env or `--model` flag
+  - Hard per-day budget ceiling (default 10 calls, overridable via `JUDGE_BUDGET`) enforced by append-only ledger at `.claude/storage/judge-ledger.jsonl`
+  - Structured JSON verdict rendered as markdown: PASS/FAIL, confidence 0-1, severity-ranked concerns with evidence citations, suggested fixes
+  - Distinct exit codes (0 PASS, 1 FAIL, 2 config, 3 budget, 4 API) for future CI/shell composition
+  - `/judge --ledger` shows today's usage
+  - Setup guide at `docs/getting-started/judge-setup.md` covering OpenRouter key, cost reference, privacy, troubleshooting
+  - No MCP server, no auto-triggering hook, no classifier in V0 — user opts in per invocation
+- **Flag System (Progressive Enhancement Framework)** added to backlog as 🔵 P1 for v3.2 — unified flag vocabulary across all phase commands, preserving AgentSpec's simple surface while enabling opt-in depth
 
 ### Changed
 
 - `build-plugin.sh` gained **Step 0** — runs the agent-router generator before copying artifacts into `plugin/`, ensuring the plugin ships the current routing tables
 - `CLAUDE.md` repository tree updated to reflect the new `scripts/` directory
 - `tasks/backlog.md` marks Agent Router v2 Phase 1 as 🟢 shipped and tracks Phases 2-4 as future work
+
+### Fixed
+
+- Broken link in `.claude/commands/README.md`: `[data-engineering/README.md](data-engineering/README.md)` → `[data-engineering/](data-engineering/)` (referenced file didn't exist; directory does)
 
 ### Philosophy
 

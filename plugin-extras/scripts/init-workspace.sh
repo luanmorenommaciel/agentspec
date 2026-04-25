@@ -1,12 +1,33 @@
 #!/usr/bin/env bash
+# =============================================================================
+# init-workspace.sh — AgentSpec Workspace Initializer
+#
+# Creates SDD workspace directories and detects project stack at session
+# start. Runs on SessionStart — idempotent, silent on success.
+#
+# Prerequisites:
+#   - bash 3.2+ (uses ${BASH_SOURCE} and mapfile-free patterns)
+#   - Standard POSIX utilities: mkdir, cat
+#   - Called with the project working directory as CWD
+#
+# Usage:
+#   ./init-workspace.sh          # normal run (SessionStart hook)
+#   ./init-workspace.sh --help   # show this help
+#
+# Behavior:
+#   - No-ops unless the CWD looks like an AgentSpec-aware project
+#     (has .git/, CLAUDE.md, or .claude/)
+#   - Creates .claude/sdd/{features,reports,archive}/ if missing
+#   - Writes .claude/sdd/.detected-stack.md with inferred tech-stack hints
+# =============================================================================
+
 set -euo pipefail
 
-# =============================================================================
-# AgentSpec Workspace Initializer
-# =============================================================================
-# Creates SDD workspace directories and detects project stack at session start.
-# Runs on SessionStart — idempotent, silent on success.
-# =============================================================================
+# Parse --help early, before side effects
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+    sed -n '3,22p' "$0"
+    exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # Phase 1: Workspace Initialization (existing behavior)

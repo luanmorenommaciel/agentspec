@@ -1,82 +1,108 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# =============================================================================
+# share.sh — Share Visual Explainer HTML via Vercel
+#
+# Deploys a single HTML file to Vercel and returns the live URL. No auth
+# required — uses Vercel's public deploy flow.
+#
+# Prerequisites:
+#   - vercel CLI installed (npm install -g vercel)
+#   - bash, mktemp, grep
+#
+# Usage:
+#   ./share.sh <html-file>                # deploy and print URL
+#   ./share.sh --help                     # show usage
+# =============================================================================
 
-# Share Visual Explainer HTML via Vercel
-# Usage: ./share.sh <html-file>
-# Returns: Live URL instantly (no auth required)
-
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-HTML_FILE="${1}"
+show_help() {
+  cat <<EOF
+Usage: $(basename "$0") <html-file>
 
-if [ -z "$HTML_FILE" ]; then
-    echo -e "${RED}Error: Please provide an HTML file to share${NC}" >&2
-    echo "Usage: $0 <html-file>" >&2
+Deploys a single HTML file to Vercel and returns the live URL.
+
+Options:
+  --help, -h    Show this help message
+
+Examples:
+  $(basename "$0") diagram.html
+EOF
+  exit 0
+}
+
+# Parse --help before positional args
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+  show_help
+fi
+
+HTML_FILE="${1:-}"
+
+if [[ -z "${HTML_FILE}" ]]; then
+    printf "${RED}Error: Please provide an HTML file to share${NC}\n" >&2
+    printf "Usage: %s <html-file>\n" "$(basename "$0")" >&2
     exit 1
 fi
 
-if [ ! -f "$HTML_FILE" ]; then
-    echo -e "${RED}Error: File not found: $HTML_FILE${NC}" >&2
+if [[ ! -f "${HTML_FILE}" ]]; then
+    printf "${RED}Error: File not found: %s${NC}\n" "${HTML_FILE}" >&2
     exit 1
 fi
 
 # Find vercel-deploy skill
 VERCEL_SCRIPT=""
 for dir in ~/.pi/agent/skills/vercel-deploy/scripts /mnt/skills/user/vercel-deploy/scripts; do
-    if [ -f "$dir/deploy.sh" ]; then
-        VERCEL_SCRIPT="$dir/deploy.sh"
+    if [[ -f "${dir}/deploy.sh" ]]; then
+        VERCEL_SCRIPT="${dir}/deploy.sh"
         break
     fi
 done
 
-if [ -z "$VERCEL_SCRIPT" ]; then
-    echo -e "${RED}Error: vercel-deploy skill not found${NC}" >&2
-    echo "Install it with: pi install npm:vercel-deploy" >&2
+if [[ -z "${VERCEL_SCRIPT}" ]]; then
+    printf "${RED}Error: vercel-deploy skill not found${NC}\n" >&2
+    printf "Install it with: pi install npm:vercel-deploy\n" >&2
     exit 1
 fi
 
 # Create temp directory with index.html
-TEMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TEMP_DIR"' EXIT
+TEMP_DIR="$(mktemp -d)"
+trap 'rm -rf "${TEMP_DIR}"' EXIT
 
 # Copy file as index.html (Vercel serves index.html at root)
-cp "$HTML_FILE" "$TEMP_DIR/index.html"
+cp "${HTML_FILE}" "${TEMP_DIR}/index.html"
 
-echo -e "${CYAN}Sharing $(basename "$HTML_FILE")...${NC}" >&2
+printf "${CYAN}Sharing %s...${NC}\n" "$(basename "${HTML_FILE}")" >&2
 
-# Deploy via vercel-deploy skill
-# Temporarily disable errexit to capture deployment errors
-set +e
-RESULT=$(bash "$VERCEL_SCRIPT" "$TEMP_DIR" 2>&1)
-DEPLOY_EXIT=$?
-set -e
+# Deploy via vercel-deploy skill — capture failures explicitly without set +e
+RESULT=""
+DEPLOY_EXIT=0
+RESULT="$(bash "${VERCEL_SCRIPT}" "${TEMP_DIR}" 2>&1)" || DEPLOY_EXIT=$?
 
-if [ $DEPLOY_EXIT -ne 0 ]; then
-    echo -e "${RED}Error: Deployment failed${NC}" >&2
-    echo "$RESULT" >&2
+if [[ ${DEPLOY_EXIT} -ne 0 ]]; then
+    printf "${RED}Error: Deployment failed${NC}\n" >&2
+    printf "%s\n" "${RESULT}" >&2
     exit 1
 fi
 
 # Extract preview URL
-PREVIEW_URL=$(echo "$RESULT" | grep -oE 'https://[^"]+\.vercel\.app' | head -1)
-CLAIM_URL=$(echo "$RESULT" | grep -oE 'https://vercel\.com/claim-deployment[^"]+' | head -1)
+PREVIEW_URL="$(grep -oE 'https://[^"]+\.vercel\.app' <<< "${RESULT}" | head -1)"
+CLAIM_URL="$(grep -oE 'https://vercel\.com/claim-deployment[^"]+' <<< "${RESULT}" | head -1)"
 
-if [ -z "$PREVIEW_URL" ]; then
-    echo -e "${RED}Error: Deployment failed${NC}" >&2
-    echo "$RESULT" >&2
+if [[ -z "${PREVIEW_URL}" ]]; then
+    printf "${RED}Error: Deployment failed${NC}\n" >&2
+    printf "%s\n" "${RESULT}" >&2
     exit 1
 fi
 
-echo "" >&2
-echo -e "${GREEN}✓ Shared successfully!${NC}" >&2
-echo "" >&2
-echo -e "${GREEN}Live URL:  ${PREVIEW_URL}${NC}" >&2
-echo -e "${CYAN}Claim URL: ${CLAIM_URL}${NC}" >&2
-echo "" >&2
+printf "\n" >&2
+printf "${GREEN}✓ Shared successfully!${NC}\n\n" >&2
+printf "${GREEN}Live URL:  %s${NC}\n" "${PREVIEW_URL}" >&2
+printf "${CYAN}Claim URL: %s${NC}\n\n" "${CLAIM_URL}" >&2
 
 # Output JSON for programmatic use (extract from vercel-deploy output)
-echo "$RESULT" | grep -E '^\{' | head -1
+grep -E '^\{' <<< "${RESULT}" | head -1

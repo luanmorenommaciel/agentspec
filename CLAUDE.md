@@ -6,9 +6,9 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 30 commands, 23 KB domains, and 2 skills.
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 31 commands, 23 KB domains, and 3 skills.
 
-**Current Status:** v3.0.0 — Claude Code plugin distribution complete. Linear is the project tracker (source of truth).
+**Current Status:** v3.1.0 shipped; v3.2 in flight (Agent Router v2 Phase 1, Judge V0, `--judge` flag integration). Linear is the project tracker (source of truth).
 
 ---
 
@@ -93,9 +93,13 @@ agentspec/
 │   ├── hooks/               # hooks.json
 │   └── scripts/             # init-workspace.sh
 │
+├── Makefile                 # Developer entry point — `make help` lists all targets
 ├── build-plugin.sh          # Builds plugin/ from .claude/ (invokes scripts/generate-agent-router.py)
-├── scripts/
-│   └── generate-agent-router.py  # Regenerates agent-router SKILL.md + routing.json from agent frontmatter
+├── scripts/                 # Build tooling (not shipped in plugin)
+│   ├── generate-agent-router.py  # Regenerates agent-router SKILL.md + routing.json from agent frontmatter
+│   └── judge.py             # Judge V0: OpenRouter second opinion (backend for /judge command)
+├── tests/                   # pytest suite (27 tests) — `make test`
+├── .shellcheckrc            # Lint config for shell scripts
 ├── CHANGELOG.md             # Version history
 ├── CONTRIBUTING.md          # Contribution guide
 ├── SECURITY.md              # Security policy
@@ -149,7 +153,9 @@ Data engineering example:
 | Adapt SDD templates for DE | Done | BRAINSTORM, DEFINE, DESIGN, BUILD_REPORT templates |
 | Documentation overhaul | Done | Getting started, concepts, tutorials, reference, README |
 | Create CLAUDE.md.template | Pending | Template for user projects |
-| Implement Judge layer | Planned | Spec validation via external LLM |
+| Judge Layer V0 (`/judge`) | Done | OpenRouter cross-model second opinion with budget ledger |
+| Judge Layer V1+ | Planned | `--judge` flag, multi-model ensemble, PostToolUse hook |
+| Flag System (progressive enhancement) | Planned | Unified flag vocabulary across phase commands |
 | Add telemetry | Planned | Local usage tracking |
 
 ---
@@ -206,13 +212,14 @@ Data engineering example:
 | `/data-contract` | Contract authoring (ODCS) |
 | `/migrate` | Legacy ETL migration |
 
-### Core & Utilities (7)
+### Core & Utilities (8)
 
 | Command | Purpose |
 |---------|---------|
 | `/status` | Project status report |
 | `/create-kb` | Create KB domain |
-| `/review` | Code review |
+| `/review` | Dual-AI code review (CodeRabbit + Claude) |
+| `/judge` | Cross-model second opinion via OpenRouter (V0) |
 | `/meeting` | Meeting transcript analysis |
 | `/memory` | Save session insights |
 | `/sync-context` | Update CLAUDE.md |
@@ -255,6 +262,6 @@ Data engineering example:
 
 ## Version
 
-- **Version:** 3.0.0
+- **Version:** 3.1.0 (v3.2 in flight)
 - **Status:** Release
 - **Last Updated:** 2026-03-29

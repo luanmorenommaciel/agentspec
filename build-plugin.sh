@@ -68,7 +68,26 @@ fi
 
 info "Building AgentSpec plugin from .claude/ ..."
 
-# ─── Step 0: Regenerate agent-router from agent frontmatter ──────────────────
+# ─── Step 0: Run Python tests ────────────────────────────────────────────────
+# Fail fast if scripts/judge.py or scripts/generate-agent-router.py regress.
+# Tests are skipped (with a warning, not an error) when pytest is not
+# installed — we never block builds on a missing optional dev dependency.
+
+if [[ -d "${SCRIPT_DIR}/tests" ]]; then
+    if python3 -c "import pytest" 2>/dev/null; then
+        info "Running Python tests..."
+        if (cd "${SCRIPT_DIR}" && python3 -m pytest tests/ -q >/dev/null 2>&1); then
+            ok "Python tests passed"
+        else
+            error "Python tests failed — run: python3 -m pytest tests/ -v"
+            exit 1
+        fi
+    else
+        warn "pytest not installed — skipping tests (pip install pytest to enable)"
+    fi
+fi
+
+# ─── Step 0b: Regenerate agent-router from agent frontmatter ─────────────────
 # Ensures .claude/skills/agent-router/SKILL.md and routing.json reflect the
 # current agent set before we copy them into the plugin.
 

@@ -1,0 +1,15 @@
+# shellcheck configuration — applies to both local `make lint` and CI.
+# Target shell: bash (not POSIX sh). All scripts in this repo use
+# #!/usr/bin/env bash so bashisms are expected.
+shell=bash
+
+# Severity: warning and above.
+# Info-level is noisy and often stylistic; promote if we want it later.
+
+# SC1091: Not following sourced files — expected, since we source from
+#         relative paths that shellcheck can't resolve in CI.
+disable=SC1091
+
+# SC2155: Declare and assign separately — acceptable for export-style lines;
+#         we don't want to block on this.
+disable=SC2155
