@@ -111,8 +111,8 @@
 ## Folder Structure
 
 ```text
-.claude/
-+-- commands/                    # 29 slash commands
+.claude
++-- commands/                    # 31 slash commands
 |   +-- workflow/                # 7 SDD commands
 |   +-- data-engineering/        # 8 DE commands
 |   +-- core/                    # 4 utility commands
