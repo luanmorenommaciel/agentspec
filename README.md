@@ -10,7 +10,7 @@
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet?style=flat-square)](plugin/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/v3.0.0-green?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/v3.2.0-green?style=flat-square)](CHANGELOG.md)
 
 **A single AI agent reviewing your data pipeline will miss things.**<br/>
 **58 specialized agents with 23 knowledge domains will not.**
@@ -44,6 +44,8 @@ Done. Every Claude Code session now has 58 agents, 31 commands, and 23 KB domain
 ```bash
 claude plugin update agentspec
 ```
+
+> **Override any agent locally** — drop a file in `.claude/agents/<category>/<agent-name>.md` and it takes precedence over the plugin version. See [Agent Overrides](docs/concepts/agent-overrides.md).
 
 <details>
 <summary><b>Alternative install methods</b></summary>

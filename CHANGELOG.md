@@ -4,10 +4,18 @@ All notable changes to AgentSpec will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [3.2.0] - 2026-05-01
 
 ### Added
 
+- **Local-first agent overrides** — users can now drop a file in `.claude/agents/<category>/<name>.md` to override any of the 58 plugin agents without forking:
+  - SessionStart hook (`init-workspace.sh`) scaffolds `.claude/agents/{workflow,custom}/` on first run
+  - Auto-generated `.claude/agents/README.md` documents the override pattern with worked examples (preserves user edits across runs)
+  - New `agent_resolution` contract in `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml` documents precedence (`local` → `plugin`)
+  - New concept doc at `docs/concepts/agent-overrides.md` with full pattern reference
+  - "Customizing Agents" section added to `docs/getting-started/README.md`
+  - Override callout added to root `README.md` Install section
+  - Resolution itself is provided by Claude Code's native plugin loader — AgentSpec adds discovery and documentation, not a parallel resolver
 - **`--judge` flag on `/define`, `/design`, `/build`** — progressive-enhancement integration of Judge V0 into the SDD workflow:
   - `/define FEATURE --judge` → cross-model spec-quality review (default: openai/gpt-4o)
   - `/design FEATURE --judge` → architectural-soundness review (default: openai/gpt-4o)
@@ -53,6 +61,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Broken link in `.claude/commands/README.md`: `[data-engineering/README.md](data-engineering/README.md)` → `[data-engineering/](data-engineering/)` (referenced file didn't exist; directory does)
+- **PySpark detection in `init-workspace.sh`** now also checks `requirements.txt` (previously only checked `pyproject.toml` and `setup.py`, which missed common Python project layouts)
+- **Version drift** — `plugin/.claude-plugin/plugin.json`, `plugin/.claude-plugin/marketplace.json`, README badge, and WORKFLOW_CONTRACTS.yaml now all consistently report `3.2.0`
 
 ### Philosophy
 

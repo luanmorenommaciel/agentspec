@@ -128,12 +128,12 @@ Generated CLAUDE.md follows this structure:
 ├── src/
 │   ├── {folders discovered}
 ├── tests/
-├── .claude/
-│   ├── agents/
-│   ├── commands/
-│   ├── sdd/
-│   ├── kb/
-│   └── storage/
+├── .claude
+│   ├── agents
+│   ├── commands
+│   ├── sdd
+│   ├── kb
+│   └── storage
 ```
 
 ---

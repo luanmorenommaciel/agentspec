@@ -150,9 +150,33 @@ claude> /migrate legacy/etl_orders_proc.sql
 claude> /data-contract "Contract between orders team and analytics"
 ```
 
+## Customizing Agents
+
+Every team has its own conventions. AgentSpec lets you override any of the 58 plugin agents locally without forking — drop a file with the same name into `.claude/agents/<category>/` and it takes precedence.
+
+When the SessionStart hook runs for the first time, it scaffolds:
+
+```text
+.claude/agents/
+├── README.md       # auto-generated quick reference
+├── workflow/       # override SDD phase agents (build-agent, define-agent, etc.)
+└── custom/         # add brand-new project-specific agents
+```
+
+To override an agent, copy it from the plugin and edit your local copy:
+
+```bash
+cp $CLAUDE_PLUGIN_ROOT/agents/workflow/build-agent.md \
+   .claude/agents/workflow/build-agent.md
+$EDITOR .claude/agents/workflow/build-agent.md
+```
+
+Claude Code's native plugin loader handles precedence — your version wins when names match. See [Agent Overrides](../concepts/agent-overrides.md) for the full pattern, including custom agents and verification.
+
 ## What's Next
 
 - [Core Concepts](../concepts/) -- understand how phases, agents, and KB work together
+- [Agent Overrides](../concepts/agent-overrides.md) -- customize phase agents to your team's conventions
 - [Tutorials](../tutorials/) -- dbt, star schema, data quality, Spark, streaming, RAG walkthroughs
 - [Reference](../reference/) -- full command, agent, and KB domain catalog
 

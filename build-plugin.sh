@@ -162,6 +162,10 @@ rm -rf "${PLUGIN_DIR:?}/sdd/features"
 rm -rf "${PLUGIN_DIR:?}/sdd/reports"
 rm -rf "${PLUGIN_DIR:?}/sdd/archive"
 
+# Drop scaffolding files that exist for contributor use only and would
+# confuse Claude Code's agent loader (placeholder frontmatter values).
+find "${PLUGIN_DIR:?}/agents" -name '_template.md' -delete 2>/dev/null || true
+
 ok "Workspace directories excluded"
 
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────

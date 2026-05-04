@@ -18,6 +18,8 @@
 #   - No-ops unless the CWD looks like an AgentSpec-aware project
 #     (has .git/, CLAUDE.md, or .claude/)
 #   - Creates .claude/sdd/{features,reports,archive}/ if missing
+#   - Creates .claude/agents/{workflow,custom}/ with a README explaining
+#     the local-first override pattern (only on first run)
 #   - Writes .claude/sdd/.detected-stack.md with inferred tech-stack hints
 # =============================================================================
 
@@ -39,6 +41,74 @@ init_workspace() {
         mkdir -p .claude/sdd/reports  || true
         mkdir -p .claude/sdd/archive  || true
     fi
+}
+
+# ---------------------------------------------------------------------------
+# Phase 1.5: Local Agent Override Scaffolding
+# ---------------------------------------------------------------------------
+# Creates .claude/agents/{workflow,custom}/ so users have a discoverable
+# place to drop local agents that override AgentSpec's plugin agents.
+# Claude Code's native precedence is: user-level/project-level agents win
+# over plugin agents when names collide. This function makes that pattern
+# visible and ergonomic.
+#
+# Idempotent. Only writes the README on first run; user edits are preserved.
+
+init_agent_overrides() {
+    if [[ ! -d ".git" ]] && [[ ! -f "CLAUDE.md" ]] && [[ ! -d ".claude" ]]; then
+        return 0
+    fi
+
+    mkdir -p .claude/agents/workflow .claude/agents/custom 2>/dev/null || true
+
+    local readme=".claude/agents/README.md"
+    if [[ -f "$readme" ]]; then
+        return 0
+    fi
+
+    cat > "$readme" <<'EOF'
+# Local Agents — Override AgentSpec
+
+Agents in this directory **take precedence over AgentSpec plugin agents**
+of the same name. Use this to customize phase agents to your project's
+conventions without forking the plugin.
+
+## Layout
+
+| Folder | Purpose |
+|---|---|
+| `workflow/` | Override SDD phase agents (`brainstorm-agent`, `define-agent`, `design-agent`, `build-agent`, `ship-agent`, `iterate-agent`) |
+| `custom/` | New project-specific agents that don't replace anything |
+
+## Override an AgentSpec agent
+
+1. Find the plugin agent at `${CLAUDE_PLUGIN_ROOT}/agents/<category>/<name>.md`
+2. Copy it to `.claude/agents/<category>/<name>.md` — keep the `name:` field identical
+3. Edit freely; your version is now what runs
+
+Example: override `build-agent` so `/build` runs your team's review checklist:
+
+```bash
+cp $CLAUDE_PLUGIN_ROOT/agents/workflow/build-agent.md \
+   .claude/agents/workflow/build-agent.md
+# edit .claude/agents/workflow/build-agent.md
+```
+
+## Add a custom agent
+
+Drop a new `.md` file in `custom/` with valid frontmatter (`name`, `description`,
+`tools`). It becomes available to `/build` and other phase commands automatically.
+
+## Resolution Order
+
+```text
+.claude/agents/<name>.md   (your local override — wins)
+        ↓ if absent
+${CLAUDE_PLUGIN_ROOT}/agents/<name>.md   (AgentSpec plugin)
+```
+
+This is enforced by Claude Code's native plugin loader. No config required.
+EOF
 }
 
 # ---------------------------------------------------------------------------
@@ -129,15 +199,16 @@ detect_project_stack() {
     fi
 
     # --- Spark ---
+    local spark_source=""
     if [[ -f "pyproject.toml" ]] && grep -q "pyspark" pyproject.toml 2>/dev/null; then
-        detected_techs+=("PySpark (pyproject.toml)")
-        kb_domains+=("spark/ -- DataFrames, performance, Delta integration")
-        agents+=("spark-engineer -- Spark job development")
-        agents+=("spark-specialist -- Spark architecture")
-        agents+=("spark-performance-analyzer -- Spark tuning")
-        commands+=("/pipeline -- pipeline scaffolding")
+        spark_source="pyproject.toml"
     elif [[ -f "setup.py" ]] && grep -q "pyspark" setup.py 2>/dev/null; then
-        detected_techs+=("PySpark (setup.py)")
+        spark_source="setup.py"
+    elif [[ -f "requirements.txt" ]] && grep -q "pyspark" requirements.txt 2>/dev/null; then
+        spark_source="requirements.txt"
+    fi
+    if [[ -n "$spark_source" ]]; then
+        detected_techs+=("PySpark (${spark_source})")
         kb_domains+=("spark/ -- DataFrames, performance, Delta integration")
         agents+=("spark-engineer -- Spark job development")
         agents+=("spark-specialist -- Spark architecture")
@@ -283,4 +354,5 @@ generate_context_hint() {
 # ---------------------------------------------------------------------------
 
 init_workspace
+init_agent_overrides
 generate_context_hint

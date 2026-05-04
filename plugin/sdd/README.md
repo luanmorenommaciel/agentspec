@@ -211,8 +211,8 @@ Design dynamically discovers available agents and matches them to tasks:
 Step 1: Discover        Step 2: Index           Step 3: Match
 ------------------      -------------           -------------
 
-Glob(.claude/           agents:                 stg_orders.sql -> @dbt-specialist
-  agents/**/*.md)         dbt-specialist:       spark_job.py -> @spark-engineer
+Glob(agents/             agents:                 stg_orders.sql -> @dbt-specialist
+  **/*.md)                dbt-specialist:       spark_job.py -> @spark-engineer
        |                    keywords: [dbt,     quality.py -> @data-quality-analyst
        v                      model, staging]   dag.py -> @airflow-specialist
 58 agent files              role: "Data
