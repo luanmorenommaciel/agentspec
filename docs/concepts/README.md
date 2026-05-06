@@ -65,7 +65,7 @@ During `/build`, the build-agent delegates to DE specialists: dbt models go to `
 
 ### 3. Knowledge Base (the memory)
 
-23 KB domains ground agent responses in verified patterns instead of hallucinated SQL:
+24 KB domains ground agent responses in verified patterns instead of hallucinated SQL:
 
 | Domain | Topics |
 |--------|--------|

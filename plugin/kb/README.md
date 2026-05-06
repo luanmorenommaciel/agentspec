@@ -3,7 +3,7 @@
 > The structured knowledge layer that grounds every agent response in verified, domain-specific content.
 
 ```
-23 domains | 289 files | 42,500+ lines | MCP-validated 2026-03-26
+24 domains | 289 files | 42,500+ lines | MCP-validated 2026-03-26
 ```
 
 ---
@@ -283,7 +283,7 @@ The machine-readable registry lives at `${CLAUDE_PLUGIN_ROOT}/kb/_index.yaml`. I
 - **limits** -- File size limits (single source of truth)
 - **templates** -- Paths to scaffolding templates
 - **shared** -- Cross-domain resources (anti-patterns library)
-- **domains** -- Complete registry of all 23 domains with:
+- **domains** -- Complete registry of all 24 domains with:
   - `name` -- Domain identifier
   - `description` -- One-line summary
   - `path` -- Directory path relative to `${CLAUDE_PLUGIN_ROOT}/kb/`

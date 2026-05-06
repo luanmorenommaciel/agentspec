@@ -6,7 +6,7 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 31 commands, 23 KB domains, and 3 skills.
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 31 commands, 24 KB domains, and 3 skills.
 
 **Current Status:** v3.2.0 shipped (Agent Router v2 Phase 1, Judge V0, `--judge` flag, local-first agent overrides). Linear is the project tracker (source of truth).
 
@@ -27,17 +27,18 @@ agentspec/
 │   │   ├── dev/             # 4 developer tools & productivity
 │   │   └── workflow/        # 6 SDD phase agents
 │   │
-│   ├── commands/            # 30 slash commands
+│   ├── commands/            # 31 slash commands
 │   │   ├── workflow/        # SDD commands (7)
 │   │   ├── data-engineering/ # DE commands (8)
 │   │   ├── core/            # Utility commands (5)
 │   │   ├── knowledge/       # KB commands (1)
-│   │   ├── review/          # Review commands (1)
+│   │   ├── review/          # Review commands (2)
 │   │   └── visual-explainer/ # Visual documentation commands (8)
 │   │
 │   ├── skills/              # Reusable capability packs
 │   │   ├── visual-explainer/ # HTML page generation (templates, references, scripts)
-│   │   └── excalidraw-diagram/ # Excalidraw JSON generation
+│   │   ├── excalidraw-diagram/ # Excalidraw JSON generation
+│   │   └── agent-router/    # Auto-generated agent routing rules (built from agent frontmatter)
 │   │
 │   ├── sdd/                 # SDD framework
 │   │   ├── architecture/    # WORKFLOW_CONTRACTS.yaml, ARCHITECTURE.md
@@ -46,9 +47,10 @@ agentspec/
 │   │   ├── reports/         # Build reports
 │   │   └── archive/         # Shipped features
 │   │
-│   └── kb/                  # Knowledge Base (23 domains)
+│   └── kb/                  # Knowledge Base (24 domains)
 │       ├── _templates/      # 7 KB domain templates
 │       ├── _index.yaml      # Domain registry
+│       ├── shared/          # Cross-domain anti-patterns and conventions
 │       ├── dbt/             # dbt patterns and concepts
 │       ├── spark/           # PySpark, Spark SQL
 │       ├── sql-patterns/    # SQL best practices
@@ -65,6 +67,7 @@ agentspec/
 │       ├── microsoft-fabric/ # Lakehouse, Warehouse, Pipelines
 │       ├── lakeflow/        # Databricks Lakeflow (DLT)
 │       ├── medallion/       # Bronze/Silver/Gold architecture
+│       ├── supabase/        # pgvector, RLS, Edge Functions, Auth
 │       ├── prompt-engineering/ # Chain-of-thought, extraction
 │       ├── genai/           # Multi-agent systems, guardrails
 │       ├── pydantic/        # Validation, LLM output schemas
@@ -148,13 +151,14 @@ Data engineering example:
 
 | Task | Status | Description |
 |------|--------|-------------|
-| Data engineering pivot | Done | 23 KB domains, 58 agents (8 categories), 30 commands |
+| Data engineering pivot | Done | 24 KB domains, 58 agents (8 categories), 31 commands |
 | Adapt existing agents for DE | Done | code-reviewer, code-cleaner, test-generator, design, define, build |
 | Adapt SDD templates for DE | Done | BRAINSTORM, DEFINE, DESIGN, BUILD_REPORT templates |
 | Documentation overhaul | Done | Getting started, concepts, tutorials, reference, README |
 | Create CLAUDE.md.template | Pending | Template for user projects |
 | Judge Layer V0 (`/judge`) | Done | OpenRouter cross-model second opinion with budget ledger |
-| Judge Layer V1+ | Planned | `--judge` flag, multi-model ensemble, PostToolUse hook |
+| `--judge` flag on phase commands | Done | Inline cross-model verification on `/define`, `/design`, `/build`, `/iterate` |
+| Judge Layer V1+ | Planned | Multi-model ensemble, PostToolUse hook, automated escalation |
 | Flag System (progressive enhancement) | Planned | Unified flag vocabulary across phase commands |
 | Add telemetry | Planned | Local usage tracking |
 
@@ -247,7 +251,7 @@ Data engineering example:
 | `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml` | Phase transition rules |
 | `.claude/sdd/templates/*.md` | Document templates (DE-aware) |
 | `.claude/kb/_templates/*.template` | KB domain templates |
-| `.claude/kb/_index.yaml` | KB domain registry (23 domains) |
+| `.claude/kb/_index.yaml` | KB domain registry (24 domains) |
 | `.claude/agents/README.md` | Agent routing + escalation map |
 | `.claude/agents/architect/` | System-level design agents (schema, pipeline, lakehouse) |
 | `.claude/agents/cloud/` | AWS, GCP, CI/CD, deployment agents |
@@ -257,6 +261,7 @@ Data engineering example:
 | `.claude/agents/dev/` | Prompt crafter, codebase explorer, shell scripts, meeting analyst |
 | `.claude/skills/visual-explainer/` | HTML generation skill (templates, CSS patterns, scripts) |
 | `.claude/skills/excalidraw-diagram/` | Excalidraw JSON generation skill |
+| `.claude/skills/agent-router/` | Auto-generated routing rules (regenerated by `scripts/generate-agent-router.py`) |
 
 ---
 
@@ -264,4 +269,4 @@ Data engineering example:
 
 - **Version:** 3.2.0
 - **Status:** Release
-- **Last Updated:** 2026-05-04
+- **Last Updated:** 2026-05-05

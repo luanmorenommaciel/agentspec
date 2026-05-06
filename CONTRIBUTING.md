@@ -12,8 +12,8 @@ git checkout -b feature/your-feature
 
 # The framework lives in .claude/
 ls .claude/agents/      # 58 specialized agents
-ls .claude/commands/    # 29 slash commands
-ls .claude/skills/      # 2 capability packs (+ 2 plugin-only skills)
+ls .claude/commands/    # 31 slash commands
+ls .claude/skills/      # 3 capability packs (+ 2 plugin-only skills)
 ls .claude/sdd/         # SDD framework
 ls .claude/kb/          # Knowledge Base
 ```
