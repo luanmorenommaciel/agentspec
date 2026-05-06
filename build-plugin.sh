@@ -269,7 +269,7 @@ fi
 AGENT_COUNT=$(find "${PLUGIN_DIR}/agents" -name "*.md" -not -name "README.md" -not -name "_template.md" | wc -l | tr -d ' ')
 COMMAND_COUNT=$(find "${PLUGIN_DIR}/commands" -name "*.md" -not -name "README.md" | wc -l | tr -d ' ')
 SKILL_COUNT=$(find "${PLUGIN_DIR}/skills" -name "SKILL.md" | wc -l | tr -d ' ')
-KB_COUNT=$(find "${PLUGIN_DIR}/kb" -maxdepth 1 -type d ! -name "kb" ! -name "_templates" ! -name "shared" | wc -l | tr -d ' ')
+KB_COUNT=$(find "${PLUGIN_DIR}/kb" -maxdepth 1 -type d ! -name "kb" ! -name "_templates" | wc -l | tr -d ' ')
 
 echo ""
 echo "============================================"

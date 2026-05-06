@@ -13,7 +13,7 @@
 [![Version](https://img.shields.io/badge/v3.2.0-green?style=flat-square)](CHANGELOG.md)
 
 **A single AI agent reviewing your data pipeline will miss things.**<br/>
-**58 specialized agents with 23 knowledge domains will not.**
+**58 specialized agents with 24 knowledge domains will not.**
 
 <br/>
 
@@ -27,7 +27,7 @@
 
 Every time you ask an AI to build a data pipeline, it starts from scratch — no memory of partition strategies, no awareness of SCD patterns, no understanding of your data contracts. You get hallucinated SQL, wrong incremental strategies, and pipelines that pass in dev but break in production.
 
-AgentSpec solves this with **Spec-Driven Data Engineering**: a 5-phase workflow where every phase has access to 23 knowledge base domains, every agent knows its boundaries, and every decision is confidence-scored against real documentation — not guessed.
+AgentSpec solves this with **Spec-Driven Data Engineering**: a 5-phase workflow where every phase has access to 24 knowledge base domains, every agent knows its boundaries, and every decision is confidence-scored against real documentation — not guessed.
 
 <br/>
 
@@ -39,7 +39,7 @@ claude plugin marketplace add luanmorenommaciel/agentspec
 claude plugin install agentspec
 ```
 
-Done. Every Claude Code session now has 58 agents, 31 commands, and 23 KB domains. Updates are one command:
+Done. Every Claude Code session now has 58 agents, 31 commands, and 24 KB domains. Updates are one command:
 
 ```bash
 claude plugin update agentspec
@@ -180,16 +180,16 @@ Every agent follows the same cognitive framework:
 
 <br/>
 
-## 23 Knowledge Base Domains
+## 24 Knowledge Base Domains
 
 | Category | Domains |
 |:--|:--|
 | **Core DE** | `dbt` · `spark` · `sql-patterns` · `airflow` · `streaming` |
 | **Data Design** | `data-modeling` · `data-quality` · `medallion` |
 | **Infrastructure** | `lakehouse` · `lakeflow` · `cloud-platforms` · `terraform` |
-| **Cloud** | `aws` · `gcp` · `microsoft-fabric` |
+| **Cloud** | `aws` · `gcp` · `microsoft-fabric` · `supabase` |
 | **AI & Modern** | `ai-data-engineering` · `modern-stack` · `genai` · `prompt-engineering` |
-| **Foundations** | `pydantic` · `python` · `testing` |
+| **Foundations** | `pydantic` · `python` · `testing` · `shared` |
 
 Each domain contains an `index.md`, `quick-reference.md`, `concepts/` (3-6 files), and `patterns/` (3-6 files with production code). Agents load domains on-demand, not upfront.
 
@@ -214,8 +214,8 @@ agentspec/
 ├── .claude/                 # Source of truth (development)
 │   ├── agents/              # 58 agents across 8 categories
 │   ├── commands/            # 31 slash commands
-│   ├── skills/              # visual-explainer, excalidraw-diagram
-│   ├── kb/                  # 23 knowledge base domains
+│   ├── skills/              # visual-explainer, excalidraw-diagram, agent-router
+│   ├── kb/                  # 24 knowledge base domains
 │   └── sdd/                 # Templates, contracts, features, archive
 │
 ├── plugin/                  # Distributable Claude Code plugin
@@ -239,7 +239,7 @@ agentspec/
 | [Getting Started](docs/getting-started/) | Install and build your first data pipeline |
 | [Core Concepts](docs/concepts/) | SDD pillars through a data engineering lens |
 | [Tutorials](docs/tutorials/) | dbt, star schema, data quality, Spark, streaming, RAG |
-| [Reference](docs/reference/) | Full catalog: 58 agents, 31 commands, 23 KB domains |
+| [Reference](docs/reference/) | Full catalog: 58 agents, 31 commands, 24 KB domains |
 
 <br/>
 

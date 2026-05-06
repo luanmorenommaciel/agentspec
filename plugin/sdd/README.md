@@ -13,7 +13,7 @@
 | **Project** | AgentSpec - Spec-Driven Development Framework |
 | **Tagline** | Spec-Driven Development for Data Engineering |
 | **Business Problem** | Gap between unstructured "vibe coding" and stale traditional specifications |
-| **Solution** | 5-phase workflow with 58 specialized AI agents, 23 KB domains, and 30 commands |
+| **Solution** | 5-phase workflow with 58 specialized AI agents, 24 KB domains, and 31 commands |
 | **Target Audience** | Data engineering teams using Claude Code |
 | **License** | MIT |
 
@@ -545,7 +545,7 @@ ${CLAUDE_PLUGIN_ROOT}/kb/{domain}/
 | Dimension | Without AgentSpec | With AgentSpec |
 |-----------|-------------------|----------------|
 | File placement | Random/guessed | Explicit in Technical Context |
-| Pattern consistency | Varies | KB-grounded (23 domains) |
+| Pattern consistency | Varies | KB-grounded (24 domains) |
 | Code ownership | Unclear | Agent attribution (58 agents) |
 | Traceability | None | Full artifact chain |
 | Specialist expertise | None | Automatic matching |

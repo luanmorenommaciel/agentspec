@@ -14,8 +14,8 @@ AgentSpec provides Agent Matching (Design phase) and Agent Delegation (Build pha
 | 8 phases | **5 phases** (Brainstorm optional) |
 | 3 development modes | **1 unified stream** |
 | Generic agents only | **58 specialized agents** across 8 categories |
-| No domain expertise | **23 KB domains** for data engineering |
-| 12+ commands | **30 commands** (7 SDD + 8 DE + 8 visual + 7 core) |
+| No domain expertise | **24 KB domains** for data engineering |
+| 12+ commands | **31 commands** (7 SDD + 8 DE + 8 visual + 5 core + 2 review + 1 knowledge) |
 | 11+ artifact types | **5 artifact types** |
 | Separate ADR files | **Inline decisions** |
 | Pre-generated tasks | **On-the-fly execution** |

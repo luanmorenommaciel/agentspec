@@ -46,7 +46,7 @@ your-project/.claude/
 |   +-- data-engineering/ # 15 DE implementation agents
 |   +-- dev/             # 4 developer productivity agents
 |
-+-- commands/            # 29 slash commands (ready to use)
++-- commands/            # 31 slash commands (ready to use)
 |   +-- workflow/        # 7 SDD phase commands
 |   +-- data-engineering/ # 8 DE commands
 |   +-- visual-explainer/ # 8 visual documentation commands
@@ -192,4 +192,4 @@ Check that `.claude/agents/` contains the agent `.md` files. Agents are discover
 The `/define` phase requires 12/15 to proceed. For data pipelines, ensure Source Inventory, Schema Contract, and Freshness SLAs are populated.
 
 **KB domain not loading?**
-Check `.claude/kb/_index.yaml` -- the domain must be registered there. All 23 KB domains come pre-configured.
+Check `.claude/kb/_index.yaml` -- the domain must be registered there. All 24 KB domains come pre-configured.
