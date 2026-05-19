@@ -45,16 +45,17 @@ claude plugin install agentspec
 | Dev | 4 | codebase-explorer, prompt-crafter, meeting-analyst |
 | Test | 3 | test-generator, data-quality-analyst, data-contracts-engineer |
 
-### 23 Knowledge Base Domains
+### 24 Knowledge Base Domains
 
-dbt, Spark, Airflow, streaming, SQL patterns, data modeling, data quality, medallion, lakehouse, cloud platforms, AWS, GCP, Microsoft Fabric, Lakeflow, Terraform, AI data engineering, GenAI, prompt engineering, modern stack, Pydantic, Python, testing
+dbt, Spark, Airflow, streaming, SQL patterns, data modeling, data quality, medallion, lakehouse, cloud platforms, AWS, GCP, Microsoft Fabric, Lakeflow, Terraform, AI data engineering, GenAI, prompt engineering, modern stack, Pydantic, Python, testing, Supabase, shared anti-patterns
 
-### 4 Auto-Invoked Skills
+### 5 Auto-Invoked Skills
 
 - **sdd-workflow** -- guides through the 5-phase development workflow
 - **data-engineering-guide** -- routes to the right agent for DE tasks
 - **visual-explainer** -- generates visual HTML diagrams and slide decks
 - **excalidraw-diagram** -- creates Excalidraw diagram JSON files
+- **agent-router** -- auto-matches tasks to the best specialist agent
 
 ## Requirements
 

@@ -229,6 +229,28 @@ ok "Absolute paths rewritten"
 
 chmod +x "${PLUGIN_DIR}/scripts/"*.sh 2>/dev/null || true
 
+# ─── Step 5c: Sync root .claude-plugin/marketplace.json ─────────────────────
+# `claude plugin marketplace add <owner>/<repo>` fetches
+# .claude-plugin/marketplace.json from the repository root via GitHub's raw
+# content API. The canonical manifest lives under plugin/.claude-plugin/, so
+# we mirror it to the root after every build with `source` rewritten to
+# `./plugin`. Keeps the root copy in sync automatically and prevents drift.
+
+info "Syncing root .claude-plugin/marketplace.json..."
+ROOT_MANIFEST="${SCRIPT_DIR}/.claude-plugin/marketplace.json"
+PLUGIN_MANIFEST="${PLUGIN_DIR}/.claude-plugin/marketplace.json"
+mkdir -p "${SCRIPT_DIR}/.claude-plugin"
+python3 - <<PY
+import json, pathlib
+src = pathlib.Path("${PLUGIN_MANIFEST}")
+dst = pathlib.Path("${ROOT_MANIFEST}")
+manifest = json.loads(src.read_text())
+for p in manifest.get("plugins", []):
+    p["source"] = "./plugin"
+dst.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+PY
+ok "Root .claude-plugin/marketplace.json synced"
+
 # ─── Step 6: Verify no stale .claude/ paths remain ──────────────────────────
 
 info "Verifying path migration..."

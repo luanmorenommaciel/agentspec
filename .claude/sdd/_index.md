@@ -289,7 +289,7 @@ BRAINSTORM_*.md
 | DE Commands | `.claude/commands/data-engineering/` |
 | Core Commands | `.claude/commands/core/` |
 | Agents (58) | `.claude/agents/` |
-| KB Domains (23) | `.claude/kb/` |
+| KB Domains (24) | `.claude/kb/` |
 | Templates | `.claude/sdd/templates/` |
 | Contracts | `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml` |
 
