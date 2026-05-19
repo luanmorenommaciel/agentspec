@@ -91,6 +91,8 @@ During `/build`, the build-agent delegates to DE specialists: dbt models go to `
 | `python` | Clean architecture, type hints, dataclasses |
 | `testing` | pytest, fixtures, integration tests, CI |
 | `terraform` | Modules, state, workspaces, IaC patterns |
+| `supabase` | pgvector, RLS, Edge Functions, Auth, Realtime |
+| `shared` | Cross-domain anti-patterns and conventions |
 
 Create additional domains with `/create-kb <domain>` and agents will consult them during `/design` and `/build`.
 

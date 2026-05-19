@@ -130,14 +130,14 @@
 |   +-- data-engineering/        # 15 DE implementation
 |   +-- dev/                     # 4 developer productivity
 |
-+-- kb/                          # 23 curated KB domains
++-- kb/                          # 24 curated KB domains
 |   +-- dbt/                     # dbt patterns
 |   +-- spark/                   # PySpark, Spark SQL
 |   +-- sql-patterns/            # SQL best practices
 |   +-- airflow/                 # DAG patterns
 |   +-- streaming/               # Flink, Kafka, CDC
 |   +-- data-modeling/           # Star schema, Data Vault
-|   +-- ... (17 more domains)
+|   +-- ... (18 more domains)
 |
 +-- sdd/
     +-- _index.md                # Workflow overview

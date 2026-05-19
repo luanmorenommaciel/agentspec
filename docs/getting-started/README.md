@@ -50,9 +50,9 @@ your-project/.claude/
 |   +-- workflow/        # 7 SDD phase commands
 |   +-- data-engineering/ # 8 DE commands
 |   +-- visual-explainer/ # 8 visual documentation commands
-|   +-- core/            # 4 utility commands
+|   +-- core/            # 5 utility commands
 |   +-- knowledge/       # 1 KB command
-|   +-- review/          # 1 code review command
+|   +-- review/          # 2 review commands
 |
 +-- sdd/
 |   +-- features/        # Your active feature documents go here
@@ -60,7 +60,7 @@ your-project/.claude/
 |   +-- archive/         # Shipped features archived here
 |   +-- templates/       # 5 document templates
 |
-+-- kb/                  # 23 data engineering KB domains (ready to use)
++-- kb/                  # 24 knowledge base domains (ready to use)
 ```
 
 ## Your First Data Pipeline (5 minutes)

@@ -86,6 +86,7 @@ Some domains extend this with additional directories:
 | microsoft-fabric | 53 | Lakehouse, Warehouse, Pipelines, KQL, CI/CD, AI, Security | fabric-architect, fabric-pipeline-developer, fabric-logging-specialist, fabric-cicd-specialist, fabric-security-specialist, fabric-ai-specialist |
 | lakeflow | 23 | DLT pipelines, materialized views, streaming tables, DABs | lakeflow-architect, lakeflow-expert, lakeflow-pipeline-builder, lakeflow-specialist, ci-cd-specialist |
 | terraform | 14 | Resources, modules, providers, state, GCP/AWS patterns | aws-deployer, aws-lambda-architect, aws-data-architect, ai-data-engineer-cloud, ai-data-engineer-gcp, gcp-data-architect, ci-cd-specialist |
+| supabase | 9 | pgvector, RLS, Edge Functions, Auth, Realtime, migrations | supabase-specialist |
 
 ### AI and Modern
 
@@ -103,6 +104,7 @@ Some domains extend this with additional directories:
 | python | 10 | Dataclasses, type hints, generators, context managers | python-developer, code-cleaner, code-documenter |
 | pydantic | 10 | BaseModel, validators, LLM output validation, extraction schemas | python-developer, ai-prompt-specialist, llm-specialist, ai-prompt-specialist-gcp |
 | testing | 10 | pytest, fixtures, mocking, parametrize, Spark testing | python-developer, test-generator |
+| shared | 1 | Cross-domain anti-patterns referenced by every agent via `anti_pattern_refs` | (all agents) |
 
 ---
 

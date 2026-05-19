@@ -119,7 +119,7 @@ Traditional specs produce a task list. AgentSpec produces a **team assignment**.
                            +-------------------------------------+
                            |         ${CLAUDE_PLUGIN_ROOT}/kb/                 |
                            |  +------------------------------+   |
-                           |  |  23 curated KB domains       |   |
+                           |  |  24 curated KB domains       |   |
                            |  |  (dbt, Spark, Airflow, ...)  |   |
                            |  +------------------------------+   |
                            +------------------+------------------+
@@ -317,7 +317,7 @@ Design phase matches agents using these keywords:
 
 ## Knowledge Base Integration
 
-AgentSpec integrates deeply with 23 curated Knowledge Base domains:
+AgentSpec integrates deeply with 24 curated Knowledge Base domains:
 
 ### Available Domains
 
@@ -375,7 +375,7 @@ ${CLAUDE_PLUGIN_ROOT}/kb/{domain}/
 
 ## Commands & Artifacts
 
-### All Commands (21)
+### All Commands (31)
 
 #### SDD Workflow (7)
 
@@ -756,7 +756,7 @@ SCHEMA GOVERNANCE
 | Templates | `${CLAUDE_PLUGIN_ROOT}/sdd/templates/` |
 | Archive | `.claude/sdd/archive/` |
 | Agents (58) | `${CLAUDE_PLUGIN_ROOT}/agents/` |
-| Knowledge Base (23) | `${CLAUDE_PLUGIN_ROOT}/kb/` |
+| Knowledge Base (24) | `${CLAUDE_PLUGIN_ROOT}/kb/` |
 | SDD Commands | `${CLAUDE_PLUGIN_ROOT}/commands/workflow/` |
 | DE Commands | `${CLAUDE_PLUGIN_ROOT}/commands/data-engineering/` |
 | Core Commands | `${CLAUDE_PLUGIN_ROOT}/commands/core/` |

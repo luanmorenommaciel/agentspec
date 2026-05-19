@@ -4,6 +4,27 @@ All notable changes to AgentSpec will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Marketplace install path now works end-to-end** (#18) — `claude plugin marketplace add luanmorenommaciel/agentspec` previously returned HTTP 404 because the resolver fetches `.claude-plugin/marketplace.json` from the repository root, but the manifest only existed under `plugin/.claude-plugin/`:
+  - Added root-level `.claude-plugin/marketplace.json` with `source: "./plugin"` pointing at the canonical built artifact
+  - Added `build-plugin.sh` Step 5c that auto-regenerates the root manifest from `plugin/.claude-plugin/marketplace.json` on every build, preventing drift between the two locations
+  - Verified: `https://raw.githubusercontent.com/luanmorenommaciel/agentspec/main/.claude-plugin/marketplace.json` now returns HTTP 200
+- **`plugin/.claude-plugin/marketplace.json` schema fixed** (#17) — moved `description` into `metadata.description` to conform to the marketplace schema; the previous root-level `description` would have blocked publishing.
+- **Count reconciliation across all current-state documentation** (#17, #18) — filesystem had 24 KB domains and 31 commands while documentation still said 23 / 30 in many places. Synchronized `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `plugin/.claude-plugin/plugin.json`, `plugin/.claude-plugin/marketplace.json`, `plugin/README.md`, `docs/README.md`, `docs/reference/README.md`, `docs/getting-started/README.md`, `docs/concepts/README.md`, `.claude/agents/README.md`, `.claude/commands/README.md`, `.claude/kb/README.md`, `.claude/kb/_index.yaml`, `.claude/sdd/README.md`, `.claude/sdd/_index.md` (mirrored into `plugin/sdd/` by the build), and `SECURITY.md` (supported version bumped to 3.2.x). Historical `version_history` rows for v2.1.0 / v3.0.0 preserved as audit trail.
+- **`build-plugin.sh:272` KB counter** (#17) — the `! -name "shared"` exclusion under-reported KB domains by one. `shared/` contains anti-patterns referenced by every agent and is correctly counted as a domain now.
+
+### Added
+
+- **`supabase` KB domain** — pgvector, RLS, Edge Functions, Auth, Realtime, migrations. Consumed by `supabase-specialist`. Brings total to 24 KB domains.
+- **`shared` KB domain entry** — `.claude/kb/shared/anti-patterns.md` is now formally cataloged in `.claude/kb/README.md` as a cross-domain resource referenced by every agent via `anti_pattern_refs`.
+
+### Changed
+
+- `plugin/README.md` — "Auto-Invoked Skills" count corrected from 4 to 5 (added `agent-router` to the list); domain list now enumerates all 24 domains including Supabase and shared anti-patterns.
+
 ## [3.2.0] - 2026-05-01
 
 ### Added

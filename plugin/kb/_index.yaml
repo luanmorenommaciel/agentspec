@@ -35,7 +35,7 @@ shared:
     path: shared/anti-patterns.md
     description: "Cross-agent anti-pattern library referenced by all data engineering agents"
 
-# Domain Registry — 23 Domains
+# Domain Registry — 24 Domains (23 named + shared anti-patterns)
 domains:
 
   # ─── Core Data Engineering ─────────────────────────────────────────
