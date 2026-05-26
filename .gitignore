@@ -41,3 +41,6 @@ node_modules/
 
 # Build artifacts
 *.tmp
+
+# OpenCode compatibility layer (build artifact — runs 'make build-opencode' to generate)
+.opencode/

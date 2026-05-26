@@ -10,13 +10,15 @@
 #   make test          # pytest suite only
 #   make check         # drift check (tests + --check on generators)
 #   make lint          # shellcheck + markdown warnings
+#   make build-opencode # generate .opencode/ from .claude/ source
+#   make test-opencode  # validate OpenCode compatibility layer
 # ============================================================================
 
 # Use bash so we get [[ ]], set -u, etc. — not POSIX sh.
 SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help build test check lint clean generate plugin install-deps
+.PHONY: help build test check lint clean generate plugin install-deps build-opencode test-opencode check-opencode clean-opencode
 
 # ----------------------------------------------------------------------------
 # Help
@@ -47,6 +49,22 @@ generate: ## Regenerate agent-router artifacts (SKILL.md + routing.json)
 	@python3 scripts/generate-agent-router.py
 
 plugin: build ## Alias for `make build`
+
+# ----------------------------------------------------------------------------
+# OpenCode compatibility
+# ----------------------------------------------------------------------------
+
+build-opencode: ## Generate .opencode/ layer from .claude/ source
+	@./build-opencode.sh
+
+test-opencode: ## Validate OpenCode compatibility layer
+	@python3 -m pytest tests/test_opencode_compat.py -v
+
+check-opencode: build-opencode test-opencode ## Build + validate OpenCode layer (full gate)
+
+clean-opencode: ## Remove .opencode/ build artifact
+	@rm -rf .opencode
+	@echo ".opencode/ cleaned."
 
 # ----------------------------------------------------------------------------
 # Hygiene
