@@ -60,6 +60,9 @@ build-opencode: ## Generate .opencode/ layer from .claude/ source
 test-opencode: ## Validate OpenCode compatibility layer
 	@python3 -m pytest tests/test_opencode_compat.py -v
 
+test-opencode-integration: build-opencode ## Build + integration test against live opencode server
+	@python3 -m pytest tests/test_opencode_integration.py -v
+
 check-opencode: build-opencode test-opencode ## Build + validate OpenCode layer (full gate)
 
 clean-opencode: ## Remove .opencode/ build artifact

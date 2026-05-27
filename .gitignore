@@ -44,3 +44,4 @@ node_modules/
 
 # OpenCode compatibility layer (build artifact — runs 'make build-opencode' to generate)
 .opencode/
+opencode.json

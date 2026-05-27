@@ -79,14 +79,21 @@ def _build_permission_block(permissions: set[str]) -> str:
     return "\n".join(lines)
 
 
+_COLOR_RE = re.compile(r"^color:\s*\S+\s*$", re.MULTILINE)
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+
 def transform(source_text: str) -> str:
-    """Transform a .md string: inject permission + mode into frontmatter.
+    """Transform a .md string: strip Claude-only fields, inject permission + mode.
+
+    Drops ``tools:`` (OpenCode rejects list format) and ``color:`` (OpenCode
+    rejects non-standard values). Injects ``permission:`` and ``mode: subagent``
+    blocks in their place.
 
     Returns the transformed text.
     """
     fm_match = _FRONTMATTER_RE.match(source_text)
     if not fm_match:
-        # No frontmatter — pass through unchanged
         return source_text
 
     fm_body = fm_match.group(1)
@@ -97,22 +104,20 @@ def transform(source_text: str) -> str:
     permissions = _tools_to_permissions(tools)
     perm_block = _build_permission_block(permissions)
 
-    # Find insertion point: after the tools: line, before the next top-level key
-    # or the closing ---
+    # Capture the tools: line position before we strip it
     tools_match = _TOOLS_RE.search(fm_body)
-    if tools_match:
-        insert_pos = tools_match.end()  # after the tools: line within fm_body
-    else:
-        insert_pos = 0
+    insert_pos = tools_match.start() if tools_match else 0
 
-    before = fm_body[:insert_pos]
-    after = fm_body[insert_pos:]
+    # Strip Claude Code-only fields that break OpenCode
+    fm_body = _TOOLS_RE.sub("", fm_body)          # remove tools: [...]
+    fm_body = _COLOR_RE.sub("", fm_body)           # remove color: orange etc
+    fm_body = _BLANK_LINES_RE.sub("\n\n", fm_body)  # collapse extra blank lines
 
-    new_fm_body = before + "\n" + perm_block + "\nmode: subagent" + after
+    new_fm_body = fm_body[:insert_pos].rstrip() + \
+        "\n" + perm_block + "\nmode: subagent\n" + \
+        fm_body[insert_pos:].lstrip()
 
-    # Drop any existing stale tools-in-permission or claude-only fields
     result = source_text[:fm_start] + "---\n" + new_fm_body + "\n---\n" + source_text[fm_end:]
-
     return result
 
 

@@ -222,14 +222,16 @@ class TestAgentFrontmatter:
         assert not violations, f"mcp__ references in permission: block: {violations}"
 
     @_require_build
-    def test_claude_tools_field_preserved(self):
-        """The original tools: field is kept for Claude Code compatibility."""
-        missing = []
+    def test_tools_field_stripped_for_opencode(self):
+        """tools: field is intentionally removed — OpenCode rejects the list format."""
+        violations = []
         for f in _all_files(OPENCODE_DIR / "agents"):
             fm = _parse_frontmatter_multiline(f.read_text(encoding="utf-8"))
-            if not fm.get("_tools"):
-                missing.append(str(f.relative_to(OPENCODE_DIR)))
-        assert not missing, f"Agents missing tools: field: {missing}"
+            if fm.get("_tools"):
+                violations.append(str(f.relative_to(OPENCODE_DIR)))
+        assert not violations, (
+            f"Agents with stale tools: field (should be stripped): {violations}"
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -104,8 +104,8 @@ while IFS= read -r -d '' src; do
     rel_path="${src#"${SOURCE_DIR}/agents/"}"
     dst="${OUTPUT_DIR}/agents/${rel_path}"
 
-    # Skip non-.md files (README.md, _template.md)
-    if [[ "${src}" != *.md ]]; then
+    # Skip non-.md files and README files (not agents)
+    if [[ "${src}" != *.md ]] || [[ "$(basename "${src}")" == "README.md" ]]; then
         continue
     fi
 
@@ -128,6 +128,9 @@ ok "${AGENT_COUNT} agents copied"
 
 info "Copying commands..."
 cp -r "${SOURCE_DIR}/commands" "${OUTPUT_DIR}/commands"
+
+# Remove README.md files from commands (they're documentation, not commands)
+find "${OUTPUT_DIR}/commands" -name "README.md" -delete 2>/dev/null || true
 
 COMMAND_COUNT=$(find "${OUTPUT_DIR}/commands" -name "*.md" -not -name "README.md" | wc -l | tr -d ' ')
 
@@ -222,6 +225,9 @@ cat > "${OUTPUT_DIR}/opencode.json" << 'OPCONF'
 }
 OPCONF
 ok "opencode.json generated"
+
+# Copy opencode.json to project root so opencode discovers it
+cp "${OUTPUT_DIR}/opencode.json" "${SCRIPT_DIR}/opencode.json"
 
 # ─── Step 7: Summary ─────────────────────────────────────────────────────────
 
