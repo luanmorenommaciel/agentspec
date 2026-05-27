@@ -9,6 +9,7 @@
 <br/><br/>
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet?style=flat-square)](plugin/)
+[![OpenCode](https://img.shields.io/badge/OpenCode-Compatible-cyan?style=flat-square)](#opencode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/badge/v3.2.0-green?style=flat-square)](CHANGELOG.md)
 
@@ -61,6 +62,24 @@ cp -r agentspec/.claude your-project/.claude
 ```
 
 </details>
+
+<br/>
+
+### OpenCode
+
+```bash
+# Clone and build the OpenCode layer
+git clone https://github.com/luanmorenommaciel/agentspec.git
+cd agentspec && make build-opencode
+
+# In your project, symlink the .opencode/ layer
+cd your-project
+ln -s /path/to/agentspec/.opencode .opencode
+cp /path/to/agentspec/opencode.json opencode.json
+cp /path/to/agentspec/AGENTS.md AGENTS.md
+```
+
+OpenCode discovers agents, commands, and skills from `.opencode/` automatically. No plugin install needed.
 
 <br/>
 

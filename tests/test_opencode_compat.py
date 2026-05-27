@@ -492,7 +492,7 @@ class TestOverallStructure:
     @_require_build
     def test_opencode_directory_structure(self):
         """All expected subdirectories exist after build."""
-        expected = {"agents", "commands", "skills", "plugins"}
+        expected = {"agents", "commands", "skills", "plugins", "sdd"}
         actual = {
             d.name for d in OPENCODE_DIR.iterdir()
             if d.is_dir() and not d.name.startswith(".")
@@ -506,6 +506,20 @@ class TestOverallStructure:
         agents_root = OPENCODE_DIR / "agents"
         subdirs = [d for d in agents_root.iterdir() if d.is_dir()]
         assert len(subdirs) >= 8, f"Expected >=8 agent categories, got {len(subdirs)}"
+
+    @_require_build
+    def test_sdd_templates_exist(self):
+        """SDD phase templates are included in .opencode/sdd/templates/."""
+        templates_dir = OPENCODE_DIR / "sdd" / "templates"
+        assert templates_dir.is_dir(), "Missing .opencode/sdd/templates/"
+        expected = {
+            "BRAINSTORM_TEMPLATE.md", "DEFINE_TEMPLATE.md",
+            "DESIGN_TEMPLATE.md", "BUILD_REPORT_TEMPLATE.md",
+            "SHIPPED_TEMPLATE.md",
+        }
+        actual = {f.name for f in templates_dir.iterdir() if f.suffix == ".md"}
+        missing = expected - actual
+        assert not missing, f"Missing templates: {missing}"
 
     @_require_build
     def test_opensource_claude_sources_untouched(self):

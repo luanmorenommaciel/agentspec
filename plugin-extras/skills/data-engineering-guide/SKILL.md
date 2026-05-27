@@ -15,14 +15,14 @@ You have access to 23 specialized knowledge base domains and 15+ data engineerin
 
 | User Task | Command | Agent |
 |-----------|---------|-------|
-| Design a data pipeline / DAG | `/agentspec:pipeline` | pipeline-architect |
-| Design a schema / star schema / data model | `/agentspec:schema` | schema-designer |
-| Add data quality checks | `/agentspec:data-quality` | data-quality-analyst |
-| Review SQL performance | `/agentspec:sql-review` | sql-optimizer |
-| Choose table format (Iceberg/Delta) | `/agentspec:lakehouse` | lakehouse-architect |
-| Build RAG / embedding pipeline | `/agentspec:ai-pipeline` | ai-data-engineer |
-| Create a data contract | `/agentspec:data-contract` | data-contracts-engineer |
-| Migrate legacy ETL | `/agentspec:migrate` | dbt-specialist + spark-engineer |
+| Design a data pipeline / DAG | `/pipeline` | pipeline-architect |
+| Design a schema / star schema / data model | `/schema` | schema-designer |
+| Add data quality checks | `/data-quality` | data-quality-analyst |
+| Review SQL performance | `/sql-review` | sql-optimizer |
+| Choose table format (Iceberg/Delta) | `/lakehouse` | lakehouse-architect |
+| Build RAG / embedding pipeline | `/ai-pipeline` | ai-data-engineer |
+| Create a data contract | `/data-contract` | data-contracts-engineer |
+| Migrate legacy ETL | `/migrate` | dbt-specialist + spark-engineer |
 
 ## Knowledge Domains Available
 
@@ -43,11 +43,11 @@ You have access to 23 specialized knowledge base domains and 15+ data engineerin
 
 ## When to Suggest Commands
 
-- User mentions "dbt model" or "staging model" → `/agentspec:schema` or delegate to dbt-specialist
-- User mentions "pipeline" or "DAG" or "orchestration" → `/agentspec:pipeline`
-- User mentions "data quality" or "expectations" or "tests" → `/agentspec:data-quality`
-- User mentions "slow query" or "optimize SQL" → `/agentspec:sql-review`
-- User mentions "Iceberg" or "Delta Lake" or "table format" → `/agentspec:lakehouse`
-- User mentions "RAG" or "embeddings" or "vector" → `/agentspec:ai-pipeline`
-- User mentions "contract" or "SLA" or "schema governance" → `/agentspec:data-contract`
-- User mentions "migrate" or "legacy" or "SSIS" or "Informatica" → `/agentspec:migrate`
+- User mentions "dbt model" or "staging model" → `/schema` or delegate to dbt-specialist
+- User mentions "pipeline" or "DAG" or "orchestration" → `/pipeline`
+- User mentions "data quality" or "expectations" or "tests" → `/data-quality`
+- User mentions "slow query" or "optimize SQL" → `/sql-review`
+- User mentions "Iceberg" or "Delta Lake" or "table format" → `/lakehouse`
+- User mentions "RAG" or "embeddings" or "vector" → `/ai-pipeline`
+- User mentions "contract" or "SLA" or "schema governance" → `/data-contract`
+- User mentions "migrate" or "legacy" or "SSIS" or "Informatica" → `/migrate`
