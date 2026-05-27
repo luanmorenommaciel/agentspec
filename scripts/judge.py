@@ -95,6 +95,10 @@ class LedgerEntry:
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LEDGER = REPO_ROOT / ".claude" / "storage" / "judge-ledger.jsonl"
+OPENCODE_LEDGER = REPO_ROOT / ".opencode" / "storage" / "judge-ledger.jsonl"
+
+if (REPO_ROOT / ".opencode").exists():
+    LEDGER = OPENCODE_LEDGER
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-4o-mini"
 DEFAULT_BUDGET = 10

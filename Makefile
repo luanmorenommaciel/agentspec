@@ -18,7 +18,7 @@
 SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help build test check lint clean generate plugin install-deps build-opencode test-opencode check-opencode clean-opencode
+.PHONY: help build test check lint clean generate plugin install-deps build-opencode test-opencode check-opencode check-opencode-quick test-opencode-integration clean-opencode
 
 # ----------------------------------------------------------------------------
 # Help
@@ -63,7 +63,9 @@ test-opencode: ## Validate OpenCode compatibility layer
 test-opencode-integration: build-opencode ## Build + integration test against live opencode server
 	@python3 -m pytest tests/test_opencode_integration.py -v
 
-check-opencode: build-opencode test-opencode ## Build + validate OpenCode layer (full gate)
+check-opencode: build-opencode test-opencode test-opencode-integration ## Build + full gate (unit + integration)
+
+check-opencode-quick: build-opencode test-opencode ## Build + unit tests only (no opencode serve needed)
 
 clean-opencode: ## Remove .opencode/ build artifact
 	@rm -rf .opencode

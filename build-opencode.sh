@@ -147,6 +147,23 @@ done < <(find "${OUTPUT_DIR}/commands" -type f \( -name "*.md" \) -print0)
 
 ok "${COMMAND_COUNT} commands copied"
 
+# ─── Step 3.5: Copy SDD templates ─────────────────────────────────────────────
+
+info "Copying SDD templates..."
+if [[ -d "${SOURCE_DIR}/sdd/templates" ]]; then
+    mkdir -p "${OUTPUT_DIR}/sdd/templates"
+    cp "${SOURCE_DIR}/sdd/templates/"*.md "${OUTPUT_DIR}/sdd/templates/"
+fi
+TEMPLATE_COUNT=$(find "${OUTPUT_DIR}/sdd/templates" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+ok "${TEMPLATE_COUNT} SDD templates copied"
+
+cp "${SOURCE_DIR}/sdd/_index.md" "${OUTPUT_DIR}/sdd/_index.md" 2>/dev/null || true
+if [[ -d "${SOURCE_DIR}/sdd/architecture" ]]; then
+    mkdir -p "${OUTPUT_DIR}/sdd/architecture"
+    cp "${SOURCE_DIR}/sdd/architecture/"* "${OUTPUT_DIR}/sdd/architecture/"
+fi
+ok "SDD architecture files copied"
+
 # ─── Step 4: Copy skills ──────────────────────────────────────────────────────
 
 info "Copying skills..."
@@ -186,13 +203,160 @@ ok "${SKILL_COUNT} skills copied"
 info "Creating plugin stub..."
 mkdir -p "${OUTPUT_DIR}/plugins"
 cat > "${OUTPUT_DIR}/plugins/init-workspace.js" << 'PLUGINJS'
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 export const InitWorkspace = async ({ directory, $ }) => {
   return {
     "session.created": async () => {
-      await $`mkdir -p .claude/sdd/features .claude/sdd/reports .claude/sdd/archive .opencode/storage`;
+      const isAgentSpecProject =
+        existsSync(join(directory, ".git")) ||
+        existsSync(join(directory, "CLAUDE.md")) ||
+        existsSync(join(directory, ".claude"));
+
+      if (!isAgentSpecProject) return;
+
+      await $`mkdir -p .claude/sdd/features .claude/sdd/reports .claude/sdd/archive .claude/sdd/templates`;
+      await $`mkdir -p .opencode/sdd/features .opencode/sdd/reports .opencode/sdd/archive .opencode/sdd/templates .opencode/storage`;
+
+      if (existsSync(join(directory, ".opencode", "sdd", "templates"))) {
+        await $`cp -n .opencode/sdd/templates/*.md .claude/sdd/templates/ 2>/dev/null || true`;
+      }
+      if (existsSync(join(directory, ".opencode", "sdd", "architecture"))) {
+        await $`mkdir -p .claude/sdd/architecture`;
+        await $`cp -n .opencode/sdd/architecture/* .claude/sdd/architecture/ 2>/dev/null || true`;
+        await $`cp .opencode/sdd/architecture/* .opencode/sdd/architecture/ 2>/dev/null || true`;
+      }
+      if (existsSync(join(directory, ".opencode", "sdd", "_index.md"))) {
+        await $`cp -n .opencode/sdd/_index.md .claude/sdd/_index.md 2>/dev/null || true`;
+      }
+
+      const path_sdd = join(directory, ".claude", "sdd");
+      const path_opencode_sdd = join(directory, ".opencode", "sdd");
+      mkdirSync(path_sdd, { recursive: true });
+      mkdirSync(path_opencode_sdd, { recursive: true });
+
+      const hint = renderStackHint(detectStack(directory));
+      writeFileSync(join(path_sdd, ".detected-stack.md"), hint);
+      writeFileSync(join(path_opencode_sdd, ".detected-stack.md"), hint);
     }
   };
 };
+
+function detectStack(directory) {
+  const result = { techs: [], kbDomains: [], agents: [], commands: [] };
+  const add = (arr, items) => { for (const i of items) if (!arr.includes(i)) arr.push(i); };
+  const fex = (rel) => existsSync(join(directory, rel));
+  const fgrep = (rel, pat) => { try { return readFileSync(join(directory, rel), "utf8").includes(pat); } catch { return false; } };
+
+  if (fex("dbt_project.yml") || fex("profiles.yml")) {
+    add(result.techs, ["dbt"]);
+    add(result.kbDomains, ["dbt", "sql-patterns"]);
+    add(result.agents, ["dbt-specialist", "sql-optimizer", "schema-designer"]);
+    add(result.commands, ["/schema", "/sql-review", "/data-quality"]);
+    if (fex("profiles.yml")) {
+      const pf = readFileSync(join(directory, "profiles.yml"), "utf8");
+      if (pf.includes("snowflake")) add(result.techs, ["Snowflake"]);
+      if (pf.includes("bigquery")) add(result.techs, ["BigQuery"]);
+      if (pf.includes("databricks")) { add(result.techs, ["Databricks"]); add(result.kbDomains, ["lakehouse"]); }
+    }
+  }
+
+  if (fex("databricks.yml") || existsSync(join(directory, "bronze.py")) || existsSync(join(directory, "silver.py"))) {
+    add(result.techs, ["Databricks Lakeflow"]);
+    add(result.kbDomains, ["lakeflow", "medallion", "lakehouse"]);
+    add(result.agents, ["lakeflow-specialist", "lakeflow-architect", "medallion-architect"]);
+    add(result.commands, ["/pipeline", "/lakehouse"]);
+  }
+
+  if (fex("template.yaml") && fex("samconfig.toml")) {
+    add(result.techs, ["AWS Lambda (SAM)"]);
+    add(result.kbDomains, ["aws"]);
+    add(result.agents, ["aws-lambda-architect", "lambda-builder", "aws-deployer"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  if (fex("dags") || fex("airflow.cfg") || fex("airflow")) {
+    add(result.techs, ["Apache Airflow"]);
+    add(result.kbDomains, ["airflow"]);
+    add(result.agents, ["airflow-specialist", "pipeline-architect"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  if (fex("docker-compose.yml") && fgrep("docker-compose.yml", "supabase")) {
+    add(result.techs, ["Supabase"]);
+    add(result.kbDomains, ["supabase"]);
+    add(result.agents, ["supabase-specialist"]);
+  }
+
+  if (existsSync(join(directory, "main.tf")) || existsSync(join(directory, "terraform"))) {
+    add(result.techs, ["Terraform"]);
+    add(result.kbDomains, ["terraform"]);
+    add(result.agents, ["data-platform-engineer"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  const sparkIn =
+    (fex("pyproject.toml") && fgrep("pyproject.toml", "pyspark")) ? "pyproject.toml" :
+    (fex("setup.py") && fgrep("setup.py", "pyspark")) ? "setup.py" :
+    (fex("requirements.txt") && fgrep("requirements.txt", "pyspark")) ? "requirements.txt" : null;
+  if (sparkIn) {
+    add(result.techs, ["PySpark (" + sparkIn + ")"]);
+    add(result.kbDomains, ["spark"]);
+    add(result.agents, ["spark-engineer", "spark-specialist", "spark-performance-analyzer"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  if (fex("streaming") || existsSync(join(directory, "kafka"))) {
+    add(result.techs, ["Streaming / Kafka"]);
+    add(result.kbDomains, ["streaming"]);
+    add(result.agents, ["streaming-engineer", "spark-streaming-architect"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  if (fex("Fabric") || existsSync(join(directory, "model.pbix"))) {
+    add(result.techs, ["Microsoft Fabric"]);
+    add(result.kbDomains, ["microsoft-fabric"]);
+    add(result.agents, ["fabric-architect", "fabric-pipeline-developer"]);
+    add(result.commands, ["/pipeline"]);
+  }
+
+  const hasDQ =
+    (fex("requirements.txt") && /great.expectations|soda/.test(readFileSync(join(directory, "requirements.txt"), "utf8"))) ||
+    (fex("pyproject.toml") && /great.expectations|soda/.test(readFileSync(join(directory, "pyproject.toml"), "utf8")));
+  if (hasDQ) {
+    add(result.techs, ["Data Quality (Great Expectations / Soda)"]);
+    add(result.kbDomains, ["data-quality"]);
+    add(result.agents, ["data-quality-analyst", "data-contracts-engineer"]);
+    add(result.commands, ["/data-quality", "/data-contract"]);
+  }
+
+  if ((fex("pyproject.toml") && fgrep("pyproject.toml", "pydantic")) || (fex("requirements.txt") && fgrep("requirements.txt", "pydantic"))) {
+    add(result.techs, ["Pydantic"]);
+    add(result.kbDomains, ["pydantic"]);
+  }
+
+  return result;
+}
+
+function renderStackHint(stack) {
+  const date = new Date().toISOString().slice(0, 10);
+  let out = "# Detected Project Stack\n\n";
+  out += "> Auto-generated by AgentSpec on " + date + ". Do not edit manually.\n\n";
+  out += "## Technologies Found\n";
+  for (const t of stack.techs) out += "- " + t + "\n";
+  if (!stack.techs.length) out += "- _(no specific stack detected)_\n";
+  out += "\n## Recommended KB Domains\n";
+  for (const d of stack.kbDomains) out += "- `" + d + "`\n";
+  if (!stack.kbDomains.length) out += "- _(none detected)_\n";
+  out += "\n## Recommended Agents\n";
+  for (const a of stack.agents) out += "- `" + a + "`\n";
+  if (!stack.agents.length) out += "- _(none detected)_\n";
+  out += "\n## Quick Commands\n";
+  for (const c of stack.commands) out += "- `" + c + "`\n";
+  if (!stack.commands.length) out += "- _(none detected)_\n";
+  return out;
+}
 PLUGINJS
 ok "Plugin stub created"
 
