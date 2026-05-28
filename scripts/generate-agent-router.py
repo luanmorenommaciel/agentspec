@@ -40,8 +40,6 @@ SKILL_DIR_OPENCODE = REPO_ROOT / ".opencode" / "skills" / "agent-router"
 SKILL_MD_OPENCODE = SKILL_DIR_OPENCODE / "SKILL.md"
 ROUTING_JSON_OPENCODE = SKILL_DIR_OPENCODE / "routing.json"
 
-AGENT_DIRS = [AGENTS_DIR, AGENTS_DIR_OPENCODE]
-
 # Skip these filenames in the agents tree
 SKIP_FILES: frozenset[str] = frozenset({"README.md", "_template.md"})
 
@@ -154,42 +152,51 @@ def extract_one_liner(description: str) -> str:
 # ── Agent discovery ──────────────────────────────────────────────────────────
 
 def discover_agents() -> list[AgentSpec]:
-    """Walk .claude/agents/ and .opencode/agents/, parse each agent, return normalized specs."""
+    """Walk .claude/agents/, parse each agent, return normalized specs."""
     specs: list[AgentSpec] = []
-    seen: set[str] = set()
-    for agents_root in AGENT_DIRS:
-        if not agents_root.exists():
+    if not AGENTS_DIR.exists():
+        return specs
+
+    for md in sorted(AGENTS_DIR.rglob("*.md")):
+        if md.name in SKIP_FILES:
             continue
-        for md in sorted(agents_root.rglob("*.md")):
-            if md.name in SKIP_FILES:
-                continue
-            rel = md.relative_to(REPO_ROOT)
-            parts = md.relative_to(agents_root).parts
-            if len(parts) < 2:
-                continue  # Not in a category directory
-            category = parts[0]
-            agent_name = str(rel)
-            if agent_name in seen:
-                continue
-            seen.add(agent_name)
+        rel = md.relative_to(REPO_ROOT)
+        parts = md.relative_to(AGENTS_DIR).parts
+        if len(parts) < 2:
+            continue  # Not in a category directory
+        category = parts[0]
 
-            text = md.read_text(encoding="utf-8")
-            fm = parse_frontmatter(text)
-            if not fm or "name" not in fm:
-                print(f"[WARN] Skipping {rel} — no parseable frontmatter", file=sys.stderr)
-                continue
+        text = md.read_text(encoding="utf-8")
+        fm = parse_frontmatter(text)
+        if not fm or "name" not in fm:
+            print(f"[WARN] Skipping {rel} — no parseable frontmatter", file=sys.stderr)
+            continue
 
-            specs.append(AgentSpec(
-                name=str(fm["name"]),
-                category=category,
-                path=str(rel),
-                tier=str(fm.get("tier", "T1")),
-                model=str(fm.get("model", "sonnet")),
-                description=extract_one_liner(str(fm.get("description", ""))),
-                kb_domains=tuple(fm.get("kb_domains", []) or []),   # pyright: ignore[reportArgumentType]
-                escalates_to=tuple(fm.get("escalates_to", []) or []),  # pyright: ignore[reportArgumentType]
-            ))
+        specs.append(AgentSpec(
+            name=str(fm["name"]),
+            category=category,
+            path=str(rel),
+            tier=str(fm.get("tier", "T1")),
+            model=str(fm.get("model", "sonnet")),
+            description=extract_one_liner(str(fm.get("description", ""))),
+            kb_domains=tuple(fm.get("kb_domains", []) or []),   # pyright: ignore[reportArgumentType]
+            escalates_to=tuple(fm.get("escalates_to", []) or []),  # pyright: ignore[reportArgumentType]
+        ))
     return specs
+
+
+def _remap_path(spec: AgentSpec, source_prefix: str, target_prefix: str) -> AgentSpec:
+    """Return a copy of *spec* with its path remapped from *source_prefix* to *target_prefix*."""
+    return AgentSpec(
+        name=spec.name,
+        category=spec.category,
+        path=spec.path.replace(source_prefix, target_prefix),
+        tier=spec.tier,
+        model=spec.model,
+        description=spec.description,
+        kb_domains=spec.kb_domains,
+        escalates_to=spec.escalates_to,
+    )
 
 
 # ── Rendering ────────────────────────────────────────────────────────────────
@@ -347,15 +354,23 @@ def main() -> int:
         print("[ERROR] No agents discovered under .claude/agents/", file=sys.stderr)
         return 2
 
-    chash = content_hash_for(specs)
-    skill_md = render_skill_md(specs, chash)
-    routing_json = render_routing_json(specs)
+    OUTPUTS = [
+        (AGENTS_DIR, SKILL_DIR, None),
+        (AGENTS_DIR_OPENCODE, SKILL_DIR_OPENCODE, ".opencode/agents/"),
+    ]
 
     if args.check:
         drift = False
-        for agents_root, skill_dir in [(AGENTS_DIR, SKILL_DIR), (AGENTS_DIR_OPENCODE, SKILL_DIR_OPENCODE)]:
+        for agents_root, skill_dir, path_prefix in OUTPUTS:
             if not agents_root.exists():
                 continue
+            output_specs = specs
+            if path_prefix:
+                output_specs = [_remap_path(s, ".claude/agents/", path_prefix) for s in specs]
+            chash = content_hash_for(output_specs)
+            skill_md = render_skill_md(output_specs, chash)
+            routing_json = render_routing_json(output_specs)
+
             skill_md_path = skill_dir / "SKILL.md"
             routing_path = skill_dir / "routing.json"
             for path, content in [(skill_md_path, skill_md), (routing_path, routing_json)]:
@@ -374,19 +389,26 @@ def main() -> int:
         if drift:
             print("\n[FAIL] Run: python3 scripts/generate-agent-router.py", file=sys.stderr)
             return 1
-        print(f"[OK] agent-router is up to date ({len(specs)} agents, hash {chash})")
+        print(f"[OK] agent-router is up to date ({len(specs)} agents, hash {content_hash_for(specs)})")
         return 0
 
-    for agents_root, skill_dir in [(AGENTS_DIR, SKILL_DIR), (AGENTS_DIR_OPENCODE, SKILL_DIR_OPENCODE)]:
+    for agents_root, skill_dir, path_prefix in OUTPUTS:
         if not agents_root.exists():
             continue
+        output_specs = specs
+        if path_prefix:
+            output_specs = [_remap_path(s, ".claude/agents/", path_prefix) for s in specs]
+        chash = content_hash_for(output_specs)
+        skill_md = render_skill_md(output_specs, chash)
+        routing_json = render_routing_json(output_specs)
+
         skill_dir.mkdir(parents=True, exist_ok=True)
         skill_md_path = skill_dir / "SKILL.md"
         routing_path = skill_dir / "routing.json"
         skill_md_path.write_text(skill_md, encoding="utf-8")
         routing_path.write_text(routing_json, encoding="utf-8")
         print(f"[OK] Wrote {skill_md_path.relative_to(REPO_ROOT)} and {routing_path.relative_to(REPO_ROOT)}")
-    print(f"     {len(specs)} agents, {len({s.category for s in specs})} categories, hash {chash}")
+    print(f"     {len(specs)} agents, {len({s.category for s in specs})} categories, hash {content_hash_for(specs)}")
     return 0
 
 
