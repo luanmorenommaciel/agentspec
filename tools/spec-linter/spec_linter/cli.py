@@ -10,7 +10,8 @@ import json
 import sys
 from pathlib import Path
 
-from .linter import emit_json_schema, lint_dir, lint_file
+from .contracts.agent_spec import emit_json_schema
+from .linter import lint_dir, lint_file
 from .verdict import Level, Verdict
 
 
@@ -38,7 +39,9 @@ def _lint_path(path: Path) -> Level:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="spec_linter", description="AgentSpec Gate A linter.")
+    parser = argparse.ArgumentParser(
+        prog="spec_linter", description="AgentSpec contract-validation engine (the Linter)."
+    )
     parser.add_argument("path", nargs="?", help="spec file or directory to lint")
     parser.add_argument(
         "--emit-schema",

@@ -8,7 +8,8 @@ from typing import Any
 
 import pytest
 
-from spec_linter.linter import emit_json_schema, lint_dir, lint_spec
+from spec_linter.contracts.agent_spec import emit_json_schema
+from spec_linter.linter import lint_dir, lint_spec
 from spec_linter.verdict import Level
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
