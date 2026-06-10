@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.2.0
+# Version: 3.3.0
 # Date: 2026-05-01
 
-version: "3.2.0"
+version: "3.3.0"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -112,6 +112,87 @@ agent_resolution:
   documentation:
     user_facing: "docs/concepts/agent-overrides.md"
     quick_reference: ".claude/agents/README.md (auto-generated in user project)"
+
+# =============================================================================
+# CONTRACT ENFORCEMENT (the Linter — ADR-002)
+# =============================================================================
+# A deterministic contract-validation engine. The engine is pure mechanism
+# (validate an artifact against a contract -> verdict); contracts are policy
+# (what is checked + severity); consumers below choose where they bind. The
+# engine and verdict semantics are stable; contract CONTENT is owned upstream
+# (canonical schemas pending). Operator documentation: tools/spec-linter/USAGE.md
+
+contract_enforcement:
+  component: "spec-linter"
+  usage_doc: "tools/spec-linter/USAGE.md"
+  entry_point: "spec_linter.engine.lint(artifact, contract)"
+
+  verdict_semantics:
+    PASS: "fully compliant — proceed"
+    WARN: "advisory finding — proceed, but record the finding"
+    FAIL: "non-compliance — blocks; CLI exits 1"
+    rule: "A contract assigns severity to its own rules; consumers MUST NOT reinterpret FAIL."
+
+  contract_sources:
+    - id: "authored_as_code"
+      description: "Pydantic model + governance rules (agent-spec reference contract)."
+      status: "reference — canonical schema pending upstream"
+    - id: "loaded_as_data"
+      description: "Built from a phase's required_sections; validates a Markdown document."
+    - id: "derived_from_instance"
+      description: "A spec's own output_contract.required_fields become the rule for its artifact."
+
+  available_patterns:
+    pre_generation_validation: "Validate an input artifact before derivation runs (team name: Gate A)."
+    post_generation_conformance: "Validate a produced artifact against the contract it must honor (team name: Gate B)."
+    two_pass_loop: "validate -> regenerate on FAIL -> re-validate, bounded retries."
+    ci_precommit: "Run the CLI on changed artifacts; FAIL blocks the merge."
+
+  consumer_bindings:
+    note: |
+      Each phase agent declares its binding in its own definition. The bindings
+      below are the contract-level summary. Wired now: agents declare a
+      pre-handoff validation of the produced phase document against its phase
+      contract (required_sections). Specified TARGET: a two-pass
+      spec -> validate -> document -> validate binding (the team's Gate A
+      pattern) activates when upstream phase-spec schemas land.
+    bindings:
+      - phase: "Define"
+        artifact: "DEFINE_{FEATURE}.md"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections"
+        pattern: "post_generation_conformance"
+        status: "wired (document-level); two-pass is the target"
+      - phase: "Design"
+        artifact: "DESIGN_{FEATURE}.md"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections"
+        pattern: "post_generation_conformance"
+        status: "wired (document-level); two-pass is the target"
+      - phase: "Build"
+        artifact: "BUILD_REPORT_{FEATURE}.md"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections"
+        pattern: "post_generation_conformance"
+        status: "specified target"
+      - phase: "Brainstorm"
+        artifact: "BRAINSTORM_{FEATURE}.md"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections"
+        pattern: "post_generation_conformance"
+        status: "specified target"
+      - phase: "Ship"
+        artifact: "SHIPPED_{DATE}.md"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections"
+        pattern: "post_generation_conformance"
+        status: "specified target"
+      - phase: "Iterate"
+        artifact: "the edited phase document"
+        contract_source: "loaded_as_data"
+        binds_on: "required_sections of the edited document's phase"
+        pattern: "post_generation_conformance"
+        status: "specified target"
 
 # =============================================================================
 # PHASE 0: BRAINSTORM (Optional)
@@ -869,6 +950,13 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.3.0"
+    date: "2026-06-10"
+    changes:
+      - "Added contract_enforcement contract documenting the spec-linter engine (ADR-002): verdict semantics, three contract sources, available usage patterns, and per-phase consumer bindings"
+      - "Documented the D1<->D2 interface — contract CONTENT (canonical schemas) is owned upstream; the engine and verdict semantics are the stable surface"
+      - "Phase agents now declare a pre-handoff document-validation binding against their phase contract (required_sections); two-pass spec->validate->document->validate is the specified target pending upstream phase-spec schemas"
+
   - version: "3.2.0"
     date: "2026-05-01"
     changes:

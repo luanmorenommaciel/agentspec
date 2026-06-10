@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **`supabase` KB domain** — pgvector, RLS, Edge Functions, Auth, Realtime, migrations. Consumed by `supabase-specialist`. Brings total to 24 KB domains.
 - **`shared` KB domain entry** — `.claude/kb/shared/anti-patterns.md` is now formally cataloged in `.claude/kb/README.md` as a cross-domain resource referenced by every agent via `anti_pattern_refs`.
+- **Contract Enforcement layer — the Linter (ADR-002, #54)** — a deterministic contract-validation engine that checks an artifact against a contract and returns a `PASS`/`WARN`/`FAIL` verdict. The engine is pure mechanism (`lint(artifact, contract)`); contracts are policy (three sources: authored-as-code reference contract, data-driven SDD-phase contract, instance-derived contract); consumers declare their own binding. New `contract_enforcement` block in `WORKFLOW_CONTRACTS.yaml` (version bumped 3.2.0 → 3.3.0), Quality Gates in `ARCHITECTURE.md` now reference the component, and the 6 workflow phase agents declare a pre-handoff document-validation binding against their phase contract (`required_sections`). Operator usage documented in `tools/spec-linter/USAGE.md`. Component lives under `tools/spec-linter/` with its own CI job. Phase-spec "Gate A" two-pass validation is the specified target, activating when upstream canonical phase-spec schemas land.
 
 ### Changed
 

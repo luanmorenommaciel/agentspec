@@ -364,7 +364,8 @@
 │   ├─────────────────────────────────────────────────────────────────┤                   │
 │   │ [ ] All files from manifest created                              │                   │
 │   │ [ ] All verification commands pass                               │                   │
-│   │ [ ] Lint check passes                                              │                   │
+│   │ [ ] Lint check passes (ruff)                                     │                   │
+│   │ [ ] Contract check passes (spec-linter; see USAGE.md)            │                   │
 │   │ [ ] Tests pass                                                    │                   │
 │   │ [ ] No TODO comments in code                                     │                   │
 │   └─────────────────────────────────────────────────────────────────┘                   │
@@ -383,12 +384,29 @@
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Contract Enforcement (the Linter)
+
+The Quality Gates above are enforced in part by the **spec-linter** — a
+deterministic contract-validation engine (`lint(artifact, contract) -> verdict`).
+Two validation points sit on the phase flow:
+
+- **Pre-generation (team's "Gate A"):** a phase's input is validated before the
+  phase derives its artifact.
+- **Post-generation (team's "Gate B"):** the produced phase document is validated
+  against its phase contract (`required_sections`) before handoff to the next phase.
+
+Verdict semantics: `PASS` proceeds, `WARN` proceeds with a recorded finding,
+`FAIL` blocks. Contract definitions and per-phase bindings live in
+`WORKFLOW_CONTRACTS.yaml` (`contract_enforcement`); operator usage is documented
+in `tools/spec-linter/USAGE.md`.
+
 ---
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.3.0 | 2026-06-10 | Contract Enforcement (the Linter) — verdict semantics, contract sources, per-phase consumer bindings; phase agents declare document-validation binding |
 | 2.1.0 | 2026-03-26 | Updated folder structure for 58 agents, 8 categories, 23 KB domains |
 | 2.0.0 | 2026-03-26 | Data engineering pivot |
 | 1.0.0 | 2026-02-17 | Public release as AgentSpec v1.0.0 |
