@@ -1,7 +1,7 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
 # Version: 3.3.0
-# Date: 2026-05-01
+# Date: 2026-06-10
 
 version: "3.3.0"
 name: "AgentSpec"
@@ -143,18 +143,18 @@ contract_enforcement:
       description: "A spec's own output_contract.required_fields become the rule for its artifact."
 
   available_patterns:
-    pre_generation_validation: "Validate an input artifact before derivation runs (team name: Gate A)."
-    post_generation_conformance: "Validate a produced artifact against the contract it must honor (team name: Gate B)."
+    pre_generation_validation: "Validate an input artifact before derivation runs (pattern name: Gate A)."
+    post_generation_conformance: "Validate a produced artifact against the contract it must honor (pattern name: Gate B)."
     two_pass_loop: "validate -> regenerate on FAIL -> re-validate, bounded retries."
     ci_precommit: "Run the CLI on changed artifacts; FAIL blocks the merge."
 
   consumer_bindings:
     note: |
       Each phase agent declares its binding in its own definition. The bindings
-      below are the contract-level summary. Wired now: agents declare a
+      below are the contract-level summary. Currently wired: agents declare a
       pre-handoff validation of the produced phase document against its phase
       contract (required_sections). Specified TARGET: a two-pass
-      spec -> validate -> document -> validate binding (the team's Gate A
+      spec -> validate -> document -> validate binding (the Gate A
       pattern) activates when upstream phase-spec schemas land.
     bindings:
       - phase: "Define"
@@ -954,7 +954,7 @@ version_history:
     date: "2026-06-10"
     changes:
       - "Added contract_enforcement contract documenting the spec-linter engine (ADR-002): verdict semantics, three contract sources, available usage patterns, and per-phase consumer bindings"
-      - "Documented the D1<->D2 interface — contract CONTENT (canonical schemas) is owned upstream; the engine and verdict semantics are the stable surface"
+      - "Documented the spec-definition <-> validation interface — contract CONTENT (canonical schemas) is owned upstream; the engine and verdict semantics are the stable surface"
       - "Phase agents now declare a pre-handoff document-validation binding against their phase contract (required_sections); two-pass spec->validate->document->validate is the specified target pending upstream phase-spec schemas"
 
   - version: "3.2.0"

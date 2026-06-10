@@ -2,8 +2,8 @@
 
 Local, self-contained prototype that validates an **AgentSpec** YAML file with a
 **Pydantic v2** model and runs layered governance checks. It exists to validate an
-architecture decision before it becomes a PR in the AgentSpec OSS repo: this is a
-**prototype to be ported via the issue → PR workflow**, not the production code.
+architecture decision (ADR-002): this is a **reference prototype**, not the
+production code.
 
 ## What it proves
 
@@ -36,8 +36,8 @@ L2 (governance) stay cleanly separated — which is the architectural point.
 
 This prototype backs **ADR-002 (Contract Enforcement Layer)**. The layered model
 maps to the ADR as: L1 = schema validity (Pydantic-native), L2 = the Policy /
-contract-enforcement layer, L3/L4 = consistency + identity guards. Each module is a
-candidate unit for the OSS port:
+contract-enforcement layer, L3/L4 = consistency + identity guards. Each module owns
+a single layer or concern:
 
 | Module | Role |
 | --- | --- |

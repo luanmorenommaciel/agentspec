@@ -1,9 +1,9 @@
-"""Compatibility surface over the engine + agent-spec reference contract.
+"""Compatibility layer: thin wrappers over the engine and the agent-spec contract.
 
-Pre-refactor callers used lint_spec/lint_file/lint_dir and emit_json_schema
-from here. These now delegate to engine.lint() with the AgentSpecContract so
-the public behavior is preserved while the mechanism/policy split lives in
-engine.py + contracts/.
+lint_spec, lint_file, lint_dir, and emit_json_schema delegate to engine.lint()
+with the AgentSpecContract; the mechanism/policy split lives in engine.py +
+contracts/. New code should use spec_linter.engine and spec_linter.contracts
+directly.
 """
 
 from __future__ import annotations

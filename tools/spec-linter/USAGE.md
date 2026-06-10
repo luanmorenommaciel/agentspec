@@ -25,9 +25,10 @@
 
 - (a) **Authored as code** — `AgentSpecContract`
   (`spec_linter/contracts/agent_spec.py`): the agent-spec reference contract
-  (Pydantic model + governance rules). *Reference implementation pending pod
-  D1's canonical schema.* It also owns `emit_json_schema()` — the spec JSON
-  Schema is a contract capability, not an engine one.
+  (Pydantic model + governance rules). *Reference implementation pending the
+  canonical agent-spec schema, owned upstream.* It also owns
+  `emit_json_schema()` — the spec JSON Schema is a contract capability, not an
+  engine one.
 - (b) **Loaded as data** — `SddPhaseContract(phase, required_sections)`
   (`spec_linter/contracts/sdd_phase.py`): built from a phase's
   `required_sections` list (e.g., from a WORKFLOW_CONTRACTS-style YAML),
@@ -76,9 +77,9 @@ Findings are classified on the L1–L4 taxonomy (schema / contract / consistency
 
 ## 5. Usage patterns (SUGGESTIONS — consumers choose)
 
-- **Pre-generation validation** (the team's "Gate A"): validate a spec with the
+- **Pre-generation validation** (the "Gate A" pattern): validate a spec with the
   agent-spec contract before deriving artifacts from it.
-- **Post-generation conformance** (the team's "Gate B"): validate a produced
+- **Post-generation conformance** (the "Gate B" pattern): validate a produced
   artifact against the contract it should honor (instance- or phase-derived).
 - **Two-pass loop with bounded retries**: validate → if FAIL, regenerate →
   re-validate, up to N attempts; then stop and surface the verdict.
@@ -91,6 +92,7 @@ Findings are classified on the L1–L4 taxonomy (schema / contract / consistency
 
 ## 6. Status & scope
 
-- The agent-spec contract is a REFERENCE implementation; pod D1 owns the
-  canonical schema/contract content (the D1↔D2 interface). The engine and
+- The agent-spec contract is a REFERENCE implementation; the canonical
+  schema/contract content is owned upstream by the spec workstream (the
+  interface between spec definition and spec validation). The engine and
   verdict semantics are the stable surface.

@@ -1,9 +1,9 @@
 """Agent-spec REFERENCE contract (authored as code).
 
-REFERENCE IMPLEMENTATION — pending pod D1's canonical agent-spec schema. This
-repackages the existing Pydantic model + governance rules as a Contract so the
+REFERENCE IMPLEMENTATION — pending the canonical agent-spec schema, owned
+upstream. Packages the Pydantic model + governance rules as a Contract so the
 engine can validate agent specs without knowing they are specs. The same
-Pydantic model still emits the spec JSON Schema (emit_json_schema), which is a
+Pydantic model also emits the spec JSON Schema (emit_json_schema), which is a
 CONTRACT capability, not an engine one.
 """
 

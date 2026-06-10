@@ -1,4 +1,4 @@
-"""Tests for the Gate A spec linter — one test per narrative point."""
+"""Tests for the Gate A spec linter — one test per documented behavior."""
 
 from __future__ import annotations
 

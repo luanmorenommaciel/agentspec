@@ -390,9 +390,9 @@ The Quality Gates above are enforced in part by the **spec-linter** — a
 deterministic contract-validation engine (`lint(artifact, contract) -> verdict`).
 Two validation points sit on the phase flow:
 
-- **Pre-generation (team's "Gate A"):** a phase's input is validated before the
+- **Pre-generation ("Gate A"):** a phase's input is validated before the
   phase derives its artifact.
-- **Post-generation (team's "Gate B"):** the produced phase document is validated
+- **Post-generation ("Gate B"):** the produced phase document is validated
   against its phase contract (`required_sections`) before handoff to the next phase.
 
 Verdict semantics: `PASS` proceeds, `WARN` proceeds with a recorded finding,

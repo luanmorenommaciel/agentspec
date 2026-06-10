@@ -16,6 +16,7 @@ from .verdict import Level, Verdict
 
 
 def _write_schema(out: Path) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(emit_json_schema(), indent=2) + "\n")
     print(f"Wrote JSON Schema to {out}")
 

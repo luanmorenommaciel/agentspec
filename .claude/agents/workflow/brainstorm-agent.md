@@ -180,7 +180,7 @@ contract using the spec-linter (`lint(artifact, contract)`), following
 - `FAIL` blocks handoff (a required section is missing); `WARN` proceeds with
   the finding recorded; `PASS` proceeds.
 - **Target binding (pending upstream phase-spec schemas):** a two-pass
-  `spec -> validate -> document -> validate` flow (the team's "Gate A" pattern).
+  `spec -> validate -> document -> validate` flow (the "Gate A" pattern).
   Until those schemas land, this step is the post-generation document check and
   is behaviorally declared, not yet runtime-enforced.
 
