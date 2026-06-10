@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "Observability": {
+      "properties": {
+        "confidence_scoring": {
+          "title": "Confidence Scoring",
+          "type": "boolean"
+        },
+        "sources_attribution": {
+          "title": "Sources Attribution",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "confidence_scoring",
+        "sources_attribution"
+      ],
+      "title": "Observability",
+      "type": "object"
+    },
+    "OutputContract": {
+      "properties": {
+        "format": {
+          "enum": [
+            "structured-report",
+            "code-file",
+            "json",
+            "markdown-only"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "required_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Fields",
+          "type": "array"
+        },
+        "side_effects": {
+          "$ref": "#/$defs/SideEffects"
+        }
+      },
+      "required": [
+        "format",
+        "side_effects"
+      ],
+      "title": "OutputContract",
+      "type": "object"
+    },
+    "SideEffects": {
+      "properties": {
+        "files_written": {
+          "title": "Files Written",
+          "type": "boolean"
+        },
+        "git_operations": {
+          "items": {
+            "enum": [
+              "commit",
+              "push",
+              "branch",
+              "none"
+            ],
+            "type": "string"
+          },
+          "title": "Git Operations",
+          "type": "array"
+        },
+        "external_apis": {
+          "items": {
+            "type": "string"
+          },
+          "title": "External Apis",
+          "type": "array"
+        }
+      },
+      "required": [
+        "files_written",
+        "git_operations",
+        "external_apis"
+      ],
+      "title": "SideEffects",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "tools": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tools",
+      "type": "array"
+    },
+    "kb_domains": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Kb Domains",
+      "type": "array"
+    },
+    "maturity": {
+      "enum": [
+        "V1",
+        "V2",
+        "V3"
+      ],
+      "title": "Maturity",
+      "type": "string"
+    },
+    "tier": {
+      "enum": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "title": "Tier",
+      "type": "string"
+    },
+    "output_contract": {
+      "$ref": "#/$defs/OutputContract"
+    },
+    "stop_conditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Stop Conditions",
+      "type": "array"
+    },
+    "escalation_rules": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Escalation Rules",
+      "type": "array"
+    },
+    "observability": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Observability"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "memory_backend": {
+      "anyOf": [
+        {
+          "enum": [
+            "kv",
+            "vector",
+            "graph",
+            "none"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Memory Backend"
+    },
+    "recall_strategy": {
+      "anyOf": [
+        {
+          "enum": [
+            "per-session",
+            "per-user",
+            "global"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recall Strategy"
+    },
+    "requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "deliverables": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Deliverables",
+      "type": "array"
+    },
+    "publish": {
+      "default": false,
+      "title": "Publish",
+      "type": "boolean"
+    },
+    "security_review": {
+      "default": false,
+      "title": "Security Review",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "description",
+    "model",
+    "tools",
+    "maturity",
+    "tier",
+    "output_contract"
+  ],
+  "title": "AgentSpec",
+  "type": "object"
+}

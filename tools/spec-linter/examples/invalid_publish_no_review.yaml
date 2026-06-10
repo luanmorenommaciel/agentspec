@@ -1,0 +1,28 @@
+# publish=true but security_review=false -> L2.publish_security_review FAIL.
+id: release-bot
+name: Release Bot
+description: Cuts releases and pushes tags.
+model: claude-opus-4
+tools:
+  - run_command
+maturity: V2
+tier: T3
+output_contract:
+  format: structured-report
+  required_fields: []
+  side_effects:
+    files_written: true
+    git_operations:
+      - commit
+      - push
+    external_apis:
+      - github
+observability:
+  confidence_scoring: true
+  sources_attribution: false
+stop_conditions:
+  - dirty working tree
+escalation_rules:
+  - escalate on failed CI
+publish: true
+security_review: false

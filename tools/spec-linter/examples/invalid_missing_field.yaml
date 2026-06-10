@@ -1,0 +1,19 @@
+# Missing the required `model` field -> L1 schema FAIL.
+id: doc-writer
+name: Doc Writer
+description: Writes documentation from a spec.
+tools: []
+maturity: V1
+tier: T1
+output_contract:
+  format: markdown-only
+  required_fields: []
+  side_effects:
+    files_written: true
+    git_operations:
+      - none
+    external_apis: []
+stop_conditions:
+  - no input
+escalation_rules:
+  - escalate on ambiguity
