@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-platform distribution (Claude Code, Cursor, VS Code + Copilot, MCP)** — AgentSpec now ships native bundles for every supported runtime from a single source of truth (`.claude/`):
+  - `scripts/lib/` — shared build core (`platforms.py`, `path_rewrite.py`, `frontmatter.py`, `packaging.py`) with full unit test coverage.
+  - `scripts/build_all.py` — multi-target orchestrator. New `Makefile` targets: `build-claude`, `build-cursor`, `build-copilot`, `build-mcp`, `build-all`, `validate-all`, `clean-dist`.
+  - `scripts/build_claude.py` — `dist/claude/` with `.claude-plugin/plugin.json` + `marketplace.json` (the legacy `build-plugin.sh` still works and now also ships `scripts/judge.py`).
+  - `scripts/build_cursor.py` — `dist/cursor/` with `.cursor-plugin/plugin.json`, a Claude-format mirror manifest, 31 explicit skills converted from commands (`disable-model-invocation: true`), Cursor-friendly agent frontmatter, hooks, and `.mcp.json`.
+  - `scripts/build_copilot.py` — `dist/vscode-copilot/` with `.claude-plugin/plugin.json`, `.github/prompts/*.prompt.md` (31 workspace prompts), `.github/agents/*.agent.md` (58 workspace agents with SDD `handoffs:` on workflow agents), and `.vscode/settings.recommended.json`.
+  - `scripts/build_mcp.py` — `dist/mcp/` with the MCP server, `resources/` (KB + SDD + agents + skills) and `mcp.json` ready to drop into any MCP client config.
+- **AgentSpec MCP server** (`packages/agentspec-mcp/`) — zero-dependency JSON-RPC server over stdio exposing `kb_search`, `kb_read`, `route_agent`, `sdd_status` and `judge` tools. Built from `routing.json` so it stays in lock-step with the agent-router skill.
+- **`scripts/validate_dist.py`** — counts agents/commands/skills/KB domains, validates manifest schemas (Claude, Cursor, Copilot, MCP), checks for stale `.claude/` references and asserts the presence of `scripts/judge.py` and workspace fallbacks.
+- **Per-platform getting-started guides** under `docs/getting-started/` (`claude-code.md`, `cursor.md`, `vscode-copilot.md`).
+- **`.github/workflows/multi-platform-validate.yml`** — CI gate that runs `make build-all`, `make validate-all`, `python3 -m pytest tests/ -v`, the agent-router drift check, and a JSON-RPC roundtrip against the MCP server.
+- **Path-rewrite policy is now testable** — `_WORKSPACE_PATHS` is a single source of truth (covers `.claude/sdd`, `.claude/storage`, `.claude/settings`, `.claude/plans`, `.claude/memory`, `.claude/CLAUDE.md`, `.claude/agents/workflow`, `.claude/agents/custom`).
+- **`build-plugin.sh` now ships `scripts/judge.py`** alongside the existing skills and hooks, so `/judge` resolves end-to-end in published Claude Code plugins (previously missing).
+- **README install matrix** covers all four targets; CONTRIBUTING documents the multi-platform build workflow and per-target path tokens.
+
 ### Fixed
 
 - **Marketplace install path now works end-to-end** (#18) — `claude plugin marketplace add luanmorenommaciel/agentspec` previously returned HTTP 404 because the resolver fetches `.claude-plugin/marketplace.json` from the repository root, but the manifest only existed under `plugin/.claude-plugin/`:

@@ -139,32 +139,92 @@ See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples.
 
 ## Plugin Development
 
-AgentSpec is distributed as a Claude Code plugin. The development workflow:
+AgentSpec is distributed natively to **Claude Code**, **Cursor**, and
+**VS Code + Copilot**, plus a universal **AgentSpec MCP** server. The
+source of truth is `.claude/`; every distribution is generated from it.
 
-1. **Develop in `.claude/`** — this is the source of truth
-2. **Build the plugin** — run `bash build-plugin.sh` to generate `plugin/`
-3. **Test locally** — run `claude --plugin-dir ./plugin`
-4. **Iterate** — make changes in `.claude/`, rebuild, reload with `/reload-plugins`
+### Workflow
+
+1. **Develop in `.claude/`** — agents, commands, skills, KB, SDD.
+2. **Run the multi-target build**:
+
+   ```bash
+   make build-all          # Claude Code, Cursor, VS Code + Copilot, MCP
+   make validate-all       # sanity-check every dist/ target
+   ```
+
+3. **Test locally**:
+   - Claude Code → `claude --plugin-dir ./dist/claude`
+   - Cursor → copy `dist/cursor/` to `~/.cursor/plugins/local/agentspec/`
+   - VS Code + Copilot → point `chat.pluginLocations` at `dist/vscode-copilot/`
+   - MCP client → point your client at `dist/mcp/mcp.json`
+
+4. **Iterate** — make changes in `.claude/`, rebuild, reload.
+
+### Build Targets
+
+| Target | Output | Builder |
+|--------|--------|---------|
+| Claude Code | `dist/claude/` | `make build-claude` (or legacy `bash build-plugin.sh`) |
+| Cursor | `dist/cursor/` | `make build-cursor` |
+| VS Code + Copilot | `dist/vscode-copilot/` | `make build-copilot` |
+| AgentSpec MCP | `dist/mcp/` | `make build-mcp` |
+| All four | `dist/` | `make build-all` |
+
+The orchestrator lives in `scripts/build_all.py`; each per-platform
+builder is a small Python module that consumes the shared library at
+`scripts/lib/` (`platforms.py`, `path_rewrite.py`, `frontmatter.py`,
+`packaging.py`).
 
 ### Key Concepts
 
-- **`.claude/`** contains agents, commands, skills, KB, SDD — your development environment
-- **`plugin/`** is the generated distributable (built from `.claude/` by the build script)
-- **`plugin-extras/`** contains plugin-only content (new skills, hooks, scripts) that don't belong in `.claude/`
-- **`build-plugin.sh`** copies `.claude/` → `plugin/`, rewrites `.claude/` paths to `${CLAUDE_PLUGIN_ROOT}/`, then merges `plugin-extras/`
+- **`.claude/`** contains agents, commands, skills, KB, SDD — your development environment.
+- **`plugin/`** is the legacy Claude-only output (kept for backwards compatibility with users who run `bash build-plugin.sh`).
+- **`dist/`** is the new multi-platform output (Claude / Cursor / Copilot / MCP).
+- **`plugin-extras/`** contains plugin-only content (skills, hooks, scripts) that ships with every target.
+- **`packages/agentspec-mcp/`** is the MCP server source, vendored into `dist/mcp/server/` at build time.
 
 ### Path Convention
 
-In `.claude/` (source), reference paths as `.claude/kb/dbt/index.md`.
-In plugin output, these become `${CLAUDE_PLUGIN_ROOT}/kb/dbt/index.md`.
-Workspace output paths (`.claude/sdd/features/`, `.claude/sdd/reports/`, `.claude/sdd/archive/`) stay as-is — they point to the user's project.
+In `.claude/` (source), reference paths as `.claude/kb/dbt/index.md`. The
+build rewrites them per platform:
+
+| Platform | Token |
+|----------|-------|
+| Claude Code | `${CLAUDE_PLUGIN_ROOT}/kb/dbt/index.md` |
+| Cursor | `${PLUGIN_ROOT}/kb/dbt/index.md` |
+| VS Code + Copilot | `${CLAUDE_PLUGIN_ROOT}/kb/dbt/index.md` (Claude-format mirror) |
+| MCP | `${AGENTSPEC_ROOT}/resources/kb/dbt/index.md` |
+
+Workspace output paths (`.claude/sdd/features/`, `.claude/sdd/reports/`,
+`.claude/sdd/archive/`, `.claude/storage/`, `.claude/CLAUDE.md`) stay
+literal across every target — they point to the **user's project**, not
+the plugin.
 
 ### Adding Plugin-Only Content
 
-If you create something that only exists in the plugin (not in `.claude/`), add it to `plugin-extras/`:
+If you create something that only exists in distribution bundles (not in
+`.claude/`), add it to `plugin-extras/`:
+
 - New skills → `plugin-extras/skills/{skill-name}/SKILL.md`
 - Hooks → `plugin-extras/hooks/hooks.json`
 - Scripts → `plugin-extras/scripts/{script-name}.sh`
+
+`plugin-extras/` is merged into Claude, Cursor and Copilot bundles. The
+MCP target ships only the source `.claude/` skills (no plugin-extras).
+
+### Testing
+
+Run the full test suite (78 tests) plus the per-target snapshot tests:
+
+```bash
+make test                # alias for python3 -m pytest tests/ -v
+make validate-all        # build + validate every dist/ target
+```
+
+CI runs `.github/workflows/multi-platform-validate.yml` on every PR
+touching `.claude/`, `scripts/`, `tests/`, `packages/`, `plugin-extras/`
+or build entrypoints.
 
 ## Code of Conduct
 

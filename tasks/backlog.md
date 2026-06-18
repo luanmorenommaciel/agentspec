@@ -226,17 +226,25 @@
 
 ## v4.1 — Strategic Expansion
 
-### ⚫ P2: Codex & Claude Cross-Platform
+### 🟢 P1: Multi-Platform Distribution (Claude Code, Cursor, VS Code + Copilot, MCP)
 
-**Description:** Extend AgentSpec beyond Claude Code — make it work with Codex, OpenClaw, Cursor via MCP-first distribution.
+**Description:** Make AgentSpec install natively on Claude Code, Cursor and VS Code + Copilot, plus a universal AgentSpec MCP server, all from the same `.claude/` source.
 
-**Tasks:**
-- [ ] Add `build_codex_plugin()` to build-plugin.sh
-- [ ] Add `build_mcp_only()` target for universal distribution
-- [ ] Create MCP-only package (KB + routing as MCP tools)
-- [ ] Write AGENTS.md conversion layer (agents → AGENTS.md sections)
-- [ ] Test with Codex, OpenClaw, Cursor
-- [ ] Document cross-platform installation
+**Shipped:**
+- [x] Shared build core at `scripts/lib/` (`platforms.py`, `path_rewrite.py`, `frontmatter.py`, `packaging.py`) with full pytest coverage.
+- [x] Orchestrator `scripts/build_all.py` + `Makefile` targets `build-claude`, `build-cursor`, `build-copilot`, `build-mcp`, `build-all`, `validate-all`, `clean-dist`.
+- [x] Cursor bundle: `.cursor-plugin/plugin.json` + Claude-format mirror, 31 skills converted from commands, agent frontmatter normalized for Cursor.
+- [x] VS Code + Copilot bundle: `.claude-plugin/plugin.json`, `.github/prompts/*.prompt.md` (31 workspace prompts), `.github/agents/*.agent.md` (58 agents, with SDD `handoffs:` on workflow agents), recommended `.vscode/settings.json`.
+- [x] AgentSpec MCP server at `packages/agentspec-mcp/` exposing `kb_search`, `kb_read`, `route_agent`, `sdd_status`, `judge` over JSON-RPC stdio.
+- [x] `scripts/validate_dist.py` — checks counts, manifests, stale paths, judge.py presence and workspace fallbacks for every target.
+- [x] CI workflow `.github/workflows/multi-platform-validate.yml`.
+- [x] Per-platform getting-started docs (`docs/getting-started/claude-code.md`, `cursor.md`, `vscode-copilot.md`).
+- [x] `build-plugin.sh` now ships `scripts/judge.py` end-to-end.
+
+**Still planned (next iterations):**
+- [ ] Publish marketplace listings for Cursor and Copilot once the formats stabilize.
+- [ ] `AGENTS.md` conversion layer (single-file aggregate for tools that consume `AGENTS.md`).
+- [ ] Telemetry across runtimes (opt-in) so we can see which target picks up which commands.
 
 ---
 

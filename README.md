@@ -9,8 +9,11 @@
 <br/><br/>
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet?style=flat-square)](plugin/)
+[![Cursor Plugin](https://img.shields.io/badge/Cursor-Plugin-1A1A1A?style=flat-square)](docs/getting-started/cursor.md)
+[![VS Code + Copilot](https://img.shields.io/badge/VS%20Code%20%2B%20Copilot-Agent%20Plugin-007ACC?style=flat-square)](docs/getting-started/vscode-copilot.md)
+[![MCP Server](https://img.shields.io/badge/MCP-Server-7c3aed?style=flat-square)](packages/agentspec-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/v3.2.0-green?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/v3.3.0-green?style=flat-square)](CHANGELOG.md)
 
 **A single AI agent reviewing your data pipeline will miss things.**<br/>
 **58 specialized agents with 24 knowledge domains will not.**
@@ -33,31 +36,32 @@ AgentSpec solves this with **Spec-Driven Data Engineering**: a 5-phase workflow 
 
 ## Install
 
-```bash
-# Install the plugin (one-time)
-claude plugin marketplace add luanmorenommaciel/agentspec
-claude plugin install agentspec
-```
+AgentSpec runs natively in **Claude Code**, **Cursor**, and **VS Code + Copilot**, and exposes the same capabilities to any MCP-compatible client via the **AgentSpec MCP** server.
 
-Done. Every Claude Code session now has 58 agents, 31 commands, and 24 KB domains. Updates are one command:
+| Platform | Install | Slash Commands | Setup Guide |
+|----------|---------|----------------|-------------|
+| Claude Code | `claude plugin marketplace add luanmorenommaciel/agentspec && claude plugin install agentspec` | `/agentspec:*` (namespaced) | [Guide](docs/getting-started/claude-code.md) |
+| Cursor | Copy `dist/cursor/` to `~/.cursor/plugins/local/agentspec/` (Marketplace coming) | `/define`, `/build`, … | [Guide](docs/getting-started/cursor.md) |
+| VS Code + Copilot | Enable `chat.plugins.enabled` and load `dist/vscode-copilot/` (or use `.github/prompts/` fallback) | `/define`, `/build`, … | [Guide](docs/getting-started/vscode-copilot.md) |
+| MCP Client | Add `dist/mcp/mcp.json` to your client's MCP config | `kb_search`, `route_agent`, `judge`, … | [Package README](packages/agentspec-mcp/README.md) |
 
 ```bash
-claude plugin update agentspec
+# Build every target locally
+git clone https://github.com/luanmorenommaciel/agentspec.git
+cd agentspec
+make build-all          # → dist/claude, dist/cursor, dist/vscode-copilot, dist/mcp
+make validate-all       # sanity-check every artifact
 ```
 
 > **Override any agent locally** — drop a file in `.claude/agents/<category>/<agent-name>.md` and it takes precedence over the plugin version. See [Agent Overrides](docs/concepts/agent-overrides.md).
 
 <details>
-<summary><b>Alternative install methods</b></summary>
+<summary><b>Claude Code one-liner (legacy install)</b></summary>
 
 ```bash
-# Local testing (no install needed)
-git clone https://github.com/luanmorenommaciel/agentspec.git
-claude --plugin-dir ./agentspec/plugin
-
-# Legacy copy (pre-plugin, still works)
-git clone https://github.com/luanmorenommaciel/agentspec.git
-cp -r agentspec/.claude your-project/.claude
+claude plugin marketplace add luanmorenommaciel/agentspec
+claude plugin install agentspec
+claude plugin update agentspec
 ```
 
 </details>
@@ -218,15 +222,30 @@ agentspec/
 │   ├── kb/                  # 24 knowledge base domains
 │   └── sdd/                 # Templates, contracts, features, archive
 │
-├── plugin/                  # Distributable Claude Code plugin
-│   ├── .claude-plugin/      # Manifest + marketplace config
-│   ├── agents/              # Path-rewritten agents
-│   ├── skills/              # 5 skills (3 from .claude/ + 2 plugin-only)
-│   ├── hooks/               # SessionStart workspace init
-│   └── ...                  # commands, kb, sdd, scripts
+├── plugin/                  # Legacy Claude Code build (build-plugin.sh)
+├── plugin-extras/           # Plugin-only content (merged by all builds)
 │
-├── plugin-extras/           # Plugin-only content (merged by build)
-├── build-plugin.sh          # Packages .claude/ → plugin/
+├── dist/                    # Multi-platform output (scripts/build_all.py)
+│   ├── claude/              # Claude Code plugin (mirror of plugin/)
+│   ├── cursor/              # Cursor plugin (.cursor-plugin + Claude mirror)
+│   ├── vscode-copilot/      # VS Code Agent Plugin + workspace prompts/agents
+│   └── mcp/                 # Universal MCP bundle (server + resources)
+│
+├── packages/
+│   └── agentspec-mcp/       # AgentSpec MCP server source
+│
+├── scripts/
+│   ├── lib/                 # Shared build core (platforms, path_rewrite…)
+│   ├── build_all.py         # Multi-platform orchestrator
+│   ├── build_claude.py      # Claude Code target
+│   ├── build_cursor.py      # Cursor target
+│   ├── build_copilot.py     # VS Code + Copilot target
+│   ├── build_mcp.py         # MCP target
+│   ├── validate_dist.py     # CI gate for every dist/ target
+│   ├── generate-agent-router.py
+│   └── judge.py
+│
+├── build-plugin.sh          # Legacy bash builder (Claude only)
 └── docs/                    # Getting started, concepts, tutorials, reference
 ```
 
