@@ -1,0 +1,76 @@
+name: Multi-Platform Validate
+
+# Builds every distribution target (Claude Code, Cursor, VS Code + Copilot,
+# AgentSpec MCP) and validates the artifacts: counts, manifests, stale
+# paths, judge.py presence, and prompt/agent fallbacks.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/**'
+      - 'plugin-extras/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'Makefile'
+      - 'build-plugin.sh'
+      - '.github/workflows/multi-platform-validate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.claude/**'
+      - 'plugin-extras/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'Makefile'
+      - 'build-plugin.sh'
+      - '.github/workflows/multi-platform-validate.yml'
+
+jobs:
+  multi-platform:
+    name: Build + validate all targets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest
+        run: python3 -m pip install pytest
+
+      - name: Run unit tests
+        run: python3 -m pytest tests/ -v
+
+      - name: Check agent-router drift
+        run: python3 scripts/generate-agent-router.py --check
+
+      - name: Build every target
+        run: make build-all
+
+      - name: Validate every target
+        run: make validate-all
+
+      - name: Smoke test MCP server (JSON-RPC roundtrip)
+        env:
+          AGENTSPEC_RESOURCES: ${{ github.workspace }}/dist/mcp/resources
+          AGENTSPEC_ROOT: ${{ github.workspace }}/dist/mcp
+        run: |
+          cd packages/agentspec-mcp
+          python3 -m agentspec_mcp <<'EOF' | tee /tmp/mcp-smoke.json
+          {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+          {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+          {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"route_agent","arguments":{"task":"build a star schema","top_k":1}}}
+          EOF
+          test -s /tmp/mcp-smoke.json
+
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentspec-dist
+          path: dist/
+          retention-days: 7
