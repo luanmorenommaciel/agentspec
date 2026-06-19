@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Cursor/MCP hook token migration** — `plugin-extras/hooks/hooks.json` hardcoded `${CLAUDE_PLUGIN_ROOT}` and was shipped verbatim to `dist/cursor/` and `dist/mcp/`, where that variable is not resolved by the host. `scripts/lib/path_rewrite.py` now exposes `LEGACY_ROOT_TOKEN` and migrates the legacy token to the target's `root_token` for any non-Claude profile (Cursor → `${PLUGIN_ROOT}`, MCP → `${AGENTSPEC_ROOT}`). Claude and Copilot keep the original token because both runtimes recognize it natively. Covered by 5 new tests in `tests/test_lib_path_rewrite.py::TestLegacyTokenMigration`.
 - **Marketplace install path now works end-to-end** (#18) — `claude plugin marketplace add luanmorenommaciel/agentspec` previously returned HTTP 404 because the resolver fetches `.claude-plugin/marketplace.json` from the repository root, but the manifest only existed under `plugin/.claude-plugin/`:
   - Added root-level `.claude-plugin/marketplace.json` with `source: "./plugin"` pointing at the canonical built artifact
   - Added `build-plugin.sh` Step 5c that auto-regenerates the root manifest from `plugin/.claude-plugin/marketplace.json` on every build, preventing drift between the two locations

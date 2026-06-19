@@ -77,12 +77,23 @@ class RewriteResult:
     bytes_after: int
 
 
+# Legacy token used in handcrafted artifacts (hooks/hooks.json, helper scripts)
+# that were authored against the Claude Code variable. Non-Claude targets must
+# migrate it to their own root token; Claude keeps it verbatim.
+LEGACY_ROOT_TOKEN: str = "${CLAUDE_PLUGIN_ROOT}"
+
+
 def rewrite_text(text: str, profile: PlatformProfile) -> str:
     """Apply the canonical ``.claude/`` → ``{root_token}`` rewrite.
 
     The function is pure: same input + profile produce the same output.
     It does not protect workspace paths because the regex below only matches
     the plugin-internal prefixes — anything outside that set is left alone.
+
+    When the target profile uses a root token other than the legacy
+    ``${CLAUDE_PLUGIN_ROOT}``, every literal occurrence of that legacy token
+    is migrated to the target token. This is required for shipped artifacts
+    like ``hooks/hooks.json`` that hardcode the Claude variable.
     """
     if not text:
         return text
@@ -99,6 +110,11 @@ def rewrite_text(text: str, profile: PlatformProfile) -> str:
     for plugin_file in _PLUGIN_FILES:
         pattern = re.compile(rf"\.claude/{re.escape(plugin_file)}")
         out = pattern.sub(f"{token}/{plugin_file}", out)
+
+    # Legacy token migration: ${CLAUDE_PLUGIN_ROOT} → {target token} for
+    # non-Claude targets. Avoids a no-op self-replacement on the Claude target.
+    if token != LEGACY_ROOT_TOKEN:
+        out = out.replace(LEGACY_ROOT_TOKEN, token)
 
     # Absolute paths that include the canonical root and survived earlier
     # transforms — strip the leading filesystem prefix so they look like

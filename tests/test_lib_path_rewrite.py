@@ -18,6 +18,16 @@ def cursor_profile():
     return platforms.get_profile(platforms.CURSOR)
 
 
+@pytest.fixture
+def mcp_profile():
+    return platforms.get_profile(platforms.MCP)
+
+
+@pytest.fixture
+def copilot_profile():
+    return platforms.get_profile(platforms.COPILOT)
+
+
 class TestRewriteText:
     def test_rewrites_plugin_dirs_to_token(self, claude_profile):
         text = "See .claude/agents/workflow/define-agent.md for details."
@@ -47,6 +57,41 @@ class TestRewriteText:
 
     def test_empty_input_returns_empty(self, claude_profile):
         assert path_rewrite.rewrite_text("", claude_profile) == ""
+
+
+class TestLegacyTokenMigration:
+    """Cursor/MCP must migrate ${CLAUDE_PLUGIN_ROOT} to their own root token.
+
+    Claude/Copilot keep ${CLAUDE_PLUGIN_ROOT} verbatim because their native
+    runtime resolves that variable.
+    """
+
+    HOOK_PAYLOAD = (
+        '{"command": "${CLAUDE_PLUGIN_ROOT}/scripts/init-workspace.sh"}'
+    )
+
+    def test_cursor_migrates_legacy_token(self, cursor_profile):
+        result = path_rewrite.rewrite_text(self.HOOK_PAYLOAD, cursor_profile)
+        assert "${CLAUDE_PLUGIN_ROOT}" not in result
+        assert "${PLUGIN_ROOT}/scripts/init-workspace.sh" in result
+
+    def test_mcp_migrates_legacy_token(self, mcp_profile):
+        result = path_rewrite.rewrite_text(self.HOOK_PAYLOAD, mcp_profile)
+        assert "${CLAUDE_PLUGIN_ROOT}" not in result
+        assert "${AGENTSPEC_ROOT}/scripts/init-workspace.sh" in result
+
+    def test_claude_keeps_legacy_token(self, claude_profile):
+        result = path_rewrite.rewrite_text(self.HOOK_PAYLOAD, claude_profile)
+        assert "${CLAUDE_PLUGIN_ROOT}/scripts/init-workspace.sh" in result
+
+    def test_copilot_keeps_legacy_token(self, copilot_profile):
+        result = path_rewrite.rewrite_text(self.HOOK_PAYLOAD, copilot_profile)
+        assert "${CLAUDE_PLUGIN_ROOT}/scripts/init-workspace.sh" in result
+
+    def test_idempotent_for_cursor(self, cursor_profile):
+        once = path_rewrite.rewrite_text(self.HOOK_PAYLOAD, cursor_profile)
+        twice = path_rewrite.rewrite_text(once, cursor_profile)
+        assert once == twice
 
 
 class TestStaleReferences:
