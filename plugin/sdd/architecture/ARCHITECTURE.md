@@ -398,7 +398,7 @@ Two validation points sit on the phase flow:
 Verdict semantics: `PASS` proceeds, `WARN` proceeds with a recorded finding,
 `FAIL` blocks. Contract definitions and per-phase bindings live in
 `WORKFLOW_CONTRACTS.yaml` (`contract_enforcement`); operator usage is documented
-in `tools/spec-linter/USAGE.md`.
+in `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md`.
 
 ---
 

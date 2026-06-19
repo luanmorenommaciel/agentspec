@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.3.0
-# Date: 2026-06-10
+# Version: 3.3.1
+# Date: 2026-06-19
 
-version: "3.3.0"
+version: "3.3.1"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -120,11 +120,11 @@ agent_resolution:
 # (validate an artifact against a contract -> verdict); contracts are policy
 # (what is checked + severity); consumers below choose where they bind. The
 # engine and verdict semantics are stable; contract CONTENT is owned upstream
-# (canonical schemas pending). Operator documentation: tools/spec-linter/USAGE.md
+# (canonical schemas pending). Operator documentation: ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md
 
 contract_enforcement:
   component: "spec-linter"
-  usage_doc: "tools/spec-linter/USAGE.md"
+  usage_doc: "${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md"
   entry_point: "spec_linter.engine.lint(artifact, contract)"
 
   verdict_semantics:
@@ -132,6 +132,16 @@ contract_enforcement:
     WARN: "advisory finding — proceed, but record the finding"
     FAIL: "non-compliance — blocks; CLI exits 1"
     rule: "A contract assigns severity to its own rules; consumers MUST NOT reinterpret FAIL."
+
+  exit_code_contract:
+    description: |
+      The CLI / spec-lint wrapper maps verdicts to a three-way exit code.
+      ERROR is a process concern, NOT a fourth Verdict Level — the Verdict
+      surface stays exactly PASS/WARN/FAIL.
+    codes:
+      "0": "PASS or WARN — proceed"
+      "1": "FAIL — a loadable artifact violates its contract; blocks"
+      "2": "ERROR — operational failure or linter unavailable (missing file, YAML syntax error, non-mapping top level, unknown phase / phase without required_sections, missing dependencies)"
 
   contract_sources:
     - id: "authored_as_code"
@@ -151,9 +161,13 @@ contract_enforcement:
   consumer_bindings:
     note: |
       Each phase agent declares its binding in its own definition. The bindings
-      below are the contract-level summary. Currently wired: agents declare a
-      pre-handoff validation of the produced phase document against its phase
-      contract (required_sections). Specified TARGET: a two-pass
+      below are the contract-level summary. Currently wired: the Define and
+      Design agents run a pre-handoff validation of the produced phase document
+      against its phase contract (required_sections) via the spec-lint wrapper,
+      branching on the exit code (0 proceed, 1 block, 2 record a VISIBLE skip and
+      proceed — never assume PASS on exit 2). Phases without required_sections
+      (Brainstorm, Build, Ship) have no phase contract yet, so the document-level
+      check is N/A for them today. Specified TARGET: a two-pass
       spec -> validate -> document -> validate binding (the Gate A
       pattern) activates when upstream phase-spec schemas land.
     bindings:
@@ -950,6 +964,12 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.3.1"
+    date: "2026-06-19"
+    changes:
+      - "Recorded the spec-linter exit-code contract under contract_enforcement (0 = PASS/WARN, 1 = FAIL, 2 = ERROR/unavailable); ERROR is a process concern, not a fourth Verdict Level"
+      - "Consumer bindings now run for real via the spec-lint wrapper and degrade loudly on exit 2 (a VISIBLE skip note, never an assumed PASS); clarified that only Define and Design have phase contracts (required_sections) today, so the document check is N/A for Brainstorm/Build/Ship"
+
   - version: "3.3.0"
     date: "2026-06-10"
     changes:

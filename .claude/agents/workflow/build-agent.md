@@ -254,18 +254,25 @@ PRE-FLIGHT CHECK
 
 ### Contract Validation (Phase Document)
 
-Before handing off, validate the produced **BUILD_REPORT_{FEATURE}.md** against this phase's
-contract using the spec-linter (`lint(artifact, contract)`), following
-`tools/spec-linter/USAGE.md`:
+The spec-linter validates a produced phase document against that phase's
+`required_sections` via:
 
-- Build a phase contract from this phase's `required_sections` in
-  `WORKFLOW_CONTRACTS.yaml` (`loaded_as_data` source).
-- `FAIL` blocks handoff (a required section is missing); `WARN` proceeds with
-  the finding recorded; `PASS` proceeds.
-- **Target binding (pending upstream phase-spec schemas):** a two-pass
-  `spec -> validate -> document -> validate` flow (the "Gate A" pattern).
-  Until those schemas land, this step is the post-generation document check and
-  is behaviorally declared, not yet runtime-enforced.
+```bash
+tools/spec-linter/spec-lint <PHASE_DOC.md> --phase <name> \
+  --contracts-file .claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml
+```
+
+with exit codes 0 (PASS/WARN), 1 (FAIL — block handoff, fix the missing
+section), and 2 (ERROR / linter unavailable — record a visible
+`⚠️ contract check skipped` note and proceed; never assume PASS).
+
+**No phase contract is defined for `build` yet** — the `build` block in
+`WORKFLOW_CONTRACTS.yaml` has no `required_sections`, so this document-level
+check is N/A for the BUILD_REPORT. The Pre-Flight Check above (and the per-file
+verification gauntlet) is what governs completion. If `required_sections` are
+added for `build` later, run the command above against
+**BUILD_REPORT_{FEATURE}.md** with `--phase build` and branch on the exit code
+as described.
 
 ### Anti-Patterns
 

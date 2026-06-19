@@ -143,6 +143,27 @@ cp -r "${SOURCE_DIR}/sdd/architecture" "${PLUGIN_DIR}/sdd/architecture"
 
 ok "All components copied"
 
+# ─── Step 2c: Copy the spec-linter tool ──────────────────────────────────────
+# Ships the contract-validation engine so the workflow agents' phase-document
+# checks can run inside an installed plugin. Copy-then-prune: copy the whole
+# tree, then drop dev-only and generated subpaths (the runtime needs only the
+# package, wrapper, docs, schema, examples, and packaging metadata).
+
+if [[ -d "${SCRIPT_DIR}/tools/spec-linter" ]]; then
+    info "Copying spec-linter tool..."
+    mkdir -p "${PLUGIN_DIR}/tools"
+    cp -r "${SCRIPT_DIR}/tools/spec-linter" "${PLUGIN_DIR}/tools/spec-linter"
+    rm -rf "${PLUGIN_DIR}/tools/spec-linter/.venv"
+    rm -rf "${PLUGIN_DIR}/tools/spec-linter/tests"
+    find "${PLUGIN_DIR}/tools/spec-linter" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-linter" -name '.pytest_cache' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-linter" -name '.ruff_cache' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-linter" -name '*.egg-info' -type d -exec rm -rf {} + 2>/dev/null || true
+    ok "spec-linter copied"
+else
+    warn "tools/spec-linter not found — skipping linter packaging"
+fi
+
 # ─── Step 2b: Copy plugin-extras (plugin-only content) ───────────────────────
 
 if [[ -d "${EXTRAS_DIR}" ]]; then
@@ -200,6 +221,7 @@ while IFS= read -r -d '' file; do
         -e 's|\.claude/sdd/architecture/|${CLAUDE_PLUGIN_ROOT}/sdd/architecture/|g' \
         -e 's|\.claude/sdd/_index\.md|${CLAUDE_PLUGIN_ROOT}/sdd/_index.md|g' \
         -e 's|\.claude/sdd/README\.md|${CLAUDE_PLUGIN_ROOT}/sdd/README.md|g' \
+        -e 's|tools/spec-linter/|${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/|g' \
         "$file" > "$tmp" && mv "$tmp" "$file" || { rm -f "$tmp"; exit 1; }
 done < <(find "${PLUGIN_DIR}" \( -name "*.md" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) \
     -type f ! -path "${PLUGIN_DIR}/.claude-plugin/*" -print0)
@@ -228,6 +250,7 @@ ok "Absolute paths rewritten"
 # ─── Step 5b: Restore executable permissions (lost during sed tmp→mv) ────────
 
 chmod +x "${PLUGIN_DIR}/scripts/"*.sh 2>/dev/null || true
+chmod +x "${PLUGIN_DIR}/tools/spec-linter/spec-lint" 2>/dev/null || true
 
 # ─── Step 5c: Sync root .claude-plugin/marketplace.json ─────────────────────
 # `claude plugin marketplace add <owner>/<repo>` fetches
@@ -292,6 +315,11 @@ AGENT_COUNT=$(find "${PLUGIN_DIR}/agents" -name "*.md" -not -name "README.md" -n
 COMMAND_COUNT=$(find "${PLUGIN_DIR}/commands" -name "*.md" -not -name "README.md" | wc -l | tr -d ' ')
 SKILL_COUNT=$(find "${PLUGIN_DIR}/skills" -name "SKILL.md" | wc -l | tr -d ' ')
 KB_COUNT=$(find "${PLUGIN_DIR}/kb" -maxdepth 1 -type d ! -name "kb" ! -name "_templates" | wc -l | tr -d ' ')
+if [[ -x "${PLUGIN_DIR}/tools/spec-linter/spec-lint" ]]; then
+    LINTER_STATUS="bundled"
+else
+    LINTER_STATUS="not bundled"
+fi
 
 echo ""
 echo "============================================"
@@ -301,6 +329,7 @@ echo "  Agents:   ${AGENT_COUNT}"
 echo "  Commands: ${COMMAND_COUNT}"
 echo "  Skills:   ${SKILL_COUNT}"
 echo "  KB:       ${KB_COUNT} domains"
+echo "  Linter:   ${LINTER_STATUS}"
 echo ""
 echo "  Output:   ${PLUGIN_DIR}/"
 echo ""

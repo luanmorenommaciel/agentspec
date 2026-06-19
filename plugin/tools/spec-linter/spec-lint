@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Deterministic entry point for the spec-linter.
+# Exit codes: 0 = PASS/WARN, 1 = FAIL, 2 = ERROR (incl. linter unavailable).
+#
+# Resolves an interpreter that can import the linter's deps (pydantic, pyyaml),
+# preferring an explicit $SPEC_LINTER_PYTHON, then a local .venv (dev/dogfooding),
+# then the ambient python3/python. If none can import the deps, it degrades
+# LOUDLY (exit 2) rather than silently skipping the contract check.
+#
+# NOTE: a future revision may route through `uv run` (PEP 723 inline deps) so the
+# linter self-provisions its deps instead of requiring a preprovisioned env.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+for py in "${SPEC_LINTER_PYTHON:-}" "$HERE/.venv/bin/python" python3 python; do
+  [ -n "$py" ] || continue
+  command -v "$py" >/dev/null 2>&1 || continue
+  if "$py" -c "import pydantic, yaml" >/dev/null 2>&1; then
+    exec env PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" "$py" -m spec_linter.cli "$@"
+  fi
+done
+
+echo "ERROR: spec-linter unavailable — needs python3 with 'pydantic' and 'pyyaml' (or a local .venv); skipping contract check." >&2
+exit 2

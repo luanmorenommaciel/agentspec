@@ -1,0 +1,36 @@
+id: code-reviewer
+name: Code Reviewer
+description: Reviews Python diffs against house standards and emits a structured report.
+model: claude-opus-4
+tools:
+  - read_file
+  - grep
+kb_domains:
+  - python-standards
+maturity: V2
+tier: T2
+output_contract:
+  format: structured-report
+  required_fields:
+    - summary
+    - findings
+  side_effects:
+    files_written: false
+    git_operations:
+      - none
+    external_apis: []
+stop_conditions:
+  - no diff provided
+escalation_rules:
+  - escalate to human on security-sensitive change
+observability:
+  confidence_scoring: true
+  sources_attribution: true
+memory_backend: none
+recall_strategy: per-session
+requirements:
+  - lint the diff
+deliverables:
+  - lint the diff
+publish: false
+security_review: false

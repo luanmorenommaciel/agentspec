@@ -227,18 +227,28 @@ PRE-FLIGHT CHECK
 
 ### Contract Validation (Phase Document)
 
-Before handing off, validate the produced **DESIGN_{FEATURE}.md** against this phase's
-contract using the spec-linter (`lint(artifact, contract)`), following
-`tools/spec-linter/USAGE.md`:
+Before handing off, validate the produced **DESIGN_{FEATURE}.md** against this
+phase's contract (its `required_sections`) by running the spec-linter wrapper:
 
-- Build a phase contract from this phase's `required_sections` in
-  `WORKFLOW_CONTRACTS.yaml` (`loaded_as_data` source).
-- `FAIL` blocks handoff (a required section is missing); `WARN` proceeds with
-  the finding recorded; `PASS` proceeds.
-- **Target binding (pending upstream phase-spec schemas):** a two-pass
-  `spec -> validate -> document -> validate` flow (the "Gate A" pattern).
-  Until those schemas land, this step is the post-generation document check and
-  is behaviorally declared, not yet runtime-enforced.
+```bash
+tools/spec-linter/spec-lint <DESIGN_{FEATURE}.md> --phase design \
+  --contracts-file .claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml
+```
+
+Branch on the exit code:
+
+- **0 (PASS/WARN)** → proceed; if any `WARN` finding was reported, record it in
+  the handoff.
+- **1 (FAIL)** → a required section is missing. BLOCK handoff: surface the
+  findings and regenerate the document to add the missing section(s) before
+  proceeding.
+- **2 (ERROR / linter unavailable)** → record a VISIBLE note
+  (`⚠️ contract check skipped — linter unavailable`) and proceed. Never treat
+  exit 2 as a PASS.
+
+In the development repo this check runs for real. In an installed plugin it is
+best-effort and degrades safely (the visible skip above) until runtime
+dependency provisioning lands.
 
 ### Anti-Patterns
 

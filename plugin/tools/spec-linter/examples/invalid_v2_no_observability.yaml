@@ -1,0 +1,22 @@
+# maturity V2 but no observability block -> L2.maturity_observability FAIL.
+id: triage-agent
+name: Triage Agent
+description: Triages incoming issues into buckets.
+model: claude-sonnet-4
+tools:
+  - read_file
+maturity: V2
+tier: T2
+output_contract:
+  format: json
+  required_fields:
+    - bucket
+  side_effects:
+    files_written: false
+    git_operations:
+      - none
+    external_apis: []
+stop_conditions:
+  - no issue body
+escalation_rules:
+  - escalate unclear issues
