@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Level(IntEnum):
@@ -19,6 +19,8 @@ class Level(IntEnum):
 
 
 class Finding(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     level: Level
     rule: str
     message: str
@@ -35,6 +37,8 @@ class Finding(BaseModel):
 
 
 class Verdict(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     level: Level
     findings: list[Finding]
 

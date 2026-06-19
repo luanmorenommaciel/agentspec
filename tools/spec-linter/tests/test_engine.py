@@ -23,8 +23,10 @@ def test_engine_agent_spec_schema_fail(valid_spec: dict[str, Any]) -> None:
     del valid_spec["model"]
     verdict = lint(valid_spec, AgentSpecContract())
     assert verdict.level == Level.FAIL
-    schema_findings = [f for f in verdict.findings if f.rule == "L1.schema"]
-    assert any(f.field == "model" for f in schema_findings)
+    assert len(verdict.findings) == 1
+    finding = verdict.findings[0]
+    assert finding.rule == "agent-spec.unparseable"
+    assert "model" in finding.message
 
 
 def test_engine_unparseable_artifact() -> None:

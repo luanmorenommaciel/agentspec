@@ -15,21 +15,27 @@ from pydantic import ValidationError
 
 from .. import rules
 from ..models import AgentSpec
-from ..verdict import Finding, Level
+from ..verdict import Finding
 
 
 class AgentSpecContract:
     name = "agent-spec"
 
-    def parse(self, artifact: Any) -> AgentSpec | list[Finding]:
+    def parse(self, artifact: Any) -> AgentSpec:
+        """Validate the artifact into an `AgentSpec`, or raise on schema failure.
+
+        Per the Contract protocol, an unparseable artifact is signalled by
+        raising: the engine converts that into a single `agent-spec.unparseable`
+        FAIL finding. The raised message preserves per-field detail so no
+        schema information is lost.
+        """
         try:
             return AgentSpec.model_validate(artifact)
         except ValidationError as exc:
-            return _schema_findings(exc)  # parse "succeeds" into findings; check() forwards them
+            raise ValueError(_schema_message(exc)) from exc
 
-    def check(self, parsed: AgentSpec | list[Finding]) -> list[Finding]:
-        if isinstance(parsed, list):  # schema-invalid: forward L1.schema FAILs as-is
-            return parsed
+    def check(self, parsed: AgentSpec) -> list[Finding]:
+        """Run L1-unknown / L2 / L3 checks on a successfully parsed spec."""
         findings = rules.unknown_field_findings(parsed)
         findings += rules.l2_governance_findings(parsed)
         findings += rules.l3_consistency_findings(parsed)
@@ -41,17 +47,9 @@ def emit_json_schema() -> dict[str, Any]:
     return AgentSpec.model_json_schema()
 
 
-def _schema_findings(error: ValidationError) -> list[Finding]:
-    findings: list[Finding] = []
+def _schema_message(error: ValidationError) -> str:
+    parts = []
     for err in error.errors():
-        field = ".".join(str(part) for part in err["loc"]) or None
-        findings.append(
-            Finding(
-                level=Level.FAIL,
-                rule="L1.schema",
-                field=field,
-                message=err["msg"],
-                found=err["type"],
-            )
-        )
-    return findings
+        field = ".".join(str(part) for part in err["loc"]) or "<root>"
+        parts.append(f"{field}: {err['msg']} [{err['type']}]")
+    return "schema validation failed — " + "; ".join(parts)

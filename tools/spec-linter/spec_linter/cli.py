@@ -1,9 +1,19 @@
-"""CLI: `python -m spec_linter.cli [path] [--emit-schema OUT.json]`.
+"""CLI: `python -m spec_linter.cli [path] [--phase NAME] [--emit-schema OUT.json]`.
 
-Lints a spec file or a directory of specs; exits 1 if any verdict is FAIL,
-else 0. The CLI is a consumer of the engine and owns the usage policy: YAML
-loading, directory iteration, the cross-file duplicate-id (L4) check, and the
-choice of the agent-spec contract for every linted file.
+Lints a spec file or a directory of specs against the baked-in agent-spec
+contract, or (with `--phase`) a Markdown phase document against an
+`SddPhaseContract`. The CLI is a consumer of the engine and owns the usage
+policy: YAML/Markdown loading, directory iteration, the cross-file duplicate-id
+(L4) check, and contract selection.
+
+Exit codes form a three-way contract:
+
+- 0 — PASS or WARN verdict.
+- 1 — FAIL verdict (a loadable artifact that violates its contract).
+- 2 — ERROR: an operational failure (file not found, YAML syntax error, a
+  non-mapping top level, an unknown phase, or any unexpected exception). ERROR
+  is a process concern only — it is NOT a Verdict Level; the Verdict surface
+  stays exactly PASS/WARN/FAIL.
 """
 
 from __future__ import annotations
@@ -18,10 +28,24 @@ import yaml
 
 from . import rules
 from .contracts.agent_spec import AgentSpecContract, emit_json_schema
+from .contracts.sdd_phase import SddPhaseContract
 from .engine import lint
 from .verdict import Level, Verdict
 
 _CONTRACT = AgentSpecContract()
+
+# Repo-root-relative default; the CLI lives at tools/spec-linter/spec_linter/cli.py.
+_DEFAULT_CONTRACTS_FILE = (
+    Path(__file__).resolve().parents[3]
+    / ".claude"
+    / "sdd"
+    / "architecture"
+    / "WORKFLOW_CONTRACTS.yaml"
+)
+
+
+class _OperationalError(Exception):
+    """Raised for failures that must map to exit code 2 (ERROR), not a verdict."""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -59,6 +83,35 @@ def _lint_dir(path: Path) -> dict[str, Verdict]:
     return verdicts
 
 
+def _phase_required_sections(phase: str, contracts_file: Path) -> list[str]:
+    """Read a phase's `required_sections` from a WORKFLOW_CONTRACTS-style YAML."""
+    if not contracts_file.exists():
+        raise _OperationalError(f"contracts file not found: {contracts_file}")
+    try:
+        data = yaml.safe_load(contracts_file.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise _OperationalError(f"could not parse contracts file {contracts_file}: {exc}") from exc
+    block = (data or {}).get(phase)
+    if not isinstance(block, dict) or "required_sections" not in block:
+        raise _OperationalError(
+            f"phase '{phase}' has no required_sections in {contracts_file.name}"
+        )
+    sections = block["required_sections"]
+    if not isinstance(sections, list) or not all(isinstance(s, str) for s in sections):
+        raise _OperationalError(f"phase '{phase}' required_sections must be a list of strings")
+    return sections
+
+
+def _lint_phase(path: Path, phase: str, contracts_file: Path) -> Level:
+    """Lint a Markdown phase document against its phase contract."""
+    required = _phase_required_sections(phase, contracts_file)
+    contract = SddPhaseContract(phase, required)
+    verdict = lint(path.read_text(encoding="utf-8"), contract)
+    print(f"== {path.name} (phase: {phase}) ==")
+    print(verdict)
+    return verdict.level
+
+
 def _write_schema(out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(emit_json_schema(), indent=2) + "\n")
@@ -87,7 +140,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="spec_linter", description="AgentSpec contract-validation engine (the Linter)."
     )
-    parser.add_argument("path", nargs="?", help="spec file or directory to lint")
+    parser.add_argument("path", nargs="?", help="spec file/dir, or phase document with --phase")
+    parser.add_argument(
+        "--phase",
+        metavar="NAME",
+        help="lint PATH as a Markdown phase document against the named phase contract",
+    )
+    parser.add_argument(
+        "--contracts-file",
+        metavar="PATH",
+        type=Path,
+        default=_DEFAULT_CONTRACTS_FILE,
+        help="WORKFLOW_CONTRACTS-style YAML source for --phase required_sections",
+    )
     parser.add_argument(
         "--emit-schema",
         metavar="OUT.json",
@@ -104,7 +169,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.path is None:
         parser.error("a path is required unless only --emit-schema is given")
 
-    level = _lint_path(Path(args.path))
+    try:
+        if args.phase is not None:
+            level = _lint_phase(Path(args.path), args.phase, args.contracts_file)
+        else:
+            level = _lint_path(Path(args.path))
+    except FileNotFoundError as exc:
+        print(f"ERROR: file not found: {exc.filename or args.path}", file=sys.stderr)
+        return 2
+    except (yaml.YAMLError, ValueError, _OperationalError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:  # operational failure, not a verdict
+        print(f"ERROR: unexpected failure: {exc}", file=sys.stderr)
+        return 2
+
     return 1 if level == Level.FAIL else 0
 
 

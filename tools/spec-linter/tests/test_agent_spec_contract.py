@@ -30,12 +30,14 @@ def test_valid_spec_passes(valid_spec: dict[str, Any]) -> None:
     assert verdict.findings == []
 
 
-def test_missing_required_field_is_l1_fail(valid_spec: dict[str, Any]) -> None:
+def test_missing_required_field_is_unparseable_fail(valid_spec: dict[str, Any]) -> None:
     del valid_spec["model"]
     verdict = _lint(valid_spec)
     assert verdict.level == Level.FAIL
-    schema_findings = [f for f in verdict.findings if f.rule == "L1.schema"]
-    assert any(f.field == "model" for f in schema_findings)
+    assert len(verdict.findings) == 1
+    finding = verdict.findings[0]
+    assert finding.rule == "agent-spec.unparseable"
+    assert "model" in finding.message
 
 
 def test_v2_without_observability_is_l2_fail(valid_spec: dict[str, Any]) -> None:

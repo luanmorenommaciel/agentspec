@@ -46,34 +46,78 @@ Findings are classified on the L1–L4 taxonomy (schema / contract / consistency
 
 | Level | Meaning | Behavior |
 |-------|---------|----------|
-| PASS | fully compliant | proceed |
-| WARN | advisory finding | proceed, but RECORD the finding |
+| PASS | fully compliant | proceed (CLI exits 0) |
+| WARN | advisory finding | proceed, but RECORD the finding (CLI exits 0) |
 | FAIL | non-compliance | BLOCK; CLI exits 1 |
 
 - A `Verdict` aggregates to the worst finding present (FAIL > WARN > PASS); no
   findings means PASS.
 - Each `Finding` is structured: `level`, `rule`, `message`, plus optional
-  `field` / `expected` / `found`.
+  `field` / `expected` / `found`. Findings are immutable value objects.
 - A contract assigns severity to ITS rules; consumers MUST NOT reinterpret
   FAIL.
+- `Verdict` is exactly these three levels. An *operational* failure (an artifact
+  that cannot even be loaded) is NOT a verdict — it is signalled by exit code 2
+  (see §4), never by a fourth Level.
 
 ## 4. I/O and the CLI (BINDING)
 
-- CLI: `python -m spec_linter.cli <path>` lints a spec file, or a directory of
-  `.yaml`/`.yml` files (a directory run adds the cross-file duplicate-id
-  check). Exit code is 1 if any verdict is FAIL, else 0.
-- `--emit-schema OUT.json` writes the reference contract's JSON Schema to
-  `OUT.json`, creating parent directories as needed (combine with a path to
-  also lint; alone it just writes and exits 0).
-- Programmatic: `from spec_linter.engine import lint`; pass any Contract.
+### Entry point
 
-  ```python
-  from spec_linter.contracts.sdd_phase import SddPhaseContract
-  from spec_linter.engine import lint
+`spec-lint` (the executable wrapper in this directory) is the documented entry
+point. It verifies that `python3`, `pydantic`, and `pyyaml` are available; if any
+is missing it prints `ERROR: spec-linter unavailable …` to stderr and exits 2, so
+"linter not installed" fails loudly and deterministically rather than silently
+passing. When the environment is healthy it forwards all arguments to the CLI.
 
-  contract = SddPhaseContract("define", ["Problem Statement", "Acceptance Criteria"])
-  verdict = lint(document_text, contract)  # -> verdict.level, verdict.findings
-  ```
+```bash
+./spec-lint <path>                    # lint a spec file or directory
+./spec-lint <doc.md> --phase design   # lint a Markdown phase document
+./spec-lint --emit-schema OUT.json    # write the spec JSON Schema
+```
+
+`python -m spec_linter.cli <args>` is equivalent when the dependencies are
+already on the interpreter being used.
+
+### Exit codes (BINDING)
+
+| Exit | Meaning |
+|------|---------|
+| 0 | PASS or WARN verdict |
+| 1 | FAIL verdict — a loadable artifact that violates its contract |
+| 2 | ERROR — operational failure: file not found, YAML syntax error, non-mapping top level, unknown phase, missing dependencies, or any unexpected exception |
+
+The boundary is decisive: a valid YAML mapping that breaks the contract is a
+FAIL (exit 1, decided by the engine); input that cannot be loaded as a YAML
+mapping — or a missing file — is an ERROR (exit 2). ERROR messages go to stderr;
+verdict output goes to stdout.
+
+### Modes
+
+- **Spec linting** (default): lints a YAML spec file, or a directory of
+  `.yaml`/`.yml` files (a directory run adds the cross-file duplicate-id check),
+  against the agent-spec contract.
+- **Phase linting** (`--phase NAME`): lints the path as a Markdown phase
+  document against an `SddPhaseContract` whose `required_sections` are read from a
+  WORKFLOW_CONTRACTS-style YAML. The source defaults to the repo's
+  `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml`; override it with
+  `--contracts-file PATH`. Each required section must appear as a Markdown
+  heading (matched case/punctuation-insensitively); a missing one is a FAIL.
+- **Schema emission** (`--emit-schema OUT.json`): writes the reference
+  contract's JSON Schema to `OUT.json`, creating parent directories as needed
+  (combine with a path to also lint; alone it just writes and exits 0).
+
+### Programmatic use
+
+`from spec_linter.engine import lint`; pass any Contract.
+
+```python
+from spec_linter.contracts.sdd_phase import SddPhaseContract
+from spec_linter.engine import lint
+
+contract = SddPhaseContract("define", ["Problem Statement", "Acceptance Criteria"])
+verdict = lint(document_text, contract)  # -> verdict.level, verdict.findings
+```
 
 ## 5. Usage patterns (SUGGESTIONS — consumers choose)
 

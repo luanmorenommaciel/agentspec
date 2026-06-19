@@ -45,8 +45,9 @@ class Observability(BaseModel):
 
 class AgentSpec(BaseModel):
     # extra="allow" so unknown keys don't crash L1; they are surfaced as WARN
-    # findings via `model_extra` (see rules.unknown_field_findings).
-    model_config = ConfigDict(extra="allow")
+    # findings via `model_extra` (see rules.unknown_field_findings). frozen so a
+    # parsed spec is an immutable value object — checks never mutate it.
+    model_config = ConfigDict(extra="allow", frozen=True)
 
     id: str
     name: str

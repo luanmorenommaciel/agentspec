@@ -71,3 +71,80 @@ def test_emit_schema_writes_file_creating_parent_dirs(
     schema = json.loads(out_path.read_text())
     assert "output_contract" in schema["properties"]
     assert f"Wrote JSON Schema to {out_path}" in capsys.readouterr().out
+
+
+def test_missing_file_is_error_exit_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    missing = tmp_path / "does_not_exist.yaml"
+    assert cli.main([str(missing)]) == 2
+    assert "ERROR:" in capsys.readouterr().err
+
+
+def test_malformed_yaml_is_error_exit_two(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = tmp_path / "broken.yaml"
+    bad.write_text("id: [unterminated\n")
+    assert cli.main([str(bad)]) == 2
+    assert "ERROR:" in capsys.readouterr().err
+
+
+def test_non_mapping_yaml_is_error_exit_two(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scalar = tmp_path / "scalar.yaml"
+    scalar.write_text("just a string\n")
+    assert cli.main([str(scalar)]) == 2
+    assert "ERROR:" in capsys.readouterr().err
+
+
+def test_error_exit_two_is_distinct_from_fail_exit_one(
+    tmp_path: Path, valid_spec: dict[str, Any]
+) -> None:
+    valid_spec["observability"] = None  # loadable mapping, contract FAIL -> exit 1
+    fail_file = _write_spec(tmp_path / "fail.yaml", valid_spec)
+    assert cli.main([str(fail_file)]) == 1
+    assert cli.main([str(tmp_path / "nope.yaml")]) == 2  # operational ERROR -> exit 2
+
+
+def _write_phase_doc(path: Path, headings: list[str]) -> Path:
+    path.write_text("\n\n".join(f"## {h}" for h in headings) + "\n")
+    return path
+
+
+def test_phase_doc_passes_with_exit_zero(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    contracts = tmp_path / "contracts.yaml"
+    contracts.write_text(
+        yaml.safe_dump({"define": {"required_sections": ["Problem Statement", "Goals"]}})
+    )
+    doc = _write_phase_doc(tmp_path / "DEFINE_X.md", ["Problem Statement", "Goals"])
+    code = cli.main([str(doc), "--phase", "define", "--contracts-file", str(contracts)])
+    assert code == 0
+    assert "VERDICT: PASS" in capsys.readouterr().out
+
+
+def test_phase_doc_missing_section_fails_with_exit_one(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    contracts = tmp_path / "contracts.yaml"
+    contracts.write_text(
+        yaml.safe_dump({"define": {"required_sections": ["Problem Statement", "Goals"]}})
+    )
+    doc = _write_phase_doc(tmp_path / "DEFINE_X.md", ["Problem Statement"])
+    code = cli.main([str(doc), "--phase", "define", "--contracts-file", str(contracts)])
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "VERDICT: FAIL" in out
+    assert "L2.required_section" in out
+
+
+def test_phase_unknown_phase_is_error_exit_two(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    contracts = tmp_path / "contracts.yaml"
+    contracts.write_text(yaml.safe_dump({"define": {"required_sections": ["Problem Statement"]}}))
+    doc = _write_phase_doc(tmp_path / "DOC.md", ["Problem Statement"])
+    code = cli.main([str(doc), "--phase", "nonexistent", "--contracts-file", str(contracts)])
+    assert code == 2
+    assert "ERROR:" in capsys.readouterr().err
