@@ -13,7 +13,9 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - '**/*.sh'
-      - '.claude/agents/**'
+      - '.claude/**'
+      - 'plugin/**'
+      - 'plugin-extras/**'
       - 'tools/spec-linter/**'
       - '.github/workflows/quality-checks.yml'
   pull_request:
@@ -22,7 +24,9 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - '**/*.sh'
-      - '.claude/agents/**'
+      - '.claude/**'
+      - 'plugin/**'
+      - 'plugin-extras/**'
       - 'tools/spec-linter/**'
       - '.github/workflows/quality-checks.yml'
 
@@ -46,6 +50,11 @@ jobs:
 
       - name: Check agent-router drift
         run: python3 scripts/generate-agent-router.py --check
+
+      - name: Check plugin mirror drift
+        run: |
+          ./build-plugin.sh
+          git diff --exit-code plugin/ .claude-plugin/
 
   shellcheck:
     name: Shell script lint
