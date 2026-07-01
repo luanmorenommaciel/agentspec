@@ -9,6 +9,10 @@ the panel runs the model calls, consensus folds results into a verdict. An
 unparseable artifact mirrors the Linter's engine — a single ``FAIL`` finding — but
 in practice the CLI screens missing/empty input as an operational error (exit 2)
 before reaching here, since the Judger only runs on a structural PASS.
+
+The smoke/standard tiers' WARN-cap (``consensus.py``) bounds behavioral concerns
+only. The unparseable-artifact ``FAIL`` above is a *structural* guard of the engine
+itself, not a behavioral concern subject to that cap — it fires at every tier.
 """
 
 from __future__ import annotations

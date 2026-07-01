@@ -21,15 +21,20 @@ run (and report a clean error) even when the sibling ``spec_linter`` cannot be f
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
 from .contracts import split_frontmatter
+from .panel import TIERS
 
-TIERS = ("smoke", "standard", "high-assurance")
+if TYPE_CHECKING:
+    from spec_linter import Verdict
+
+    from .panel import Panel
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -76,17 +81,27 @@ def _show_ledger() -> int:
 
 
 def _load_spec_and_body(args: argparse.Namespace, artifact_text: str) -> tuple[dict[str, Any], str]:
-    """Resolve (source_spec, body). Raises ValueError with an operator message on failure."""
+    """Resolve (source_spec, body). Raises ValueError with an operator message on failure.
+
+    The artifact's own frontmatter is always stripped from the body first — even when
+    ``--spec`` overrides the contract — so that frontmatter is never judged as prose.
+    The body is also capped at 200KB: an oversized artifact is refused, not judged.
+    """
+    frontmatter_spec, stripped_body = split_frontmatter(artifact_text)
     if args.spec is not None:
         if not args.spec.exists():
             raise ValueError(f"spec not found: {args.spec}")
         try:
-            spec = yaml.safe_load(args.spec.read_text(encoding="utf-8"))
+            spec_text = args.spec.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ValueError(f"could not read spec: {exc}") from exc
+        try:
+            spec = yaml.safe_load(spec_text)
         except yaml.YAMLError as exc:
             raise ValueError(f"could not parse spec YAML: {exc}") from exc
-        body = artifact_text
+        body = stripped_body if frontmatter_spec is not None else artifact_text
     else:
-        spec, body = split_frontmatter(artifact_text)
+        spec, body = frontmatter_spec, stripped_body
         if spec is None:
             raise ValueError(
                 "no --spec given and the artifact has no YAML frontmatter to use as its spec"
@@ -95,26 +110,50 @@ def _load_spec_and_body(args: argparse.Namespace, artifact_text: str) -> tuple[d
         raise ValueError("the source spec must be a YAML mapping")
     if not body.strip():
         raise ValueError("artifact body is empty — nothing to judge")
+    if len(body) > 200_000:
+        raise ValueError("artifact body exceeds 200KB — refusing to judge")
     return spec, body
 
 
-def _build_panel(args: argparse.Namespace):
-    from .openrouter import OpenRouterEvaluator
+def _build_panel(args: argparse.Namespace) -> Panel:
+    from .openrouter import DEFAULT_MODEL, OpenRouterEvaluator
     from .panel import DEFAULT_ALT_MODEL, Panel
 
     evaluator = OpenRouterEvaluator(default_model=args.model) if args.model else None
     if args.tier == "high-assurance":
-        return Panel.high_assurance(
-            evaluator=evaluator, alt_model=args.alt_model or DEFAULT_ALT_MODEL
-        )
+        # Structural cross-model diversity (a distinct seat flagged `cross_model`) is
+        # necessary but not sufficient: if it resolves to the SAME model as the
+        # same-platform seats, the tier's independence guarantee silently degrades to
+        # a single model talking to itself while consensus still asserts `cross_model`.
+        same_platform = args.model or os.environ.get("JUDGE_MODEL") or DEFAULT_MODEL
+        alt = args.alt_model or os.environ.get("JUDGE_ALT_MODEL") or DEFAULT_ALT_MODEL
+        if same_platform == alt:
+            raise ValueError(
+                "high-assurance requires a cross-model seat distinct from the "
+                f"same-platform model ({same_platform!r}); set --alt-model or "
+                "JUDGE_ALT_MODEL to a different model"
+            )
+        return Panel.high_assurance(evaluator=evaluator, alt_model=args.alt_model)
     return Panel.for_tier(args.tier, evaluator=evaluator)
 
 
-def _emit(verdict: object, as_json: bool) -> None:
+def _verdict_to_json(verdict: Verdict) -> dict[str, Any]:
+    """Render ``verdict`` for ``--json`` with ``Level`` as its name (e.g. ``"WARN"``) —
+    a bare ``model_dump(mode="json")`` would emit the underlying ``IntEnum`` value."""
+    return {
+        "level": verdict.level.name,
+        "findings": [
+            {**finding.model_dump(mode="json"), "level": finding.level.name}
+            for finding in verdict.findings
+        ],
+    }
+
+
+def _emit(verdict: Verdict, as_json: bool) -> None:
     if as_json:
         import json
 
-        print(json.dumps(verdict.model_dump(mode="json"), indent=2))  # type: ignore[attr-defined]
+        print(json.dumps(_verdict_to_json(verdict), indent=2))
     else:
         print(verdict)
 
@@ -133,7 +172,11 @@ def main(argv: list[str] | None = None) -> int:
     if not artifact_path.exists():
         print(f"ERROR: artifact not found: {artifact_path}", file=sys.stderr)
         return 2
-    artifact_text = artifact_path.read_text(encoding="utf-8", errors="replace")
+    try:
+        artifact_text = artifact_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
 
     try:
         spec, body = _load_spec_and_body(args, artifact_text)
@@ -141,12 +184,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    from .contracts import SpecConformanceContract
-    from .engine import judge
-    from .ledger import BudgetError, preflight
-    from .openrouter import ConfigError, NetworkError
-
     try:
+        # `.ledger` and `.openrouter` never import the sibling `spec_linter` package, so
+        # they cannot fail here; they go first so `BudgetError`/`NetworkError`/`ConfigError`
+        # below are always bound by the time `.engine` — the one import that legitimately
+        # fails when the sibling is missing — gets a chance to raise.
+        from .ledger import BudgetError, preflight
+        from .openrouter import ConfigError, NetworkError
+        from .contracts import SpecConformanceContract
+        from .engine import judge
+
         panel = _build_panel(args)
         preflight(len(panel.seats))
         verdict = judge(body, SpecConformanceContract(spec), panel)
@@ -158,6 +205,15 @@ def main(argv: list[str] | None = None) -> int:
         return 4
     except ConfigError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except ImportError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:  # noqa: BLE001 — last-resort operational guard, mirrors the Linter CLI
+        print(f"ERROR: unexpected failure: {exc}", file=sys.stderr)
         return 2
 
     _emit(verdict, args.json)

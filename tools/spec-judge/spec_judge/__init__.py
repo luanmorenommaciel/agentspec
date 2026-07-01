@@ -18,6 +18,8 @@ from .evaluator import Concern, EvalRequest, EvalResult, FakeEvaluator
 from .panel import Panel, Seat
 from .protocol import BehavioralContract, Evaluator
 
+# NOT listed above (so introspecting __all__ never forces the import): "judge",
+# "Verdict", "Finding", and "Level" are exported lazily by __getattr__ below.
 __all__ = [
     "BehavioralContract",
     "Concern",
@@ -32,3 +34,19 @@ __all__ = [
     "SpecConformanceContract",
     "split_frontmatter",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """PEP 562 lazy export for the two names that need the sibling ``spec_linter``
+    package: resolving them only on first access (never at ``import spec_judge`` time)
+    keeps this package importable even when the sibling is momentarily unresolved,
+    the same guarantee the eagerly-imported names above already have."""
+    if name == "judge":
+        from .engine import judge
+
+        return judge
+    if name in ("Verdict", "Finding", "Level"):
+        import spec_linter
+
+        return getattr(spec_linter, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

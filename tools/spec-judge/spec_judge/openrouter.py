@@ -14,14 +14,17 @@ import os
 import re
 import urllib.error
 import urllib.request
+from typing import Any, get_args
 
 from . import ledger, prompts
 from .evaluator import Concern, EvalRequest, EvalResult
+from .vocab import Category, Severity
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-4o-mini"
-_VALID_CATEGORIES = {"B1", "B2", "B3", "B4"}
-_VALID_SEVERITIES = {"high", "medium", "low"}
+_VALID_CATEGORIES = set(get_args(Category))
+_VALID_SEVERITIES = set(get_args(Severity))
+_SEVERITY_SYNONYMS = {"critical": "high"}
 
 
 class ConfigError(RuntimeError):
@@ -32,13 +35,21 @@ class NetworkError(RuntimeError):
     """Transport/API failure or an unparseable response. The CLI maps this to exit 4."""
 
 
-def _parse_concerns(payload: dict) -> tuple[Concern, ...]:
+def _parse_concerns(payload: dict[str, Any]) -> tuple[Concern, ...]:
+    """Filter+normalize the model's raw ``concerns`` at this untrusted boundary.
+
+    Category/severity are case- and synonym-normalized before validation
+    (``"b2"`` -> ``"B2"``, ``"critical"`` -> ``"high"``). A concern that still
+    doesn't name a valid category/severity is dropped, not raised on — the
+    full untouched payload stays available in ``EvalResult.raw`` for debugging.
+    """
     concerns: list[Concern] = []
     for raw in payload.get("concerns", []) or []:
         if not isinstance(raw, dict):
             continue
-        category = str(raw.get("category", "")).strip()
+        category = str(raw.get("category", "")).strip().upper()
         severity = str(raw.get("severity", "")).strip().lower()
+        severity = _SEVERITY_SYNONYMS.get(severity, severity)
         if category not in _VALID_CATEGORIES or severity not in _VALID_SEVERITIES:
             continue
         concerns.append(
@@ -53,7 +64,7 @@ def _parse_concerns(payload: dict) -> tuple[Concern, ...]:
     return tuple(concerns)
 
 
-def _coerce_confidence(payload: dict) -> float:
+def _coerce_confidence(payload: dict[str, Any]) -> float:
     try:
         value = float(payload.get("confidence", 0.0))
     except (TypeError, ValueError):
@@ -61,7 +72,7 @@ def _coerce_confidence(payload: dict) -> float:
     return max(0.0, min(1.0, value))
 
 
-def _extract_json(raw: str) -> dict:
+def _extract_json(raw: str) -> dict[str, Any]:
     try:
         content = json.loads(raw)["choices"][0]["message"]["content"]
     except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
@@ -90,6 +101,10 @@ class OpenRouterEvaluator:
         return self._default_model or os.environ.get("JUDGE_MODEL", DEFAULT_MODEL)
 
     def evaluate(self, request: EvalRequest) -> EvalResult:
+        if ledger.today_count() >= ledger.budget():
+            raise ledger.BudgetError(
+                f"per-day evaluation budget exhausted ({ledger.budget()} calls)"
+            )
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
             raise ConfigError("OPENROUTER_API_KEY not set")
@@ -107,7 +122,7 @@ class OpenRouterEvaluator:
             raw=payload,
         )
 
-    def _call(self, api_key: str, model: str, request: EvalRequest) -> dict:
+    def _call(self, api_key: str, model: str, request: EvalRequest) -> dict[str, Any]:
         body = {
             "model": model,
             "messages": [
@@ -140,4 +155,8 @@ class OpenRouterEvaluator:
             raise NetworkError(f"OpenRouter HTTP {exc.code}: {detail[:300]}") from exc
         except urllib.error.URLError as exc:
             raise NetworkError(f"network error: {exc.reason}") from exc
+        except OSError as exc:
+            # Supertype of TimeoutError and other socket-level failures that occur
+            # mid-response (after urlopen succeeds), e.g. a stall during response.read().
+            raise NetworkError(f"network error: {exc}") from exc
         return _extract_json(raw)

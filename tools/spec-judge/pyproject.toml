@@ -3,6 +3,11 @@ name = "agentspec-spec-judge"
 version = "0.1.0"
 description = "AgentSpec behavioral evaluation engine (the Judger) — prototype"
 requires-python = ">=3.12"
+# `spec_linter` (the sibling package under tools/spec-linter) is a real runtime
+# dependency of spec_judge.consensus/.engine, but is deliberately NOT listed below:
+# it has no published package of its own. It resolves via the `spec-judge` wrapper
+# script's PYTHONPATH, or an editable co-install of tools/spec-linter in dev — never
+# through pip.
 dependencies = [
     "pydantic>=2,<3",
     "pyyaml>=6",
@@ -29,3 +34,4 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["live: touches the real model API; skipped without OPENROUTER_API_KEY"]

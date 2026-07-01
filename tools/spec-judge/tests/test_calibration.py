@@ -1,4 +1,4 @@
-"""Confirmation harness (ADR §6): the engine is a fitness function.
+"""Confirmation harness (the Judger ADR, issue #57, §6): the engine is a fitness function.
 
 Driven by scripted evaluators — this proves the ENGINE's wiring discriminates
 (degraded → WARN, good → PASS) and that the orchestration is *sensitive* to the
@@ -65,20 +65,24 @@ def test_engine_discriminates(filename: str, expected: str | None) -> None:
 
 
 def test_fault_seeker_earns_its_cost() -> None:
+    """Isolate the panel-composition variable: the SAME scripted evaluator backs both
+    arms (it only ever raises the fixture's defect when asked in the fault-seeker
+    role), so a lower detection rate with the fault-seeker seat removed cannot be an
+    artifact of the script — it can only come from the panel no longer asking anyone
+    to play that role."""
     degraded = [(name, cat) for name, cat in _FIXTURES.items() if cat is not None]
 
-    def warn_rate(build_panel, use_fault_seeker: bool) -> float:
+    def warn_rate(build_panel) -> float:
         flagged = 0
         for name, cat in degraded:
             spec, body = _load(name)
-            evaluator = _scripted(cat) if use_fault_seeker else _scripted(None)
-            verdict = judge(body, SpecConformanceContract(spec), build_panel(evaluator))
+            verdict = judge(body, SpecConformanceContract(spec), build_panel(_scripted(cat)))
             flagged += int(verdict.level >= Level.WARN)
         return flagged / len(degraded)
 
-    with_fault_seeker = warn_rate(lambda ev: Panel.standard(evaluator=ev), use_fault_seeker=True)
-    ablated = warn_rate(
-        lambda ev: Panel("ablated", [Seat(role="conformance-checker")], evaluator=ev),
-        use_fault_seeker=False,
-    )
+    with_fault_seeker = warn_rate(lambda ev: Panel.standard(evaluator=ev))
+    # Tier label is "standard" (not a made-up name): consensus() now validates tier
+    # against the canonical set, and only the seat composition is under test here —
+    # this ad hoc panel is the standard panel with its fault-seeker seat removed.
+    ablated = warn_rate(lambda ev: Panel("standard", [Seat(role="conformance-checker")], ev))
     assert with_fault_seeker > ablated  # removing the fault-seeker measurably lowers detection

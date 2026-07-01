@@ -13,15 +13,23 @@ flagged ``cross_model`` so consensus can require genuine cross-model agreement.
 
 from __future__ import annotations
 
+import os
+
 from pydantic import BaseModel, ConfigDict
 
 from .contracts import EvalSubject, Rubric
 from .evaluator import EvalRequest, EvalResult
 from .protocol import Evaluator
+from .vocab import Role
+
+# The canonical independence tiers, shared by the CLI (argument choices) and
+# consensus.py (tier validation) so both stay in lockstep with exactly one set.
+TIERS = ("smoke", "standard", "high-assurance")
 
 # A model from a different family than the default, so the cross-model seat does not
-# share the default model's blind spots. Overridable per high-assurance panel.
-DEFAULT_ALT_MODEL = "anthropic/claude-3.5-sonnet"
+# share the default model's blind spots. Overridable per high-assurance panel via the
+# `alt_model` argument or the `JUDGE_ALT_MODEL` environment variable.
+DEFAULT_ALT_MODEL = "anthropic/claude-sonnet-5"
 
 _ARBITER = "arbiter"
 
@@ -29,7 +37,7 @@ _ARBITER = "arbiter"
 class Seat(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    role: str
+    role: Role
     model: str | None = None  # None -> the evaluator's default model
     cross_model: bool = False
 
@@ -74,14 +82,15 @@ class Panel:
 
     @classmethod
     def high_assurance(
-        cls, evaluator: Evaluator | None = None, alt_model: str = DEFAULT_ALT_MODEL
+        cls, evaluator: Evaluator | None = None, alt_model: str | None = None
     ) -> Panel:
+        resolved_alt = alt_model or os.environ.get("JUDGE_ALT_MODEL") or DEFAULT_ALT_MODEL
         return cls(
             "high-assurance",
             [
                 Seat(role="fault-seeker"),
                 Seat(role="conformance-checker"),
-                Seat(role="fault-seeker", model=alt_model, cross_model=True),
+                Seat(role="fault-seeker", model=resolved_alt, cross_model=True),
                 Seat(role=_ARBITER),
             ],
             evaluator,

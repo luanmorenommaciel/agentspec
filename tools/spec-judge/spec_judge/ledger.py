@@ -17,6 +17,7 @@ import json
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 DEFAULT_BUDGET = 10
 _LEDGER_RELATIVE = Path(".claude") / "storage" / "judge-ledger.jsonl"
@@ -65,7 +66,7 @@ class LedgerEntry:
             cost_usd=data.get("cost_usd"),
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v not in (None, "") or k == "cost_usd"}
 
 

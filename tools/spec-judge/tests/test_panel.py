@@ -6,7 +6,7 @@ import pytest
 
 from _helpers import concern, evaluator_from, result
 from spec_judge.contracts import EvalSubject, Rubric
-from spec_judge.evaluator import FakeEvaluator
+from spec_judge.evaluator import EvalRequest, EvalResult, FakeEvaluator
 from spec_judge.panel import Panel
 
 
@@ -36,10 +36,17 @@ def test_for_tier_rejects_unknown_tier() -> None:
         Panel.for_tier("nonsense", evaluator=evaluator_from({}))
 
 
+def test_high_assurance_alt_model_honors_judge_alt_model_env(monkeypatch) -> None:
+    monkeypatch.setenv("JUDGE_ALT_MODEL", "x")
+    panel = Panel.high_assurance(evaluator=evaluator_from({}))
+    cross = [s for s in panel.seats if s.cross_model]
+    assert cross[0].model == "x"
+
+
 def test_arbiter_receives_prior_seats_concerns() -> None:
     seen: dict[str, tuple] = {}
 
-    def script(request):
+    def script(request: EvalRequest) -> EvalResult:
         seen[request.role] = request.peer_concerns
         raised = [] if request.role == "arbiter" else [concern("B1", "low")]
         return result(request.role, cross_model=request.cross_model, concerns=raised)

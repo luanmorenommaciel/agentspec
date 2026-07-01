@@ -12,10 +12,12 @@ Turning concerns into a ``PASS | WARN | FAIL`` verdict is the engine's job
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from .contracts import Rubric
+from .vocab import Category, Role, Severity
 
 
 class Concern(BaseModel):
@@ -23,8 +25,8 @@ class Concern(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    category: str  # "B1" | "B2" | "B3" | "B4"
-    severity: str  # "high" | "medium" | "low"
+    category: Category
+    severity: Severity
     evidence: str  # quoted artifact text          -> Finding.found
     expected: str  # what the contract required     -> Finding.expected
     recommendation: str  # the concrete fix         -> folded into Finding.message
@@ -33,7 +35,7 @@ class Concern(BaseModel):
 class EvalRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    role: str  # "fault-seeker" | "conformance-checker" | "arbiter"
+    role: Role
     artifact_text: str
     contract_summary: str
     rubric: Rubric
@@ -45,13 +47,13 @@ class EvalRequest(BaseModel):
 class EvalResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    role: str
+    role: Role
     model: str
     cross_model: bool = False
     confidence: float  # 0.0-1.0
     summary: str = ""
     concerns: tuple[Concern, ...] = ()
-    raw: dict | None = None  # the raw model JSON, for debugging
+    raw: dict[str, Any] | None = None  # the raw model JSON, for debugging
 
 
 class FakeEvaluator:

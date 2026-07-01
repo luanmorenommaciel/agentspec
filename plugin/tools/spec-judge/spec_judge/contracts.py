@@ -10,10 +10,13 @@ spec's own declaration becomes the rule for the artifact produced from it.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict
+
+from .vocab import Category
 
 _DEFAULT_SEVERITY_GUIDANCE = (
     'Reserve "high" severity for a defect that means the artifact does NOT honor a '
@@ -37,7 +40,7 @@ class Rubric(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    categories: tuple[str, ...] = ("B1", "B2", "B3", "B4")
+    categories: tuple[Category, ...] = ("B1", "B2", "B3", "B4")
     severity_guidance: str = _DEFAULT_SEVERITY_GUIDANCE
     category_guidance: str = _CATEGORY_GUIDANCE
 
@@ -86,6 +89,20 @@ def _render_contract_summary(spec: dict[str, Any]) -> str:
     deliverables = _as_list(spec.get("deliverables"))
     if deliverables:
         lines.append("deliverables (intent):\n  - " + "\n  - ".join(deliverables))
+    stop_conditions = _as_list(spec.get("stop_conditions"))
+    if stop_conditions:
+        lines.append("stop_conditions:\n  - " + "\n  - ".join(stop_conditions))
+    escalation_rules = _as_list(spec.get("escalation_rules"))
+    if escalation_rules:
+        lines.append("escalation_rules:\n  - " + "\n  - ".join(escalation_rules))
+    tools = _as_list(spec.get("tools"))
+    if tools:
+        lines.append(f"tools: {', '.join(tools)}")
+    observability = spec.get("observability")
+    if isinstance(observability, dict):
+        flags = ", ".join(f"{k}={v}" for k, v in observability.items() if isinstance(v, bool))
+        if flags:
+            lines.append(f"observability: {flags}")
     return "\n".join(lines)
 
 
@@ -95,11 +112,16 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
     Supports the self-contained artifact model where the spec lives in the artifact's
     own YAML frontmatter. Returns ``(None, original text)`` when there is no YAML-mapping
     frontmatter — e.g. a plain artifact whose source spec is supplied separately.
+
+    Splits only on a standalone fence line (``---`` alone on its line, at column 0):
+    a YAML block scalar (e.g. ``description: |``) may contain an indented line that
+    merely looks like an hrule without it being mistaken for the closing fence, and an
+    hrule in the body *after* the real closing fence is left untouched.
     """
     stripped = text.lstrip()
     if not stripped.startswith("---"):
         return None, text
-    parts = stripped.split("---", 2)
+    parts = re.split(r"(?m)^---\s*$", stripped, maxsplit=2)
     if len(parts) < 3:
         return None, text
     try:

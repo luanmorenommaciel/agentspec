@@ -9,10 +9,12 @@ the cross-model seat and arbiter agree.
 
 from __future__ import annotations
 
+import pytest
 from _helpers import concern, result
 from spec_linter import Level
 
 from spec_judge.consensus import FAIL_CONFIDENCE_FLOOR, concern_to_finding, consensus
+from spec_judge.evaluator import EvalResult
 
 
 def test_concern_maps_to_finding_fields() -> None:
@@ -57,7 +59,7 @@ def _high_assurance(
     arbiter: bool = True,
     confidence: float = 0.9,
     category: str = "B2",
-) -> list:
+) -> list[EvalResult]:
     flag = [concern(category, "high")]
     return [
         result(
@@ -101,6 +103,18 @@ def test_at_confidence_floor_blocks() -> None:
     )
 
 
+def test_low_confidence_extra_seat_does_not_veto_an_agreed_fail() -> None:
+    # Unreachable via the 3 shipped tiers, only via the public Panel(...) constructor:
+    # a 5th seat's LOW-severity concern must not drag the confidence floor down and
+    # veto an otherwise fully-agreed FAIL — only HIGH-severity agreement counts toward
+    # who is "agreeing" for the floor check.
+    results = [
+        *_high_assurance(),
+        result("fault-seeker", cross_model=False, confidence=0.01, concerns=[concern("B2", "low")]),
+    ]
+    assert consensus(results, tier="high-assurance").level == Level.FAIL
+
+
 def test_only_agreeing_category_promoted() -> None:
     # All three agree on B2; only the same-platform fault-seeker also raises B1.
     results = [
@@ -115,6 +129,34 @@ def test_only_agreeing_category_promoted() -> None:
     ]
     verdict = consensus(results, tier="high-assurance")
     assert verdict.level == Level.FAIL
-    by_rule = {f.rule: f.level for f in verdict.findings}
-    assert by_rule["B2.capability_not_delivered"] == Level.FAIL
-    assert by_rule["B1.vagueness"] == Level.WARN  # not in the agreeing set → stays capped
+    # Union semantics: 4 concerns in, 4 findings out. A dict keyed by `f.rule` would
+    # collapse the 3 independent B2 findings into 1, masking the corroboration — pin
+    # the exact counts instead.
+    assert len(verdict.findings) == 4
+    b2_findings = [f for f in verdict.findings if f.rule == "B2.capability_not_delivered"]
+    b1_findings = [f for f in verdict.findings if f.rule == "B1.vagueness"]
+    assert len(b2_findings) == 3
+    assert len(b1_findings) == 1
+    assert all(f.level == Level.FAIL for f in b2_findings)
+    assert b1_findings[0].level == Level.WARN  # not in the agreeing set → stays capped
+
+
+def test_arbiter_only_category_stays_warn() -> None:
+    # The arbiter raises B3 at high severity and high confidence, but NEITHER
+    # fault-seeker raised it. The arbiter alone — even decisive — cannot FAIL a
+    # category: the three-way gate requires both fault-seekers to agree too.
+    results = [
+        result("fault-seeker", cross_model=False, confidence=0.9),
+        result("fault-seeker", cross_model=True, confidence=0.9),
+        result("arbiter", confidence=0.95, concerns=[concern("B3", "high")]),
+    ]
+    verdict = consensus(results, tier="high-assurance")
+    assert verdict.level == Level.WARN
+    assert len(verdict.findings) == 1
+    assert verdict.findings[0].rule == "B3.internal_contradiction"
+    assert verdict.findings[0].level == Level.WARN
+
+
+def test_consensus_rejects_unknown_tier() -> None:
+    with pytest.raises(ValueError):
+        consensus([result("fault-seeker")], tier="High-Assurance")

@@ -11,9 +11,12 @@ import os
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("OPENROUTER_API_KEY"), reason="no OPENROUTER_API_KEY set"
-)
+pytestmark = [
+    pytest.mark.live,
+    pytest.mark.skipif(
+        not os.environ.get("OPENROUTER_API_KEY"), reason="no OPENROUTER_API_KEY set"
+    ),
+]
 
 
 def test_one_real_evaluation(tmp_path, monkeypatch) -> None:

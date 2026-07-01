@@ -8,6 +8,14 @@ Two stages:
 2. **Promote** (high-assurance tier only) the categories that clear a strict,
    cross-checked gate from ``WARN`` to ``FAIL``.
 
+Every seat's concerns are recorded as findings — this is a UNION, not a
+consolidation: an upheld arbiter concern that restates a peer's is corroboration
+(multiple independent voices converging on the same defect), never deduplicated
+away. The arbiter's adjudication only carries decision power at the high-assurance
+FAIL gate (below); a dropped-by-the-arbiter concern still surfaces as an advisory
+``WARN`` finding from its original reviewer, because no single voice may silence
+the panel (see the Judger ADR, issue #57, §2.3).
+
 Everything here is a pure function of the evaluators' results — no I/O, no model
 vocabulary — mirroring the Linter's engine. All non-determinism lives in the
 injected evaluator, never here.
@@ -20,6 +28,7 @@ from collections.abc import Callable, Iterable
 from spec_linter import Finding, Level, Verdict
 
 from .evaluator import Concern, EvalResult
+from .panel import TIERS
 
 _SEVERITY_TO_LEVEL = {"high": Level.FAIL, "medium": Level.WARN, "low": Level.WARN}
 _CATEGORY_RULES = {
@@ -29,14 +38,15 @@ _CATEGORY_RULES = {
     "B4": "B4.intent_drift",
 }
 
-# Calibration knobs (ADR §7 q5): a blocking FAIL requires the weakest agreeing voice
-# to clear this confidence floor, on top of the structural three-way agreement below.
+# Calibration knobs (the Judger ADR, issue #57, §7 q5): a blocking FAIL requires the
+# weakest agreeing voice to clear this confidence floor, on top of the structural
+# three-way agreement below.
 FAIL_CONFIDENCE_FLOOR = 0.7
 HIGH_ASSURANCE = "high-assurance"
 
 
 def _rule_for(category: str) -> str:
-    return _CATEGORY_RULES.get(category, f"B0.unknown_{category}")
+    return _CATEGORY_RULES[category]
 
 
 def _category_of(rule: str) -> str:
@@ -90,7 +100,8 @@ def _fail_gate(results: list[EvalResult]) -> set[str]:
     agreeing_voices = [
         r
         for r in results
-        if r.role in ("fault-seeker", "arbiter") and agree & {c.category for c in r.concerns}
+        if r.role in ("fault-seeker", "arbiter")
+        and agree & {c.category for c in r.concerns if c.severity == "high"}
     ]
     if not agreeing_voices or min(r.confidence for r in agreeing_voices) < FAIL_CONFIDENCE_FLOOR:
         return set()
@@ -98,6 +109,8 @@ def _fail_gate(results: list[EvalResult]) -> set[str]:
 
 
 def consensus(results: list[EvalResult], tier: str) -> Verdict:
+    if tier not in TIERS:
+        raise ValueError(f"unknown tier: {tier!r}")
     findings = [concern_to_finding(concern) for result in results for concern in result.concerns]
     if tier == HIGH_ASSURANCE:
         promote = _fail_gate(results)

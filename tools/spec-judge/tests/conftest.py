@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -22,6 +23,21 @@ _LINTER = _TESTS.parents[1] / "spec-linter"  # tools/spec-linter (contains spec_
 for _path in (_PKG_ROOT, _LINTER):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
+
+
+@pytest.fixture(autouse=True)
+def _no_api_key(request, monkeypatch) -> Iterator[None]:
+    """Structurally prevent an accidental paid call: strip ``OPENROUTER_API_KEY`` from
+    the environment for every test, except one explicitly marked ``live`` (which needs
+    a real key to run at all — see the ``live`` marker registered in ``pyproject.toml``).
+    A test that stubs the evaluator but still wants a key present sets it itself, after
+    this fixture has already run.
+    """
+    if "live" in request.keywords:
+        yield
+        return
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    yield
 
 
 @pytest.fixture
@@ -41,4 +57,6 @@ def source_spec() -> dict[str, Any]:
         },
         "requirements": ["lint the diff"],
         "deliverables": ["lint the diff"],
+        "stop_conditions": ["stop when the diff exceeds 5000 lines"],
+        "observability": {"confidence_scoring": True, "sources_attribution": True},
     }

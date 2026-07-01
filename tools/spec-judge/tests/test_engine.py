@@ -33,7 +33,7 @@ def test_panel_none_defaults_to_standard(source_spec, monkeypatch) -> None:
 
     built: dict[str, str] = {}
 
-    def fake_standard():
+    def fake_standard() -> Panel:
         built["tier"] = "standard"
         return Panel(
             "standard",
