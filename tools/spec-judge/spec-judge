@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Entry point for the behavioral evaluation engine (the Judger).
+#
+# Verdict surface: 0 = PASS/WARN, 1 = FAIL. Non-verdict "couldn't-run" states:
+# 2 = ERROR/unavailable, 3 = budget exhausted, 4 = network.
+#
+# The Judger reuses the sibling Linter's value objects, so it puts BOTH its own
+# package dir and the sibling spec-linter dir on PYTHONPATH and degrades loudly
+# (exit 2) if the sibling is absent — never a silent skip.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LINTER="$(cd "$HERE/../spec-linter" 2>/dev/null && pwd || true)"
+if [ -z "$LINTER" ] || [ ! -d "$LINTER/spec_linter" ]; then
+  echo "ERROR: sibling spec-linter not found next to spec-judge; cannot import spec_linter." >&2
+  exit 2
+fi
+
+for py in "${SPEC_JUDGE_PYTHON:-}" "$HERE/.venv/bin/python" python3 python; do
+  [ -n "$py" ] || continue
+  command -v "$py" >/dev/null 2>&1 || continue
+  if "$py" -c "import pydantic, yaml" >/dev/null 2>&1; then
+    exec env PYTHONPATH="$HERE:$LINTER${PYTHONPATH:+:$PYTHONPATH}" "$py" -m spec_judge.cli "$@"
+  fi
+done
+
+echo "ERROR: spec-judge unavailable — needs python3 with 'pydantic' and 'pyyaml' (or a local .venv)." >&2
+exit 2

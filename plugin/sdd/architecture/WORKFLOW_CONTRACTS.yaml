@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.4.0
+# Version: 3.5.0
 # Date: 2026-07-15
 
-version: "3.4.0"
+version: "3.5.0"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -81,13 +81,13 @@ workflow:
 # AGENT RESOLUTION (Local-First Precedence)
 # =============================================================================
 # When AgentSpec is installed as a Claude Code plugin, users may have agents
-# in their project's ${CLAUDE_PLUGIN_ROOT}/agents/ directory that share a name with a plugin
+# in their project's .claude/agents/ directory that share a name with a plugin
 # agent. This contract documents the resolution order so phase commands can
 # rely on stable behavior across hosts.
 
 agent_resolution:
   order:
-    - "local"   # ${CLAUDE_PLUGIN_ROOT}/agents/<category>/<name>.md in the user's project
+    - "local"   # .claude/agents/<category>/<name>.md in the user's project
     - "plugin"  # ${CLAUDE_PLUGIN_ROOT}/agents/<category>/<name>.md (AgentSpec)
 
   behavior: |
@@ -103,9 +103,9 @@ agent_resolution:
       The README is written once and preserved across runs to respect user
       customizations.
     paths:
-      - "${CLAUDE_PLUGIN_ROOT}/agents/workflow/"   # SDD phase agent overrides
-      - "${CLAUDE_PLUGIN_ROOT}/agents/custom/"     # New project-specific agents
-    readme: "${CLAUDE_PLUGIN_ROOT}/agents/README.md"
+      - ".claude/agents/workflow/"   # SDD phase agent overrides
+      - ".claude/agents/custom/"     # New project-specific agents
+    readme: ".claude/agents/README.md"
 
   rules:
     - "Override agent's `name:` frontmatter field MUST match the plugin agent's name"
@@ -120,7 +120,7 @@ agent_resolution:
 
   documentation:
     user_facing: "docs/concepts/agent-overrides.md"
-    quick_reference: "${CLAUDE_PLUGIN_ROOT}/agents/README.md (auto-generated in user project)"
+    quick_reference: ".claude/agents/README.md (auto-generated in user project)"
 
 # =============================================================================
 # CONTRACT ENFORCEMENT (the Linter — ADR-002)
@@ -129,11 +129,11 @@ agent_resolution:
 # (validate an artifact against a contract -> verdict); contracts are policy
 # (what is checked + severity); consumers below choose where they bind. The
 # engine and verdict semantics are stable; contract CONTENT is owned upstream
-# (canonical schemas pending). Operator documentation: ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md
+# (canonical schemas pending). Operator documentation: tools/spec-linter/USAGE.md
 
 contract_enforcement:
   component: "spec-linter"
-  usage_doc: "${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md"
+  usage_doc: "tools/spec-linter/USAGE.md"
   entry_point: "spec_linter.engine.lint(artifact, contract)"
 
   verdict_semantics:
@@ -221,13 +221,95 @@ contract_enforcement:
         status: "specified target"
 
 # =============================================================================
+# BEHAVIORAL ENFORCEMENT (the Judger — ADR-003)
+# =============================================================================
+# A model-based, contract-aware behavioral evaluation engine — the behavioral
+# counterpart to the deterministic Linter. It asks "does this artifact honor its
+# contract?" and runs ONLY after the Linter passes (never on a structural FAIL).
+# Advisory by default (WARN ceiling); FAIL is reachable only at the high-assurance
+# tier, under a strict three-way cross-model consensus, and blocks only where a
+# consumer opts in. The engine mirrors the Linter's shape and reuses its Verdict/
+# Finding value objects. Operator documentation: tools/spec-judge/USAGE.md
+
+behavioral_enforcement:
+  component: "spec-judge"
+  usage_doc: "tools/spec-judge/USAGE.md"
+  entry_point: "spec_judge.engine.judge(artifact, contract, panel=None)"
+
+  runs_after: "contract_enforcement (the Linter) returns PASS — never on a structural FAIL"
+
+  verdict_semantics:
+    PASS: "no behavioral concern — proceed"
+    WARN: "advisory behavioral concern — proceed, but record the finding"
+    FAIL: "critical behavioral deficiency — blocks; high-assurance tier + consumer opt-in only"
+    rule: "Same PASS|WARN|FAIL tokens as the Linter; consumers MUST NOT reinterpret FAIL."
+    calibration: "WARN by default; FAIL emitted only at the high-assurance tier under strict consensus."
+
+  exit_code_contract:
+    description: |
+      The spec-judge wrapper maps the verdict to an exit code. The VERDICT surface
+      stays PASS/WARN/FAIL (codes 0/1). Codes 2/3/4 are NOT Verdict Levels — they are
+      "couldn't-run" states; a consumer treats any code >= 2 as "skip the behavioral
+      check visibly and proceed" (never assume PASS), or branches on the specific code.
+    codes:
+      "0": "PASS or WARN — proceed"
+      "1": "FAIL — a high-assurance blocking verdict"
+      "2": "ERROR — operational failure (missing/empty artifact, no source spec, bad config, sibling linter absent)"
+      "3": "BUDGET — the per-day evaluation budget is exhausted"
+      "4": "NETWORK — model/API failure"
+
+  contract_sources:
+    - id: "derived_from_instance"
+      description: "The source spec is the contract: its output_contract + intent are what the produced artifact must honor. Also accepted from the artifact's own YAML frontmatter (self-contained agent.md)."
+
+  finding_categories:
+    B1: "vagueness — an instruction too vague to act on reliably"
+    B2: "capability_not_delivered — a declared capability the body never delivers"
+    B3: "internal_contradiction — instructions that conflict with each other or the contract"
+    B4: "intent_drift — coherent, but doing something other than the source spec asked"
+
+  independence_tiers:
+    invariant: "Every tier has >= 1 fault-seeker — a seat tasked to find where the artifact fails its contract."
+    smoke:          { panel: "1 fault-seeker", ceiling: "WARN", cost: "cheapest" }
+    standard:       { panel: "fault-seeker + conformance-checker + arbiter (same platform, consensus)", ceiling: "WARN", default: true }
+    high_assurance: { panel: "+ a cross-model fault-seeker + arbiter", ceiling: "FAIL", fail_rule: "the same-platform fault-seeker AND the cross-model fault-seeker AND the arbiter each raise the category at high severity, AND the weakest agreeing voice's confidence >= 0.7" }
+
+  available_patterns:
+    post_lint_evaluation: "Evaluate a produced artifact against its source spec, only after the Linter passes."
+    tiered_by_stakes: "The consumer selects smoke | standard | high-assurance by the checkpoint's stakes."
+    two_pass_refine: "Feed WARN findings into a regeneration, then re-judge."
+
+  consumer_bindings:
+    note: |
+      Bindings are expressed here at the contract level rather than by editing phase
+      commands (those are slated for rearchitecture). A binding declares the checkpoint,
+      the tier, what the consumer does with the verdict (record / refine / escalate), and
+      block_on_fail (default false — advisory). These are specified TARGET bindings;
+      wiring them into the generation lifecycle is consumer work.
+    bindings:
+      - checkpoint: "post-generation artifact review (after Gate A + Gate B pass)"
+        tier: "standard"
+        on_verdict: "record WARN findings; feed the refinement loop"
+        block_on_fail: false
+        status: "specified target"
+      - checkpoint: "pre-release / publish"
+        tier: "high-assurance"
+        on_verdict: "escalate; may block on a consensus FAIL"
+        block_on_fail: true
+        status: "specified target"
+
+  cost_bound: "A shared, append-only per-day ledger (.claude/storage/judge-ledger.jsonl) caps spend across the judge family; the CLI preflights and refuses a panel it cannot finish."
+
+  status: "prototype — re-scopes the shipped V0 reviewer's cross-model + budget mechanisms toward contract conformance; superseding V0 is a separate migration"
+
+# =============================================================================
 # PHASE 0: BRAINSTORM (Optional)
 # =============================================================================
 
 brainstorm:
   command:
     name: "/brainstorm"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/brainstorm.md"
+    file: ".claude/commands/workflow/brainstorm.md"
     args: "<idea-or-request>"
     examples:
       - '/brainstorm "Build a user notification system"'
@@ -236,11 +318,11 @@ brainstorm:
 
   agent:
     name: "brainstorm-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/brainstorm-agent.md"
+    file: ".claude/agents/workflow/brainstorm-agent.md"
 
   skill:
     name: "sdd-brainstorm"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-brainstorm/SKILL.md"
+    file: ".claude/skills/sdd-brainstorm/SKILL.md"
     owns: "Phase methodology — process steps, questioning principles, approach comparison, YAGNI, incremental validation, sample collection, anti-patterns"
 
   input:
@@ -253,7 +335,7 @@ brainstorm:
 
   output:
     file: ".claude/sdd/features/BRAINSTORM_{FEATURE}.md"
-    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/BRAINSTORM_TEMPLATE.md"
+    template: ".claude/sdd/templates/BRAINSTORM_TEMPLATE.md"
     status_values:
       - "Exploring"
       - "Approaches Identified"
@@ -275,7 +357,7 @@ brainstorm:
 define:
   command:
     name: "/define"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/define.md"
+    file: ".claude/commands/workflow/define.md"
     args: "<input>"
     examples:
       - "/define notes/meeting-notes.md"
@@ -284,11 +366,11 @@ define:
 
   agent:
     name: "define-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/define-agent.md"
+    file: ".claude/agents/workflow/define-agent.md"
 
   skill:
     name: "sdd-define"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-define/SKILL.md"
+    file: ".claude/skills/sdd-define/SKILL.md"
     owns: "Phase methodology — input classification, entity extraction patterns, clarity scoring procedure, gap-filling questions, anti-patterns"
 
   input:
@@ -302,7 +384,7 @@ define:
 
   output:
     file: ".claude/sdd/features/DEFINE_{FEATURE}.md"
-    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/DEFINE_TEMPLATE.md"
+    template: ".claude/sdd/templates/DEFINE_TEMPLATE.md"
     status_values:
       - "Draft"
       - "In Progress"
@@ -342,7 +424,7 @@ define:
 design:
   command:
     name: "/design"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/design.md"
+    file: ".claude/commands/workflow/design.md"
     args: "<define-file>"
     examples:
       - "/design .claude/sdd/features/DEFINE_USER_NOTIFICATIONS.md"
@@ -351,11 +433,11 @@ design:
 
   agent:
     name: "design-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/design-agent.md"
+    file: ".claude/agents/workflow/design-agent.md"
 
   skill:
     name: "sdd-design"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-design/SKILL.md"
+    file: ".claude/skills/sdd-design/SKILL.md"
     owns: "Phase methodology — architecture design process, inline decision records, file manifest construction, code patterns, testing strategy, anti-patterns"
 
   input:
@@ -367,7 +449,7 @@ design:
 
   output:
     file: ".claude/sdd/features/DESIGN_{FEATURE}.md"
-    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/DESIGN_TEMPLATE.md"
+    template: ".claude/sdd/templates/DESIGN_TEMPLATE.md"
 
   required_sections:
     - architecture_overview
@@ -384,18 +466,18 @@ design:
 build:
   command:
     name: "/build"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/build.md"
+    file: ".claude/commands/workflow/build.md"
     args: "<design-file>"
     examples:
       - "/build .claude/sdd/features/DESIGN_USER_NOTIFICATIONS.md"
 
   agent:
     name: "build-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/build-agent.md"
+    file: ".claude/agents/workflow/build-agent.md"
 
   skill:
     name: "sdd-build"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-build/SKILL.md"
+    file: ".claude/skills/sdd-build/SKILL.md"
     owns: "Phase methodology — task extraction, delegation flow and protocol, verification procedures, data-engineering delegation map, error handling, build-report mechanics, anti-patterns"
 
   input:
@@ -406,7 +488,7 @@ build:
   output:
     code: "As specified in DESIGN file manifest"
     report: ".claude/sdd/reports/BUILD_REPORT_{FEATURE}.md"
-    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/BUILD_REPORT_TEMPLATE.md"
+    template: ".claude/sdd/templates/BUILD_REPORT_TEMPLATE.md"
 
   execution:
     task_generation: "on-the-fly from file manifest"
@@ -422,18 +504,18 @@ build:
 ship:
   command:
     name: "/ship"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/ship.md"
+    file: ".claude/commands/workflow/ship.md"
     args: "<define-file>"
     examples:
       - "/ship .claude/sdd/features/DEFINE_USER_NOTIFICATIONS.md"
 
   agent:
     name: "ship-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/ship-agent.md"
+    file: ".claude/agents/workflow/ship-agent.md"
 
   skill:
     name: "sdd-ship"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-ship/SKILL.md"
+    file: ".claude/skills/sdd-ship/SKILL.md"
     owns: "Phase methodology — completion verification, archive procedure, lessons-learned extraction, anti-patterns"
 
   input:
@@ -445,7 +527,7 @@ ship:
   output:
     archive_folder: ".claude/sdd/archive/{FEATURE}/"
     shipped_file: "SHIPPED_{DATE}.md"
-    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/SHIPPED_TEMPLATE.md"
+    template: ".claude/sdd/templates/SHIPPED_TEMPLATE.md"
 
   archive_contents:
     - "BRAINSTORM_{FEATURE}.md"  # Optional - if Phase 0 was used
@@ -467,7 +549,7 @@ ship:
 iterate:
   command:
     name: "/iterate"
-    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/iterate.md"
+    file: ".claude/commands/workflow/iterate.md"
     args: '<file> "<change-description>"'
     examples:
       - '/iterate DEFINE_DATA_EXPORT.md "Add support for CSV format"'
@@ -476,11 +558,11 @@ iterate:
 
   agent:
     name: "iterate-agent"
-    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/iterate-agent.md"
+    file: ".claude/agents/workflow/iterate-agent.md"
 
   skill:
     name: "sdd-iterate"
-    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-iterate/SKILL.md"
+    file: ".claude/skills/sdd-iterate/SKILL.md"
     owns: "Phase methodology — change classification, cascade analysis and rules, user confirmation flow, version tracking, anti-patterns"
 
   works_with:
@@ -695,6 +777,12 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.5.0"
+    date: "2026-07-15"
+    changes:
+      - "Added behavioral_enforcement (the Judger, ADR-003): a model-based, contract-aware evaluation engine that runs after the Linter passes (never on a structural FAIL). Tiered adversarial panel (smoke/standard/high-assurance) with an always-present fault-seeker; FAIL emission is controlled by the tier, not reinterpreted by the consumer — smoke and standard are WARN-capped by construction, and the high-assurance tier emits a blocking FAIL only under a strict three-way cross-model consensus. Mirrors the Linter's entry-point shape and reuses its Verdict/Finding value objects."
+      - "Additive change — no modification to the Linter (contract_enforcement) or the existing phase contracts."
+
   - version: "3.4.0"
     date: "2026-07-15"
     changes:
@@ -702,7 +790,7 @@ version_history:
       - "Phase blocks now carry a skill: reference and keep only contract-grade facts (inputs, outputs, status values, quality gates, thresholds); methodology sub-blocks (process, questioning, extraction_elements, inline_decisions, cascade_rules, anti_patterns, etc.) moved into the skills"
       - "Removed duplicated agent model/tools from the workflow overview and phase blocks — agent frontmatter is authoritative (mirrored in routing.json); the duplicated copies had drifted from the real values"
       - "Grounded in the component model (kb/shared/component-model.md): agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth"
-      - "Contract-gate procedure relocated from the phase agents into the phase skills (sdd-define, sdd-design, sdd-iterate) under the same component-model split; the skills name the artifact and phase to validate and point at the linter's USAGE, while the exit-code contract and verdict semantics stay owned by contract_enforcement here and by ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md — consumers do not restate them"
+      - "Contract-gate procedure relocated from the phase agents into the phase skills (sdd-define, sdd-design, sdd-iterate) under the same component-model split; the skills name the artifact and phase to validate and point at the linter's USAGE, while the exit-code contract and verdict semantics stay owned by contract_enforcement here and by tools/spec-linter/USAGE.md — consumers do not restate them"
       - "Dropped the Brainstorm/Build/Ship gate stubs that narrated a missing required_sections key: the phase blocks here already own that fact and the linter reports the case itself (exit 2 — record a visible skip and proceed)"
 
   - version: "3.3.1"
@@ -722,8 +810,8 @@ version_history:
     date: "2026-05-01"
     changes:
       - "Added agent_resolution contract documenting local-first precedence"
-      - "SessionStart hook now scaffolds ${CLAUDE_PLUGIN_ROOT}/agents/{workflow,custom}/ override directories"
-      - "Auto-generated ${CLAUDE_PLUGIN_ROOT}/agents/README.md in user projects explains override pattern"
+      - "SessionStart hook now scaffolds .claude/agents/{workflow,custom}/ override directories"
+      - "Auto-generated .claude/agents/README.md in user projects explains override pattern"
       - "Fixed PySpark detection in init-workspace.sh to also check requirements.txt"
       - "Judge Layer V0 (/judge) and --judge flag shipped (see CHANGELOG)"
 

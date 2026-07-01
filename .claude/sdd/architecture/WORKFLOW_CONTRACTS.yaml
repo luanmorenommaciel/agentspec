@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.4.0
+# Version: 3.5.0
 # Date: 2026-07-15
 
-version: "3.4.0"
+version: "3.5.0"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -219,6 +219,88 @@ contract_enforcement:
         binds_on: "required_sections of the edited document's phase"
         pattern: "post_generation_conformance"
         status: "specified target"
+
+# =============================================================================
+# BEHAVIORAL ENFORCEMENT (the Judger — ADR-003)
+# =============================================================================
+# A model-based, contract-aware behavioral evaluation engine — the behavioral
+# counterpart to the deterministic Linter. It asks "does this artifact honor its
+# contract?" and runs ONLY after the Linter passes (never on a structural FAIL).
+# Advisory by default (WARN ceiling); FAIL is reachable only at the high-assurance
+# tier, under a strict three-way cross-model consensus, and blocks only where a
+# consumer opts in. The engine mirrors the Linter's shape and reuses its Verdict/
+# Finding value objects. Operator documentation: tools/spec-judge/USAGE.md
+
+behavioral_enforcement:
+  component: "spec-judge"
+  usage_doc: "tools/spec-judge/USAGE.md"
+  entry_point: "spec_judge.engine.judge(artifact, contract, panel=None)"
+
+  runs_after: "contract_enforcement (the Linter) returns PASS — never on a structural FAIL"
+
+  verdict_semantics:
+    PASS: "no behavioral concern — proceed"
+    WARN: "advisory behavioral concern — proceed, but record the finding"
+    FAIL: "critical behavioral deficiency — blocks; high-assurance tier + consumer opt-in only"
+    rule: "Same PASS|WARN|FAIL tokens as the Linter; consumers MUST NOT reinterpret FAIL."
+    calibration: "WARN by default; FAIL emitted only at the high-assurance tier under strict consensus."
+
+  exit_code_contract:
+    description: |
+      The spec-judge wrapper maps the verdict to an exit code. The VERDICT surface
+      stays PASS/WARN/FAIL (codes 0/1). Codes 2/3/4 are NOT Verdict Levels — they are
+      "couldn't-run" states; a consumer treats any code >= 2 as "skip the behavioral
+      check visibly and proceed" (never assume PASS), or branches on the specific code.
+    codes:
+      "0": "PASS or WARN — proceed"
+      "1": "FAIL — a high-assurance blocking verdict"
+      "2": "ERROR — operational failure (missing/empty artifact, no source spec, bad config, sibling linter absent)"
+      "3": "BUDGET — the per-day evaluation budget is exhausted"
+      "4": "NETWORK — model/API failure"
+
+  contract_sources:
+    - id: "derived_from_instance"
+      description: "The source spec is the contract: its output_contract + intent are what the produced artifact must honor. Also accepted from the artifact's own YAML frontmatter (self-contained agent.md)."
+
+  finding_categories:
+    B1: "vagueness — an instruction too vague to act on reliably"
+    B2: "capability_not_delivered — a declared capability the body never delivers"
+    B3: "internal_contradiction — instructions that conflict with each other or the contract"
+    B4: "intent_drift — coherent, but doing something other than the source spec asked"
+
+  independence_tiers:
+    invariant: "Every tier has >= 1 fault-seeker — a seat tasked to find where the artifact fails its contract."
+    smoke:          { panel: "1 fault-seeker", ceiling: "WARN", cost: "cheapest" }
+    standard:       { panel: "fault-seeker + conformance-checker + arbiter (same platform, consensus)", ceiling: "WARN", default: true }
+    high_assurance: { panel: "+ a cross-model fault-seeker + arbiter", ceiling: "FAIL", fail_rule: "the same-platform fault-seeker AND the cross-model fault-seeker AND the arbiter each raise the category at high severity, AND the weakest agreeing voice's confidence >= 0.7" }
+
+  available_patterns:
+    post_lint_evaluation: "Evaluate a produced artifact against its source spec, only after the Linter passes."
+    tiered_by_stakes: "The consumer selects smoke | standard | high-assurance by the checkpoint's stakes."
+    two_pass_refine: "Feed WARN findings into a regeneration, then re-judge."
+
+  consumer_bindings:
+    note: |
+      Bindings are expressed here at the contract level rather than by editing phase
+      commands (those are slated for rearchitecture). A binding declares the checkpoint,
+      the tier, what the consumer does with the verdict (record / refine / escalate), and
+      block_on_fail (default false — advisory). These are specified TARGET bindings;
+      wiring them into the generation lifecycle is consumer work.
+    bindings:
+      - checkpoint: "post-generation artifact review (after Gate A + Gate B pass)"
+        tier: "standard"
+        on_verdict: "record WARN findings; feed the refinement loop"
+        block_on_fail: false
+        status: "specified target"
+      - checkpoint: "pre-release / publish"
+        tier: "high-assurance"
+        on_verdict: "escalate; may block on a consensus FAIL"
+        block_on_fail: true
+        status: "specified target"
+
+  cost_bound: "A shared, append-only per-day ledger (.claude/storage/judge-ledger.jsonl) caps spend across the judge family; the CLI preflights and refuses a panel it cannot finish."
+
+  status: "prototype — re-scopes the shipped V0 reviewer's cross-model + budget mechanisms toward contract conformance; superseding V0 is a separate migration"
 
 # =============================================================================
 # PHASE 0: BRAINSTORM (Optional)
@@ -695,6 +777,12 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.5.0"
+    date: "2026-07-15"
+    changes:
+      - "Added behavioral_enforcement (the Judger, ADR-003): a model-based, contract-aware evaluation engine that runs after the Linter passes (never on a structural FAIL). Tiered adversarial panel (smoke/standard/high-assurance) with an always-present fault-seeker; FAIL emission is controlled by the tier, not reinterpreted by the consumer — smoke and standard are WARN-capped by construction, and the high-assurance tier emits a blocking FAIL only under a strict three-way cross-model consensus. Mirrors the Linter's entry-point shape and reuses its Verdict/Finding value objects."
+      - "Additive change — no modification to the Linter (contract_enforcement) or the existing phase contracts."
+
   - version: "3.4.0"
     date: "2026-07-15"
     changes:
