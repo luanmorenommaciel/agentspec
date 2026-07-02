@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Workflow skills suite — 7 new skills** (12 total): `github-cr-adr`, `github-cr-issue`, and `github-post-issue` form a draft → guarded-publish lifecycle for ADRs and issues (pre-draft dedup, self-containment lint, live label validation with human-in-the-loop creation, native sub-issue relationships, close-never-delete curation, and ADR number = issue number enforced by retitle-at-publish); `skill-create` is the SOP for authoring well-formed skills (naming, YAML frontmatter hygiene, progressive disclosure, description discipline); `kb-build` builds high-assurance, source-verified KB domains with adversarial verification; `meeting-analysis` turns a transcript into a validated analysis document (via `meeting-analyst`) plus a channel-ready follow-up; `standup-report` assembles the daily Done / Will do / Blockers message from git and GitHub state. Drafts are ephemeral pipeline artifacts under `.claude/sdd/drafts/` — created by `github-cr-*`, consumed and deleted by `github-post-issue` after successful publish, mirroring the ephemeral-spec lifecycle.
 - **`supabase` KB domain** — pgvector, RLS, Edge Functions, Auth, Realtime, migrations. Consumed by `supabase-specialist`. Brings total to 24 KB domains.
 - **`shared` KB domain entry** — `.claude/kb/shared/anti-patterns.md` is now formally cataloged in `.claude/kb/README.md` as a cross-domain resource referenced by every agent via `anti_pattern_refs`.
 
