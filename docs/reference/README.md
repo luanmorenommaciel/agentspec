@@ -285,7 +285,7 @@ All templates live in `.claude/kb/_templates/`:
 
 ---
 
-## Skills (10 core + 2 plugin-only)
+## Skills (8 distributed + 2 plugin-only + 2 repo-local)
 
 Skills are reusable capability packs in `.claude/skills/` that provide templates, references, and scripts for specialized generation tasks.
 
@@ -299,8 +299,15 @@ Skills are reusable capability packs in `.claude/skills/` that provide templates
 | `github-post-issue` | Guarded `gh` publishing and board curation: live label validation with human-in-the-loop creation, native sub-issue relationships, assignee-as-ownership, close-never-delete; assigns ADR numbers from the issue number at publish | Invoked directly |
 | `skill-create` | SOP for authoring well-formed skills — naming, YAML frontmatter hygiene, progressive disclosure, description discipline, structural validation | Invoked directly |
 | `kb-build` | High-assurance, source-verified knowledge-base building with adversarial verification and an independent fact-check gate | Invoked directly |
-| `meeting-analysis` | Turns a meeting transcript into a validated analysis document (via `meeting-analyst`) plus a channel-ready follow-up message | Invoked directly |
-| `standup-report` | Daily standup message (Done / Will do / Blockers) assembled from git history, PRs/issues, and user input | Invoked directly |
+
+### Repo-Local Skills (not distributed)
+
+These skills support contributors working in this repository and are excluded from the distributed plugin (`REPO_LOCAL_SKILLS` in `build-plugin.sh`).
+
+| Skill | Description |
+|-------|-------------|
+| `meeting-analysis` | Turns a meeting transcript into a validated analysis document (via `meeting-analyst`) plus a channel-ready follow-up message |
+| `standup-report` | Daily standup message (Done / Will do / Blockers) assembled from git history, PRs/issues, and user input |
 
 ### Plugin-Only Skills
 

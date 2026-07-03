@@ -2,7 +2,7 @@
 
 **Spec-Driven Development for Data Engineering on Claude Code**
 
-58 agents | 24 KB domains | 31 commands | 12 skills | 5-phase SDD workflow
+58 agents | 24 KB domains | 31 commands | 10 skills | 5-phase SDD workflow
 
 ## Install
 
@@ -49,7 +49,7 @@ claude plugin install agentspec
 
 dbt, Spark, Airflow, streaming, SQL patterns, data modeling, data quality, medallion, lakehouse, cloud platforms, AWS, GCP, Microsoft Fabric, Lakeflow, Terraform, AI data engineering, GenAI, prompt engineering, modern stack, Pydantic, Python, testing, Supabase, shared anti-patterns
 
-### 12 Auto-Invoked Skills
+### 10 Auto-Invoked Skills
 
 - **sdd-workflow** -- guides through the 5-phase development workflow
 - **data-engineering-guide** -- routes to the right agent for DE tasks
@@ -59,10 +59,8 @@ dbt, Spark, Airflow, streaming, SQL patterns, data modeling, data quality, medal
 - **github-cr-adr** -- drafts an ADR with a worthiness gate and pre-draft dedup
 - **github-cr-issue** -- drafts typed issues (feature/component/task/bug/spike) from templates
 - **github-post-issue** -- guarded gh publishing: label validation, sub-issues, close-never-delete
-- **skill-create** -- SOP for authoring well-formed skills (naming, YAML hygiene, validation)
+- **skill-create** -- repo conventions for new skills; defers craft to the upstream skill-creator
 - **kb-build** -- high-assurance, source-verified knowledge-base building
-- **meeting-analysis** -- transcript to analysis document plus channel-ready follow-up
-- **standup-report** -- daily Done / Will do / Blockers message from git and GitHub state
 
 ## Requirements
 
