@@ -170,7 +170,7 @@ find "${PLUGIN_DIR:?}/agents" -name '_template.md' -delete 2>/dev/null || true
 # (its own review/communication workflows) and are not part of the
 # distributed plugin. They live in .claude/skills/ so they load for
 # contributors, and are excluded from plugin/skills/ here.
-REPO_LOCAL_SKILLS=(meeting-analysis standup-report)
+REPO_LOCAL_SKILLS=(meeting-analysis standup-report skill-create)
 for skill in "${REPO_LOCAL_SKILLS[@]}"; do
     rm -rf "${PLUGIN_DIR:?}/skills/${skill}"
 done

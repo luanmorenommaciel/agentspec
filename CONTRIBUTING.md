@@ -13,7 +13,7 @@ git checkout -b feature/your-feature
 # The framework lives in .claude/
 ls .claude/agents/      # 58 specialized agents
 ls .claude/commands/    # 31 slash commands
-ls .claude/skills/      # 3 capability packs (+ 2 plugin-only skills)
+ls .claude/skills/      # 10 source skills (7 distributed + 3 repo-local); + 2 plugin-only in plugin-extras/
 ls .claude/sdd/         # SDD framework
 ls .claude/kb/          # Knowledge Base
 ```
@@ -110,7 +110,7 @@ Skills are reusable capability packs that power slash commands with templates, r
    - `scripts/` — automation scripts (optional)
 4. Create corresponding commands in `.claude/commands/your-skill/`
 
-See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples.
+See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples, and the `skill-create` skill for this repository's authoring conventions (naming, placement tiers, frontmatter pitfalls, ship checklist).
 
 ## Bug Fixes
 

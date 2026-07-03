@@ -41,7 +41,7 @@ REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 gh issue list --repo "$REPO" --search "<decision keywords>" --state all --limit 20
 ```
 
-Search with `--state all`, because a closed or rejected ADR on the same topic is exactly the history that must not be forked.
+Search with `--state all`, because a closed or rejected ADR on the same topic is exactly the history that must not be forked. If `gh` is missing or unauthenticated, say so and continue drafting — dedup is a read-time optimization here and runs again as a hard gate at publish.
 
 If an existing issue or ADR covers the topic, stop and propose one of these instead of a new draft:
 

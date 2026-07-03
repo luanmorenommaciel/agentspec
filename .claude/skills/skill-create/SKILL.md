@@ -46,6 +46,6 @@ Every new skill passes this before review:
 | # | Check | How |
 |---|---|---|
 | 1 | Structure valid | name matches folder and `^[a-z0-9]+(-[a-z0-9]+)+$`; description ≤1024 chars with triggers and a negative boundary; every referenced supporting file exists |
-| 2 | Mirror in sync | run `./build-plugin.sh`, then commit the regenerated `plugin/` tree together with the skill — CI compares a fresh rebuild against the commit (`git diff --exit-code plugin/ .claude-plugin/`) |
+| 2 | Mirror in sync | run `./build-plugin.sh`, then commit the regenerated `plugin/` tree together with the skill; verify locally with `git diff --exit-code plugin/ .claude-plugin/` after a fresh rebuild — CI rebuilds the plugin and validates the fresh tree, so a stale committed mirror is caught at the latest in review |
 | 3 | Docs updated | CHANGELOG `[Unreleased]`; skill counts and catalogs in `CLAUDE.md`, `README.md`, `plugin/README.md`, `docs/README.md`, `docs/reference/README.md` |
 | 4 | No template residue | if the skill renders `{{PLACEHOLDER}}` templates, grep output for `\{\{[A-Z_]+\}\}` — zero hits |

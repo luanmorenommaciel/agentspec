@@ -285,7 +285,7 @@ All templates live in `.claude/kb/_templates/`:
 
 ---
 
-## Skills (8 distributed + 2 plugin-only + 2 repo-local)
+## Skills (7 core + 2 plugin-only + 3 repo-local)
 
 Skills are reusable capability packs in `.claude/skills/` that provide templates, references, and scripts for specialized generation tasks.
 
@@ -297,7 +297,6 @@ Skills are reusable capability packs in `.claude/skills/` that provide templates
 | `github-cr-adr` | Drafts an Architecture Decision Record with a worthiness gate and pre-draft dedup; drafts are ephemeral (`.claude/sdd/drafts/`) and published via `github-post-issue` | Invoked directly |
 | `github-cr-issue` | Drafts typed issues (feature, component, task, bug, spike) from per-type templates — self-contained, dedup-first, no labels in the body | Invoked directly |
 | `github-post-issue` | Guarded `gh` publishing and board curation: live label validation with human-in-the-loop creation, native sub-issue relationships, assignee-as-ownership, close-never-delete; assigns ADR numbers from the issue number at publish | Invoked directly |
-| `skill-create` | SOP for authoring well-formed skills — naming, YAML frontmatter hygiene, progressive disclosure, description discipline, structural validation | Invoked directly |
 | `kb-build` | High-assurance, source-verified knowledge-base building with adversarial verification and an independent fact-check gate | Invoked directly |
 
 ### Repo-Local Skills (not distributed)
@@ -306,6 +305,7 @@ These skills support contributors working in this repository and are excluded fr
 
 | Skill | Description |
 |-------|-------------|
+| `skill-create` | This repository's conventions for adding a skill — naming, placement tiers, frontmatter pitfalls, ship checklist; defers general skill-writing craft to the upstream `skill-creator` |
 | `meeting-analysis` | Turns a meeting transcript into a validated analysis document (via `meeting-analyst`) plus a channel-ready follow-up message |
 | `standup-report` | Daily standup message (Done / Will do / Blockers) assembled from git history, PRs/issues, and user input |
 

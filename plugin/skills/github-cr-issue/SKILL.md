@@ -69,7 +69,7 @@ gh issue list --repo "$REPO" --search "<topic keywords>" --state all --limit 20
 #   --search "retry import"   then   --search "failed ingestion"
 ```
 
-Run the search two or three times with different keyword sets — title nouns, synonyms, the affected subsystem's name — because existing titles rarely match the new phrasing exactly. Keep `--state all`: a closed issue on the same topic is history the new one must acknowledge.
+Run the search two or three times with different keyword sets — title nouns, synonyms, the affected subsystem's name — because existing titles rarely match the new phrasing exactly. Keep `--state all`: a closed issue on the same topic is history the new one must acknowledge. If `gh` is missing or unauthenticated, say so and continue drafting — dedup is a read-time optimization here and runs again as a hard gate at publish.
 
 On a hit, stop and propose one of these instead of a new draft:
 

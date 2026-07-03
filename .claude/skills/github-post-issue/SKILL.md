@@ -33,6 +33,8 @@ REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)   # preferred
 
 Pass `--repo "$REPO"` on **every** `gh` command below. A hardcoded repo writes to the wrong board the day this skill runs in a different checkout.
 
+Before anything else, run `gh auth status` — this skill writes to the repository, and an authentication failure discovered at `gh issue create`, after the pre-flight gate has passed, strands the publish halfway. If it fails, stop and tell the user what to fix (`gh auth login`, or a token with repo scope).
+
 ## Input
 
 Accept either form:
