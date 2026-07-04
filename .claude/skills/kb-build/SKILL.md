@@ -4,7 +4,7 @@ description: |
   Build a high-assurance, source-verified knowledge base where every claim is source-cited and adversarially fact-checked before it lands.
   Grounds in the repo's KB house style, plans the domain, researches with an independent refutation pass, builds with kb-architect subagents, runs an independent fact-check gate, and registers the domain additively in the KB index.
   Use when the user wants a validated or foundational KB where every claim must be source-cited and fact-checked — "build a KB", "create a knowledge base", "validated KB", "high-assurance KB" — or when encoding researched knowledge into a reusable domain many agents will trust.
-  For a quick single-pass KB, use the create-kb command instead.
+  This is the high-assurance mode behind the create-kb command's --validated flag; for a quick single-pass KB, run create-kb without the flag.
 ---
 
 # KB Build — high-assurance, source-verified KB creation
@@ -17,16 +17,18 @@ A foundational KB is consulted by many agents, so one unverified "standard" prop
 Faithfulness is therefore non-negotiable, and the verification bar is intrinsic to the kind of claim — a notation or standard claim demands an authoritative source — regardless of how many readers the KB will have.
 The distilled reasoning lives in `references/lessons.md`.
 
-## When to use vs the create-kb command
+## The two modes of `/create-kb`
 
-The `create-kb` command is the lighter sibling: a direct, single-pass `kb-architect` run relying on the agent's own validation. Pick by stakes:
+The `create-kb` command is the single entrypoint for KB creation; this skill is the capability behind its `--validated` mode. The default mode is a direct, single-pass `kb-architect` run relying on the agent's own validation. Pick by stakes:
 
-| Use `kb-build` (this skill) | Use the `create-kb` command |
+| `--validated` (this skill) | Default (light) |
 |---|---|
 | Foundational or high-stakes domain | Quick, low-stakes domain |
 | Every claim cited and independently fact-checked | kb-architect's own validation suffices |
 | Research + adversarial verification + fact-check gate | Single pass, no separate verification layer |
 | Worth more tokens for assurance | Token-light |
+
+The skill can also be invoked directly for advanced use (custom research scope, partial reruns) — the entrypoint is a convenience, not a wall.
 
 ## Scope fence
 
@@ -164,4 +166,5 @@ Update the aggregator `.claude/kb/_index.yaml` **additively**:
 - `references/lessons.md` — the nine distilled principles behind this SOP, each with its why. Read it before running this skill on a new domain, and re-read it when choosing between single-pass and parallel build or whenever skipping a verification step starts to look attractive.
 - The `kb-architect` agent — the build protocol used as the subagent type in Stage 4.
 - The `the-planner` agent — the planning delegate in Stage 2.
-- The `create-kb` command — the lighter, single-pass sibling with no research or verification layer.
+- The `create-kb` command — the entrypoint that routes here via `--validated`; its default mode is the lighter, single-pass path with no research or verification layer.
+- The `component-model` skill — run it first when it is unclear whether a KB is the right layer for the knowledge (process knowledge belongs in a skill, not a KB).
