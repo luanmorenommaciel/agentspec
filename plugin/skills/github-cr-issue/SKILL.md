@@ -43,7 +43,7 @@ Pick exactly one type per issue.
 
 ### Component issues
 
-Use `component` when the deliverable is a reusable building block other work will consume, rather than an end-user capability. A component has a defined contract: one clear responsibility, named inputs and outputs, and an explicit boundary against sibling components. If the component's design still needs deciding, open the decision first with `github-cr-adr` and reference it by its published issue number — the decision holds the design; the component issue tracks the build.
+Use `component` when the deliverable is a reusable building block other work will consume, rather than an end-user capability. A component has a defined contract: one clear responsibility, named inputs and outputs, and an explicit boundary against sibling components. If the component's design still needs deciding, open the decision first with `github-cr-adr` and reference it by its ADR number with the issue linked — the decision holds the design; the component issue tracks the build.
 
 The template's deliverables checklist is deliberately generic — implementation, documentation, consumer wiring, tests — so tailor each item to the repository's own layout when filling it in.
 
@@ -141,7 +141,7 @@ Output of this skill: one draft file per issue under `.claude/sdd/drafts/` — n
 | One topic per issue | An issue covering two topics cannot be closed, assigned, or prioritized cleanly. |
 | No Labels line in the body | Labels are applied at publish time by `github-post-issue`; a hardcoded list drifts from the real ones. |
 | Formal, impersonal, active voice; concrete over vague | The issue becomes a public record — a shared deliverable, not a chat log. |
-| Reference ADRs by their published issue number | A name like "the caching decision" is ambiguous; the issue number is the stable handle. |
+| Reference ADRs by their ADR number, with the issue linked | A name like "the caching decision" is ambiguous; `ADR-003` is the stable citation, and the link makes it navigable. |
 
 Add an ASCII or Mermaid diagram when layout matters — future readers cannot ask follow-up questions.
 

@@ -32,7 +32,7 @@ Group related work with GitHub's native **parent/sub-issue relationships**: a `c
 
 ### Titles
 
-`[TYPE] <concise title>` — e.g. `[FEATURE] …`, `[BUG] …`, `[ADR-<n>] …`. The bracket prefix keeps the title self-describing in every surface where labels are not rendered: notifications, cross-references, and search results. For ADRs, the number in the title is the issue number itself — see the ADR flow in `SKILL.md` for the mechanical retitle step.
+`[TYPE] <concise title>` — e.g. `[FEATURE] …`, `[BUG] …`, `[ADR-001] …`. The bracket prefix keeps the title self-describing in every surface where labels are not rendered: notifications, cross-references, and search results. ADR numbers are sequential from 1, allocated from the live board at publish time — see the ADR flow in `SKILL.md` for the mechanical retitle step.
 
 ### The drift rule, restated
 

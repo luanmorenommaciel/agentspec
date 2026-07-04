@@ -13,7 +13,7 @@ Pick ONE type. The `` ## `[TYPE]` `` heading that opens each block below is a se
 <The concrete problem or the value. What is painful or missing today.>
 
 ## Proposed approach
-<High-level direction. If this needs an architecture decision, open an ADR (github-cr-adr) and reference it by its published issue number — don't decide architecture inside a feature issue.>
+<High-level direction. If this needs an architecture decision, open an ADR (github-cr-adr) and reference it by its ADR number with the issue linked — don't decide architecture inside a feature issue.>
 
 ## Scope
 - In scope: <…>
@@ -34,7 +34,7 @@ Pick ONE type. The `` ## `[TYPE]` `` heading that opens each block below is a se
 <Where it sits; what it consumes and produces; its boundary against sibling components.>
 
 ## Contract
-<The interface the component commits to: inputs, outputs, and the invariants consumers can rely on. If an architecture decision governs this design, reference it by its published issue number — the decision holds the design; this issue tracks the build.>
+<The interface the component commits to: inputs, outputs, and the invariants consumers can rely on. If an architecture decision governs this design, reference it by its ADR number with the issue linked — the decision holds the design; this issue tracks the build.>
 
 ## Deliverables
 - [ ] Implementation and entry point

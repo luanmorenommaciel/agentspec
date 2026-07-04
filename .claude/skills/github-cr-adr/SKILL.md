@@ -73,7 +73,7 @@ Ask the user for whatever is missing; never invent decision content.
 | Element | Requirement | Why |
 |---|---|---|
 | Decision | One sentence, active present voice | Reads as a commitment, not an open debate. |
-| Number | `ADR-XXX` placeholder, nothing else | The canonical number is the GitHub issue number — see Numbering. |
+| Number | `ADR-XXX` placeholder, nothing else | The next sequential number is assigned at publish — see Numbering. |
 | Context / problem | Current state plus what exactly must be decided | Value-neutral facts let the reader judge the decision on merit. |
 | Alternatives | Each option considered, plus why it was passed over | The "why not" proves the decision was weighed, not defaulted into. |
 | Consequences | Both sides: what gets easier AND what gets harder | Only-upside consequences are a sales pitch, not a decision record. |
@@ -130,11 +130,12 @@ Output of this skill: exactly one draft file under `.claude/sdd/drafts/`, or a r
 
 ## Numbering
 
-The canonical ADR number **is the GitHub issue number**, assigned at publish time: `github-post-issue` retitles the issue to `[ADR-<issue#>] <title>` immediately after creation. Therefore:
+ADR numbers are **sequential, starting from 1** (`ADR-001`, `ADR-002`, …) — they are citations, and a dense, ordered sequence is what makes them readable and quotable. The number is **assigned at publish time by `github-post-issue`**, which reads the highest existing `[ADR-NNN]` on the live board and takes the next one. Therefore:
 
 - The draft carries the `ADR-XXX` placeholder and nothing else.
-- Never pre-assign a number locally, and never treat a local number as truth — local numbering collides across sessions and forks, while the issue tracker is the only allocator that cannot.
-- Cross-references to other ADRs always use their issue-assigned numbers.
+- Never pre-assign a number at draft time — two drafts written in parallel would claim the same number; the live board at publish time is the only allocator that cannot collide.
+- Never reuse a number, even one freed by a rejected or superseded ADR — stable numbers keep old citations valid forever.
+- Cross-references to other ADRs use their ADR number (link the issue alongside it for navigation).
 
 ## Status lifecycle
 

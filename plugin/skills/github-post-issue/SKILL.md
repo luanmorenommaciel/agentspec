@@ -99,22 +99,31 @@ Why each check exists, in one clause:
 
 ## ADR flow — numbering made mechanical
 
-An ADR publishes exactly like an issue, plus the `type:adr` label. **The canonical ADR number is the issue number** GitHub assigns at creation — no side counter to maintain, so numbering cannot drift. Enforce it immediately after `gh issue create`:
+An ADR publishes exactly like an issue, plus the `type:adr` label. ADR numbers are **sequential from 1** (`ADR-001`, `ADR-002`, …) and the **live board is the allocator**: the next number is computed from the highest one already published, at publish time — never at draft time, where parallel drafts would collide. Enforce it immediately after `gh issue create`:
 
 1. Create from the draft as usual (a placeholder title like `[ADR-XXX] <title>` is fine at this point) → GitHub returns issue number `<n>`.
-2. Retitle with the real number:
+2. Find the highest ADR number on the board — search **all** states, because rejected and superseded ADRs keep their numbers forever:
 
    ```bash
-   gh issue edit <n> --repo "$REPO" --title "[ADR-<n>] <title>"
+   gh issue list --repo "$REPO" --search "[ADR-" --state all --limit 200 --json title \
+     -q '.[].title' | grep -oE '\[ADR-[0-9]+\]' | grep -oE '[0-9]+' | sort -n | tail -1
    ```
 
-3. If the published body still contains an `ADR-XXX` placeholder, replace it: fetch the body (`gh issue view <n> --repo "$REPO" --json body -q .body`), substitute `ADR-XXX` with `ADR-<n>`, write the result to a file, and push it back:
+   The next number is that value plus one (zero-padded to three digits, e.g. `ADR-005`); if the search returns nothing, this is `ADR-001`.
+3. Retitle with the real number:
+
+   ```bash
+   gh issue edit <n> --repo "$REPO" --title "[ADR-<next>] <title>"
+   ```
+
+   Before retitling, re-run the search once — if another ADR claimed the number in the meantime (two publishes racing), take the new max plus one.
+4. If the published body still contains an `ADR-XXX` placeholder, replace it: fetch the body (`gh issue view <n> --repo "$REPO" --json body -q .body`), substitute `ADR-XXX` with `ADR-<next>`, write the result to a file, and push it back:
 
    ```bash
    gh issue edit <n> --repo "$REPO" --body-file <updated.md>
    ```
 
-4. Receipt + draft cleanup, exactly as in the publish flow.
+5. Receipt + draft cleanup, exactly as in the publish flow.
 
 A `Rejected` ADR is **closed, never deleted** — it stays on record so the idea is not re-litigated from scratch.
 
