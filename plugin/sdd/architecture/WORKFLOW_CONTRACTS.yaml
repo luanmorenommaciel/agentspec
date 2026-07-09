@@ -283,19 +283,18 @@ behavioral_enforcement:
     note: |
       Bindings are expressed here at the contract level rather than by editing phase
       commands (those are slated for rearchitecture). A binding declares the checkpoint,
-      the tier, what the consumer does with the verdict (record / refine / escalate), and
-      block_on_fail (default false — advisory). These are specified TARGET bindings;
-      wiring them into the generation lifecycle is consumer work.
+      the tier, and what the consumer does with the verdict (record / refine / escalate).
+      Tier selection controls FAIL emission (ADR-003 q1) — consumers never reinterpret
+      it. These are specified TARGET bindings; wiring them into the generation lifecycle
+      is consumer work.
     bindings:
       - checkpoint: "post-generation artifact review (after Gate A + Gate B pass)"
         tier: "standard"
         on_verdict: "record WARN findings; feed the refinement loop"
-        block_on_fail: false
         status: "specified target"
       - checkpoint: "pre-release / publish"
         tier: "high-assurance"
         on_verdict: "escalate; may block on a consensus FAIL"
-        block_on_fail: true
         status: "specified target"
 
   cost_bound: "A shared, append-only per-day ledger (.claude/storage/judge-ledger.jsonl) caps spend across the judge family; the CLI preflights and refuses a panel it cannot finish."
