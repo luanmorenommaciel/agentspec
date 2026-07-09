@@ -34,14 +34,21 @@ from .verdict import Level, Verdict
 
 _CONTRACT = AgentSpecContract()
 
-# Repo-root-relative default; the CLI lives at tools/spec-linter/spec_linter/cli.py.
-_DEFAULT_CONTRACTS_FILE = (
-    Path(__file__).resolve().parents[3]
-    / ".claude"
-    / "sdd"
-    / "architecture"
-    / "WORKFLOW_CONTRACTS.yaml"
-)
+# Tool-root-relative default; the CLI lives at tools/spec-linter/spec_linter/cli.py.
+def _resolve_default_contracts_file(tool_root: Path) -> Path:
+    """Probe both layouts and return the first that exists.
+
+    A repo checkout nests the file under `.claude/`; the installed plugin does
+    not (its root already is the former `.claude/`). Falls back to the repo
+    layout so a genuinely missing file still degrades loudly (exit 2) with an
+    informative path instead of silently picking a nonexistent default.
+    """
+    repo_layout = tool_root / ".claude" / "sdd" / "architecture" / "WORKFLOW_CONTRACTS.yaml"
+    plugin_layout = tool_root / "sdd" / "architecture" / "WORKFLOW_CONTRACTS.yaml"
+    return next((p for p in (repo_layout, plugin_layout) if p.exists()), repo_layout)
+
+
+_DEFAULT_CONTRACTS_FILE = _resolve_default_contracts_file(Path(__file__).resolve().parents[3])
 
 
 class _OperationalError(Exception):

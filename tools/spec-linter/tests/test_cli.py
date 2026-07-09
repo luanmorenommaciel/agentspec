@@ -148,3 +148,18 @@ def test_phase_unknown_phase_is_error_exit_two(
     code = cli.main([str(doc), "--phase", "nonexistent", "--contracts-file", str(contracts)])
     assert code == 2
     assert "ERROR:" in capsys.readouterr().err
+
+
+def test_default_contracts_file_prefers_repo_layout(tmp_path: Path) -> None:
+    repo_file = tmp_path / ".claude" / "sdd" / "architecture" / "WORKFLOW_CONTRACTS.yaml"
+    repo_file.parent.mkdir(parents=True)
+    repo_file.write_text("{}")
+    assert cli._resolve_default_contracts_file(tmp_path) == repo_file
+
+
+def test_default_contracts_file_falls_back_to_plugin_layout(tmp_path: Path) -> None:
+    # No .claude/ prefix — this is the installed-plugin layout (the fixed bug).
+    plugin_file = tmp_path / "sdd" / "architecture" / "WORKFLOW_CONTRACTS.yaml"
+    plugin_file.parent.mkdir(parents=True)
+    plugin_file.write_text("{}")
+    assert cli._resolve_default_contracts_file(tmp_path) == plugin_file
