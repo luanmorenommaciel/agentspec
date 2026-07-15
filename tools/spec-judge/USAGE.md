@@ -129,8 +129,10 @@ Programmatic use: `from spec_judge.engine import judge`.
 - **tier by stakes** — `smoke` in-loop, `standard` at a phase handoff, `high-assurance`
   pre-release.
 - **two-pass refine** — feed `WARN` findings back into a regeneration, then re-judge.
-- **opt-in blocking** — a consumer binding may act on a `high-assurance` `FAIL`; the default
-  is advisory.
+- **blocking by tier selection** — advisory is the default because `smoke` and `standard` are
+  `WARN`-capped by construction, not because a consumer declines to act. Selecting
+  `high-assurance` *is* the decision to accept a blocking `FAIL`; a consumer chooses its tier,
+  never a verdict's meaning.
 
 These are patterns, not requirements.
 

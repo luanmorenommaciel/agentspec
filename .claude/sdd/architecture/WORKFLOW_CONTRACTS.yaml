@@ -241,7 +241,7 @@ behavioral_enforcement:
   verdict_semantics:
     PASS: "no behavioral concern — proceed"
     WARN: "advisory behavioral concern — proceed, but record the finding"
-    FAIL: "critical behavioral deficiency — blocks; high-assurance tier + consumer opt-in only"
+    FAIL: "critical behavioral deficiency — blocks; emitted only by the high-assurance tier"
     rule: "Same PASS|WARN|FAIL tokens as the Linter; consumers MUST NOT reinterpret FAIL."
     calibration: "WARN by default; FAIL emitted only at the high-assurance tier under strict consensus."
 

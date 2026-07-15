@@ -81,13 +81,13 @@ workflow:
 # AGENT RESOLUTION (Local-First Precedence)
 # =============================================================================
 # When AgentSpec is installed as a Claude Code plugin, users may have agents
-# in their project's .claude/agents/ directory that share a name with a plugin
+# in their project's ${CLAUDE_PLUGIN_ROOT}/agents/ directory that share a name with a plugin
 # agent. This contract documents the resolution order so phase commands can
 # rely on stable behavior across hosts.
 
 agent_resolution:
   order:
-    - "local"   # .claude/agents/<category>/<name>.md in the user's project
+    - "local"   # ${CLAUDE_PLUGIN_ROOT}/agents/<category>/<name>.md in the user's project
     - "plugin"  # ${CLAUDE_PLUGIN_ROOT}/agents/<category>/<name>.md (AgentSpec)
 
   behavior: |
@@ -103,9 +103,9 @@ agent_resolution:
       The README is written once and preserved across runs to respect user
       customizations.
     paths:
-      - ".claude/agents/workflow/"   # SDD phase agent overrides
-      - ".claude/agents/custom/"     # New project-specific agents
-    readme: ".claude/agents/README.md"
+      - "${CLAUDE_PLUGIN_ROOT}/agents/workflow/"   # SDD phase agent overrides
+      - "${CLAUDE_PLUGIN_ROOT}/agents/custom/"     # New project-specific agents
+    readme: "${CLAUDE_PLUGIN_ROOT}/agents/README.md"
 
   rules:
     - "Override agent's `name:` frontmatter field MUST match the plugin agent's name"
@@ -120,7 +120,7 @@ agent_resolution:
 
   documentation:
     user_facing: "docs/concepts/agent-overrides.md"
-    quick_reference: ".claude/agents/README.md (auto-generated in user project)"
+    quick_reference: "${CLAUDE_PLUGIN_ROOT}/agents/README.md (auto-generated in user project)"
 
 # =============================================================================
 # CONTRACT ENFORCEMENT (the Linter — ADR-002)
@@ -129,11 +129,11 @@ agent_resolution:
 # (validate an artifact against a contract -> verdict); contracts are policy
 # (what is checked + severity); consumers below choose where they bind. The
 # engine and verdict semantics are stable; contract CONTENT is owned upstream
-# (canonical schemas pending). Operator documentation: tools/spec-linter/USAGE.md
+# (canonical schemas pending). Operator documentation: ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md
 
 contract_enforcement:
   component: "spec-linter"
-  usage_doc: "tools/spec-linter/USAGE.md"
+  usage_doc: "${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md"
   entry_point: "spec_linter.engine.lint(artifact, contract)"
 
   verdict_semantics:
@@ -229,11 +229,11 @@ contract_enforcement:
 # Advisory by default (WARN ceiling); FAIL is reachable only at the high-assurance
 # tier, under a strict three-way cross-model consensus, and blocks only where a
 # consumer opts in. The engine mirrors the Linter's shape and reuses its Verdict/
-# Finding value objects. Operator documentation: tools/spec-judge/USAGE.md
+# Finding value objects. Operator documentation: ${CLAUDE_PLUGIN_ROOT}/tools/spec-judge/USAGE.md
 
 behavioral_enforcement:
   component: "spec-judge"
-  usage_doc: "tools/spec-judge/USAGE.md"
+  usage_doc: "${CLAUDE_PLUGIN_ROOT}/tools/spec-judge/USAGE.md"
   entry_point: "spec_judge.engine.judge(artifact, contract, panel=None)"
 
   runs_after: "contract_enforcement (the Linter) returns PASS — never on a structural FAIL"
@@ -241,7 +241,7 @@ behavioral_enforcement:
   verdict_semantics:
     PASS: "no behavioral concern — proceed"
     WARN: "advisory behavioral concern — proceed, but record the finding"
-    FAIL: "critical behavioral deficiency — blocks; high-assurance tier + consumer opt-in only"
+    FAIL: "critical behavioral deficiency — blocks; emitted only by the high-assurance tier"
     rule: "Same PASS|WARN|FAIL tokens as the Linter; consumers MUST NOT reinterpret FAIL."
     calibration: "WARN by default; FAIL emitted only at the high-assurance tier under strict consensus."
 
@@ -308,7 +308,7 @@ behavioral_enforcement:
 brainstorm:
   command:
     name: "/brainstorm"
-    file: ".claude/commands/workflow/brainstorm.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/brainstorm.md"
     args: "<idea-or-request>"
     examples:
       - '/brainstorm "Build a user notification system"'
@@ -317,11 +317,11 @@ brainstorm:
 
   agent:
     name: "brainstorm-agent"
-    file: ".claude/agents/workflow/brainstorm-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/brainstorm-agent.md"
 
   skill:
     name: "sdd-brainstorm"
-    file: ".claude/skills/sdd-brainstorm/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-brainstorm/SKILL.md"
     owns: "Phase methodology — process steps, questioning principles, approach comparison, YAGNI, incremental validation, sample collection, anti-patterns"
 
   input:
@@ -334,7 +334,7 @@ brainstorm:
 
   output:
     file: ".claude/sdd/features/BRAINSTORM_{FEATURE}.md"
-    template: ".claude/sdd/templates/BRAINSTORM_TEMPLATE.md"
+    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/BRAINSTORM_TEMPLATE.md"
     status_values:
       - "Exploring"
       - "Approaches Identified"
@@ -356,7 +356,7 @@ brainstorm:
 define:
   command:
     name: "/define"
-    file: ".claude/commands/workflow/define.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/define.md"
     args: "<input>"
     examples:
       - "/define notes/meeting-notes.md"
@@ -365,11 +365,11 @@ define:
 
   agent:
     name: "define-agent"
-    file: ".claude/agents/workflow/define-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/define-agent.md"
 
   skill:
     name: "sdd-define"
-    file: ".claude/skills/sdd-define/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-define/SKILL.md"
     owns: "Phase methodology — input classification, entity extraction patterns, clarity scoring procedure, gap-filling questions, anti-patterns"
 
   input:
@@ -383,7 +383,7 @@ define:
 
   output:
     file: ".claude/sdd/features/DEFINE_{FEATURE}.md"
-    template: ".claude/sdd/templates/DEFINE_TEMPLATE.md"
+    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/DEFINE_TEMPLATE.md"
     status_values:
       - "Draft"
       - "In Progress"
@@ -423,7 +423,7 @@ define:
 design:
   command:
     name: "/design"
-    file: ".claude/commands/workflow/design.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/design.md"
     args: "<define-file>"
     examples:
       - "/design .claude/sdd/features/DEFINE_USER_NOTIFICATIONS.md"
@@ -432,11 +432,11 @@ design:
 
   agent:
     name: "design-agent"
-    file: ".claude/agents/workflow/design-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/design-agent.md"
 
   skill:
     name: "sdd-design"
-    file: ".claude/skills/sdd-design/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-design/SKILL.md"
     owns: "Phase methodology — architecture design process, inline decision records, file manifest construction, code patterns, testing strategy, anti-patterns"
 
   input:
@@ -448,7 +448,7 @@ design:
 
   output:
     file: ".claude/sdd/features/DESIGN_{FEATURE}.md"
-    template: ".claude/sdd/templates/DESIGN_TEMPLATE.md"
+    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/DESIGN_TEMPLATE.md"
 
   required_sections:
     - architecture_overview
@@ -465,18 +465,18 @@ design:
 build:
   command:
     name: "/build"
-    file: ".claude/commands/workflow/build.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/build.md"
     args: "<design-file>"
     examples:
       - "/build .claude/sdd/features/DESIGN_USER_NOTIFICATIONS.md"
 
   agent:
     name: "build-agent"
-    file: ".claude/agents/workflow/build-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/build-agent.md"
 
   skill:
     name: "sdd-build"
-    file: ".claude/skills/sdd-build/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-build/SKILL.md"
     owns: "Phase methodology — task extraction, delegation flow and protocol, verification procedures, data-engineering delegation map, error handling, build-report mechanics, anti-patterns"
 
   input:
@@ -487,7 +487,7 @@ build:
   output:
     code: "As specified in DESIGN file manifest"
     report: ".claude/sdd/reports/BUILD_REPORT_{FEATURE}.md"
-    template: ".claude/sdd/templates/BUILD_REPORT_TEMPLATE.md"
+    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/BUILD_REPORT_TEMPLATE.md"
 
   execution:
     task_generation: "on-the-fly from file manifest"
@@ -503,18 +503,18 @@ build:
 ship:
   command:
     name: "/ship"
-    file: ".claude/commands/workflow/ship.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/ship.md"
     args: "<define-file>"
     examples:
       - "/ship .claude/sdd/features/DEFINE_USER_NOTIFICATIONS.md"
 
   agent:
     name: "ship-agent"
-    file: ".claude/agents/workflow/ship-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/ship-agent.md"
 
   skill:
     name: "sdd-ship"
-    file: ".claude/skills/sdd-ship/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-ship/SKILL.md"
     owns: "Phase methodology — completion verification, archive procedure, lessons-learned extraction, anti-patterns"
 
   input:
@@ -526,7 +526,7 @@ ship:
   output:
     archive_folder: ".claude/sdd/archive/{FEATURE}/"
     shipped_file: "SHIPPED_{DATE}.md"
-    template: ".claude/sdd/templates/SHIPPED_TEMPLATE.md"
+    template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/SHIPPED_TEMPLATE.md"
 
   archive_contents:
     - "BRAINSTORM_{FEATURE}.md"  # Optional - if Phase 0 was used
@@ -548,7 +548,7 @@ ship:
 iterate:
   command:
     name: "/iterate"
-    file: ".claude/commands/workflow/iterate.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/commands/workflow/iterate.md"
     args: '<file> "<change-description>"'
     examples:
       - '/iterate DEFINE_DATA_EXPORT.md "Add support for CSV format"'
@@ -557,11 +557,11 @@ iterate:
 
   agent:
     name: "iterate-agent"
-    file: ".claude/agents/workflow/iterate-agent.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/iterate-agent.md"
 
   skill:
     name: "sdd-iterate"
-    file: ".claude/skills/sdd-iterate/SKILL.md"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-iterate/SKILL.md"
     owns: "Phase methodology — change classification, cascade analysis and rules, user confirmation flow, version tracking, anti-patterns"
 
   works_with:
@@ -789,7 +789,7 @@ version_history:
       - "Phase blocks now carry a skill: reference and keep only contract-grade facts (inputs, outputs, status values, quality gates, thresholds); methodology sub-blocks (process, questioning, extraction_elements, inline_decisions, cascade_rules, anti_patterns, etc.) moved into the skills"
       - "Removed duplicated agent model/tools from the workflow overview and phase blocks — agent frontmatter is authoritative (mirrored in routing.json); the duplicated copies had drifted from the real values"
       - "Grounded in the component model (kb/shared/component-model.md): agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth"
-      - "Contract-gate procedure relocated from the phase agents into the phase skills (sdd-define, sdd-design, sdd-iterate) under the same component-model split; the skills name the artifact and phase to validate and point at the linter's USAGE, while the exit-code contract and verdict semantics stay owned by contract_enforcement here and by tools/spec-linter/USAGE.md — consumers do not restate them"
+      - "Contract-gate procedure relocated from the phase agents into the phase skills (sdd-define, sdd-design, sdd-iterate) under the same component-model split; the skills name the artifact and phase to validate and point at the linter's USAGE, while the exit-code contract and verdict semantics stay owned by contract_enforcement here and by ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md — consumers do not restate them"
       - "Dropped the Brainstorm/Build/Ship gate stubs that narrated a missing required_sections key: the phase blocks here already own that fact and the linter reports the case itself (exit 2 — record a visible skip and proceed)"
 
   - version: "3.3.1"
@@ -809,8 +809,8 @@ version_history:
     date: "2026-05-01"
     changes:
       - "Added agent_resolution contract documenting local-first precedence"
-      - "SessionStart hook now scaffolds .claude/agents/{workflow,custom}/ override directories"
-      - "Auto-generated .claude/agents/README.md in user projects explains override pattern"
+      - "SessionStart hook now scaffolds ${CLAUDE_PLUGIN_ROOT}/agents/{workflow,custom}/ override directories"
+      - "Auto-generated ${CLAUDE_PLUGIN_ROOT}/agents/README.md in user projects explains override pattern"
       - "Fixed PySpark detection in init-workspace.sh to also check requirements.txt"
       - "Judge Layer V0 (/judge) and --judge flag shipped (see CHANGELOG)"
 
