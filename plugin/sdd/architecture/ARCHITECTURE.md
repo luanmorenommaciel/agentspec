@@ -23,7 +23,7 @@
 │   ┌──────────┐         ┌─────────┐          ┌─────────┐          ┌─────────┐          ┌─────────┐      │
 │   │BRAINSTORM│────────▶│ DEFINE  │─────────▶│ DESIGN  │─────────▶│  BUILD  │─────────▶│  SHIP   │      │
 │   │  AGENT   │ or skip │  AGENT  │          │  AGENT  │          │  AGENT  │          │  AGENT  │      │
-│   │  (Opus)  │         │ (Opus)  │          │ (Opus)  │          │(Sonnet) │          │(Haiku)  │      │
+│   │          │         │         │          │         │          │         │          │         │      │
 │   └──────────┘         └─────────┘          └─────────┘          └─────────┘          └─────────┘      │
 │        │                    │                    │                    │                    │            │
 │        ▼                    ▼                    ▼                    ▼                    ▼            │
@@ -42,7 +42,7 @@
 │                                           ┌─────────┐                                                    │
 │                                           │ ITERATE │                                                    │
 │                                           │  AGENT  │                                                    │
-│                                           │(Sonnet) │                                                    │
+│                                           │         │                                                    │
 │                                           └─────────┘                                                    │
 │                                                │                                                         │
 │                              ┌─────────────────┼─────────────────┐                                       │
@@ -54,6 +54,10 @@
 ```
 
 ---
+
+## The Skills Layer
+
+Each phase's methodology lives in a dedicated skill (`sdd-brainstorm`, `sdd-define`, `sdd-design`, `sdd-build`, `sdd-ship`, `sdd-iterate`). Phase agents are thin executors and phase commands thin entrypoints — both load the skill. Component layering is defined in `${CLAUDE_PLUGIN_ROOT}/kb/shared/component-model.md`; contract-grade facts (inputs, outputs, status values, gates) stay in `WORKFLOW_CONTRACTS.yaml`.
 
 ## Phase Flow
 
@@ -155,52 +159,7 @@
 
 ## Model Assignment
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                              STRATEGIC MODEL ASSIGNMENT                                  │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                          │
-│   ┌────────────────────────────────────────────────────────────────────────────────┐    │
-│   │                                    OPUS                                         │    │
-│   │                    (Nuanced Understanding & Creative Thinking)                  │    │
-│   │                                                                                 │    │
-│   │   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐            │    │
-│   │   │   BRAINSTORM    │    │     DEFINE      │    │     DESIGN      │            │    │
-│   │   │     AGENT       │    │     AGENT       │    │     AGENT       │            │    │
-│   │   │                 │    │                 │    │                 │            │    │
-│   │   │ Collaborative   │    │ Requirements    │    │ Architecture    │            │    │
-│   │   │ exploration     │    │ extraction      │    │ decisions       │            │    │
-│   │   └─────────────────┘    └─────────────────┘    └─────────────────┘            │    │
-│   └────────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                          │
-│   ┌────────────────────────────────────────────────────────────────────────────────┐    │
-│   │                                   SONNET                                        │    │
-│   │                           (Fast, Accurate Coding)                               │    │
-│   │                                                                                 │    │
-│   │   ┌─────────────────┐              ┌─────────────────┐                         │    │
-│   │   │      BUILD      │              │     ITERATE     │                         │    │
-│   │   │      AGENT      │              │      AGENT      │                         │    │
-│   │   │                 │              │                 │                         │    │
-│   │   │ Code generation │              │ Change          │                         │    │
-│   │   │ & verification  │              │ management      │                         │    │
-│   │   └─────────────────┘              └─────────────────┘                         │    │
-│   └────────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                          │
-│   ┌────────────────────────────────────────────────────────────────────────────────┐    │
-│   │                                    HAIKU                                        │    │
-│   │                             (Fast, Simple Tasks)                                │    │
-│   │                                                                                 │    │
-│   │   ┌─────────────────┐                                                          │    │
-│   │   │      SHIP       │                                                          │    │
-│   │   │      AGENT      │                                                          │    │
-│   │   │                 │                                                          │    │
-│   │   │ Archive &       │                                                          │    │
-│   │   │ document        │                                                          │    │
-│   │   └─────────────────┘                                                          │    │
-│   └────────────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                          │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-```
+Per-agent model tiers live in each agent's frontmatter (authoritative) and are mirrored into `${CLAUDE_PLUGIN_ROOT}/skills/agent-router/routing.json` at build time. This document no longer restates them — a previous copy here had drifted from the real values. Tiering rationale: pick the cheapest model that does the phase's job; escalate tier only where the phase demands depth.
 
 ---
 

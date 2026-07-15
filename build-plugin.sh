@@ -187,6 +187,15 @@ rm -rf "${PLUGIN_DIR:?}/sdd/archive"
 # confuse Claude Code's agent loader (placeholder frontmatter values).
 find "${PLUGIN_DIR:?}/agents" -name '_template.md' -delete 2>/dev/null || true
 
+# Repo-local skills: support contributors working in this repository
+# (its own review/communication workflows) and are not part of the
+# distributed plugin. They live in .claude/skills/ so they load for
+# contributors, and are excluded from plugin/skills/ here.
+REPO_LOCAL_SKILLS=(meeting-analysis standup-report create-skill create-agent)
+for skill in "${REPO_LOCAL_SKILLS[@]}"; do
+    rm -rf "${PLUGIN_DIR:?}/skills/${skill}"
+done
+
 ok "Workspace directories excluded"
 
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────

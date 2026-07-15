@@ -45,95 +45,13 @@ The `/design` command combines what used to be Plan + Spec + ADRs into a single 
 
 ---
 
-## What This Command Does
+## What Happens
 
-1. **Analyze** - Understand requirements from DEFINE
-2. **Architect** - Design high-level solution with diagrams
-3. **Decide** - Document key decisions with rationale (inline ADRs)
-4. **Specify** - Create file manifest and code patterns
-5. **Plan Testing** - Define testing strategy
+1. **Load the skill** — read `.claude/skills/sdd-design/SKILL.md`. It owns the Phase 2 methodology: KB-first resolution, the architecture and inline-ADR steps, the agent-matched file manifest, code patterns, the testing strategy, and the quality gate.
+2. **Follow it end to end** (Steps 1–7) for the given `<define-file>`.
+3. **Produce the DESIGN document** at `.claude/sdd/features/DESIGN_{FEATURE_NAME}.md`, update the DEFINE status per `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml`, and suggest `/build` as the next step.
 
----
-
-## Process
-
-### Step 1: Load Context
-
-```markdown
-Read(.claude/sdd/features/DEFINE_{FEATURE}.md)
-Read(.claude/sdd/templates/DESIGN_TEMPLATE.md)
-Read(CLAUDE.md)
-
-# Explore codebase for patterns:
-Glob(**/*.py) | head -20
-Grep("class |def ") | sample
-```
-
-### Step 2: Create Architecture
-
-Design the solution:
-
-| Component | Content |
-|-----------|---------|
-| **Overview** | ASCII diagram of system |
-| **Components** | List of modules/services |
-| **Data Flow** | How data moves through system |
-| **Integration Points** | External dependencies |
-
-### Step 3: Document Decisions (Inline ADRs)
-
-For each significant choice:
-
-```markdown
-### Decision: {Name}
-
-| Attribute | Value |
-|-----------|-------|
-| **Status** | Accepted |
-| **Date** | YYYY-MM-DD |
-
-**Context:** Why this decision was needed
-
-**Choice:** What we're doing
-
-**Rationale:** Why this approach
-
-**Alternatives Rejected:**
-1. Option A - rejected because X
-2. Option B - rejected because Y
-
-**Consequences:**
-- Trade-off we accept
-- Benefit we gain
-```
-
-### Step 4: Create File Manifest
-
-List all files to create/modify:
-
-| # | File | Action | Purpose | Dependencies |
-|---|------|--------|---------|--------------|
-| 1 | `path/to/file.py` | Create | Main handler | None |
-| 2 | `path/to/config.yaml` | Create | Configuration | None |
-| 3 | `path/to/handler.py` | Create | Request handler | 1, 2 |
-
-### Step 5: Define Code Patterns
-
-Provide copy-paste ready code snippets for key patterns.
-
-### Step 6: Plan Testing Strategy
-
-| Test Type | Scope | Tools |
-|-----------|-------|-------|
-| Unit | Functions | pytest |
-| Integration | API | pytest + requests |
-| E2E | Full flow | Manual/automated |
-
-### Step 7: Save
-
-```markdown
-Write(.claude/sdd/features/DESIGN_{FEATURE_NAME}.md)
-```
+The judge pass below is command-only — it runs after the skill's Step 7, and only when `--judge` is passed.
 
 ### Step 8: Optional Judge Pass (`--judge`)
 
@@ -187,43 +105,9 @@ python3 ${CLAUDE_PLUGIN_ROOT:-.}/scripts/judge.py \
 
 ---
 
-## Output
-
-| Artifact | Location |
-|----------|----------|
-| **DESIGN** | `.claude/sdd/features/DESIGN_{FEATURE_NAME}.md` |
-
-**Next Step:** `/build .claude/sdd/features/DESIGN_{FEATURE_NAME}.md`
-
----
-
-## Quality Gate
-
-Before saving, verify:
-
-```text
-[ ] Architecture diagram is clear
-[ ] All major decisions documented with rationale
-[ ] File manifest is complete (all files listed)
-[ ] Code patterns are copy-paste ready
-[ ] Testing strategy covers requirements
-[ ] No circular dependencies in architecture
-```
-
----
-
-## Tips
-
-1. **Diagram First** - ASCII art clarifies thinking
-2. **Decisions Are Permanent** - Document the "why" not just "what"
-3. **Self-Contained Files** - Each file should work independently
-4. **Config Over Code** - Use YAML for tunables, not hardcoded values
-5. **Test Early** - Design for testability from the start
-
----
-
 ## References
 
+- Skill: `.claude/skills/sdd-design/SKILL.md`
 - Agent: `.claude/agents/workflow/design-agent.md`
 - Template: `.claude/sdd/templates/DESIGN_TEMPLATE.md`
 - Contracts: `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml`

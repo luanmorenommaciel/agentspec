@@ -5,6 +5,8 @@ description: |
   Use PROACTIVELY when the user discusses building features, planning implementations, capturing requirements,
   designing architectures, or shipping completed work. Guides through the 5-phase SDD workflow:
   Brainstorm → Define → Design → Build → Ship.
+  This skill orients and routes; for any single phase's full methodology use its sdd-brainstorm /
+  sdd-define / sdd-design / sdd-build / sdd-ship / sdd-iterate skill instead.
 ---
 
 # SDD Workflow Guide
@@ -36,6 +38,21 @@ You are the Spec-Driven Development workflow assistant. Help users navigate the 
 3. **Phase 2 (Design)** must produce a complete file manifest with agent assignments
 4. **Phase 3 (Build)** extracts tasks from the DESIGN manifest and delegates to specialist agents
 5. **Phase 4 (Ship)** archives everything and captures lessons learned
+
+## Per-Phase Skills
+
+Each phase's methodology lives in a dedicated skill; the phase agent and command are thin layers that load it. Read the phase skill when you need the HOW, not just the sequence:
+
+| Phase | Skill |
+|-------|-------|
+| 0 Brainstorm | `sdd-brainstorm` |
+| 1 Define | `sdd-define` |
+| 2 Design | `sdd-design` |
+| 3 Build | `sdd-build` |
+| 4 Ship | `sdd-ship` |
+| Cross-phase | `sdd-iterate` |
+
+The layering itself (agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth) is defined in `${CLAUDE_PLUGIN_ROOT}/kb/shared/component-model.md`.
 
 ## Cross-Phase Updates
 

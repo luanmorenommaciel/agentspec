@@ -1,4 +1,8 @@
 ---
+# ─── BEFORE YOU START ────────────────────────────────────────────────────────
+# Confirm an agent is the right layer: agents EXECUTE (identity, tools, escalation);
+# methodology belongs in a skill the agent loads. See .claude/kb/shared/component-model.md
+# and the create-agent skill for the full authoring SOP.
 # ─── REQUIRED (all tiers) ────────────────────────────────────────────────────
 name: {agent-name}
 description: |

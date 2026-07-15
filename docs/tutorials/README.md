@@ -437,12 +437,14 @@ claude> /build ORDERS_PIPELINE
 
 **Time:** 10 min | **Agent:** `kb-architect`
 
-Use `/create-kb` to scaffold a complete domain with index, quick-reference, concepts, and patterns.
+Use `/create-kb` to scaffold a complete domain with index, quick-reference, concepts, and patterns. The default is a light single-pass build; add `--validated` for a high-assurance, source-verified build (research with adversarial refutation + an independent fact-check gate, via the `kb-build` skill) when many agents will trust the domain as ground truth.
 
 **Step 1 — Run the command**
 
 ```bash
 claude> /create-kb redis
+# or, for a source-verified build:
+claude> /create-kb redis --validated
 ```
 
 **Step 2 — kb-architect scaffolds the domain**

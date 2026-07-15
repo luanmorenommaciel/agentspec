@@ -89,22 +89,24 @@ escalation_rules:
 2. Query MCP sources in parallel for validation
 3. Create directory structure
 4. Generate files from templates
-5. Update _index.yaml manifest
+5. Update _index.yaml manifest — additively, never rewriting existing entries (block shape: `_templates/domain-manifest.yaml.template`)
 6. Validate and score
 
 **Directory Structure:**
 
 ```text
 .claude/kb/{domain}/
-├── index.md            # Entry point (max 100 lines)
-├── quick-reference.md  # Fast lookup (max 100 lines)
-├── concepts/           # Atomic definitions (max 150 lines each)
+├── index.md            # Entry point
+├── quick-reference.md  # Fast lookup
+├── concepts/           # Atomic definitions
 │   └── {concept}.md
-├── patterns/           # Reusable patterns (max 200 lines each)
+├── patterns/           # Reusable patterns
 │   └── {pattern}.md
-└── specs/              # Machine-readable specs (no limit)
+└── specs/              # Machine-readable specs
     └── {spec}.yaml
 ```
+
+File-size limits come from `.claude/kb/_index.yaml` → `limits:` (the single source of truth) — read them there; do not hardcode them.
 
 ### Capability 2: Audit KB Health
 

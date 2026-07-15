@@ -45,14 +45,14 @@ BRAINSTORM_*.md
 
 ### SDD Workflow (7)
 
-| Command | Phase | Purpose | Model |
+| Command | Phase | Purpose | Skill |
 |---------|-------|---------|-------|
-| `/brainstorm` | 0 | Explore ideas through collaborative dialogue | Opus |
-| `/define` | 1 | Capture and validate requirements | Opus |
-| `/design` | 2 | Create architecture and specification | Opus |
-| `/build` | 3 | Execute implementation with verification | Sonnet |
-| `/ship` | 4 | Archive with lessons learned | Haiku |
-| `/iterate` | Any | Update documents when changes needed | Sonnet |
+| `/brainstorm` | 0 | Explore ideas through collaborative dialogue | `sdd-brainstorm` |
+| `/define` | 1 | Capture and validate requirements | `sdd-define` |
+| `/design` | 2 | Create architecture and specification | `sdd-design` |
+| `/build` | 3 | Execute implementation with verification | `sdd-build` |
+| `/ship` | 4 | Archive with lessons learned | `sdd-ship` |
+| `/iterate` | Any | Update documents when changes needed | `sdd-iterate` |
 | `/create-pr` | -- | Create pull request | -- |
 
 ### Data Engineering (8)
@@ -173,6 +173,8 @@ BRAINSTORM_*.md
 
 ## Phase Details
 
+> Summaries only — each phase's full methodology lives in its `sdd-<phase>` skill; contract-grade facts live in `architecture/WORKFLOW_CONTRACTS.yaml`.
+
 ### Phase 0: Brainstorm (Optional)
 
 **Purpose:** Explore ideas through collaborative dialogue before capturing requirements.
@@ -270,14 +272,7 @@ BRAINSTORM_*.md
 
 ## Model Assignment
 
-| Phase | Model | Rationale |
-|-------|-------|-----------|
-| Brainstorm | Opus | Creative thinking and nuanced dialogue |
-| Define | Opus | Nuanced understanding of requirements |
-| Design | Opus | Architectural decisions require depth |
-| Build | Sonnet | Fast, accurate code generation |
-| Ship | Haiku | Simple archival operations |
-| Iterate | Sonnet | Balanced speed and understanding |
+Per-agent model tiers live in each agent's frontmatter (authoritative), mirrored into `routing.json` at build time — this index no longer restates them (a previous copy here had drifted).
 
 ---
 

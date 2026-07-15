@@ -34,6 +34,9 @@ shared:
   anti-patterns:
     path: shared/anti-patterns.md
     description: "Cross-agent anti-pattern library referenced by all data engineering agents"
+  component-model:
+    path: shared/component-model.md
+    description: "Canonical component layering — agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth; referenced by the authoring skills and the SDD components"
 
 # Domain Registry — 24 Domains (23 named + shared anti-patterns)
 domains:

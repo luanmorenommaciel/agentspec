@@ -104,7 +104,7 @@ Some domains extend this with additional directories:
 | python | 10 | Dataclasses, type hints, generators, context managers | python-developer, code-cleaner, code-documenter |
 | pydantic | 10 | BaseModel, validators, LLM output validation, extraction schemas | python-developer, ai-prompt-specialist, llm-specialist, ai-prompt-specialist-gcp |
 | testing | 10 | pytest, fixtures, mocking, parametrize, Spark testing | python-developer, test-generator |
-| shared | 1 | Cross-domain anti-patterns referenced by every agent via `anti_pattern_refs` | (all agents) |
+| shared | 2 | Cross-domain resources: anti-patterns (referenced by every agent via `anti_pattern_refs`) + the component model (agents/skills/commands/KB layering) | (all agents; authoring skills) |
 
 ---
 
@@ -284,7 +284,7 @@ The machine-readable registry lives at `${CLAUDE_PLUGIN_ROOT}/kb/_index.yaml`. I
 - **version** -- Schema version of the index format
 - **limits** -- File size limits (single source of truth)
 - **templates** -- Paths to scaffolding templates
-- **shared** -- Cross-domain resources (anti-patterns library)
+- **shared** -- Cross-domain resources (anti-patterns library; component model)
 - **domains** -- Complete registry of all 24 domains with:
   - `name` -- Domain identifier
   - `description` -- One-line summary

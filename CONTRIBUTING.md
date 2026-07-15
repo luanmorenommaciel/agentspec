@@ -13,7 +13,7 @@ git checkout -b feature/your-feature
 # The framework lives in .claude/
 ls .claude/agents/      # 58 specialized agents
 ls .claude/commands/    # 31 slash commands
-ls .claude/skills/      # 3 capability packs (+ 2 plugin-only skills)
+ls .claude/skills/      # 19 source skills (15 distributed + 4 repo-local); + 1 plugin-only in plugin-extras/
 ls .claude/sdd/         # SDD framework
 ls .claude/kb/          # Knowledge Base
 ```
@@ -102,6 +102,8 @@ Templates are in `.claude/kb/_templates/`. Register your domain in `.claude/kb/_
 
 Skills are reusable capability packs that power slash commands with templates, references, and scripts.
 
+Before adding any component, decide the layer first — agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth. The canonical model lives in `.claude/kb/shared/component-model.md`; the `component-model` skill walks the decision.
+
 1. Create a directory: `.claude/skills/your-skill/`
 2. Add a `SKILL.md` with YAML frontmatter (`name`, `description`)
 3. Add supporting files:
@@ -110,7 +112,7 @@ Skills are reusable capability packs that power slash commands with templates, r
    - `scripts/` — automation scripts (optional)
 4. Create corresponding commands in `.claude/commands/your-skill/`
 
-See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples.
+See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples, and the `create-skill` skill for this repository's authoring conventions (naming, placement tiers, frontmatter pitfalls, ship checklist).
 
 ## Bug Fixes
 

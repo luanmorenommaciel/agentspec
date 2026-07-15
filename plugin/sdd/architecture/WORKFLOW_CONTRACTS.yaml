@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.3.1
-# Date: 2026-06-19
+# Version: 3.4.0
+# Date: 2026-07-15
 
-version: "3.3.1"
+version: "3.4.0"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -17,56 +17,65 @@ workflow:
       number: 0
       command: "/brainstorm"
       agent: "brainstorm-agent"
+      skill: "sdd-brainstorm"
       purpose: "Collaborative exploration to clarify intent and approach"
       input: "Raw idea, request, or problem statement"
       output: "BRAINSTORM_{FEATURE}.md"
-      model: "opus"
       optional: true
 
     - name: "Define"
       number: 1
       command: "/define"
       agent: "define-agent"
+      skill: "sdd-define"
       purpose: "Capture and validate requirements"
       input: "Raw notes, emails, conversations, BRAINSTORM document, or direct requirements"
       output: "DEFINE_{FEATURE}.md"
-      model: "opus"
 
     - name: "Design"
       number: 2
       command: "/design"
       agent: "design-agent"
+      skill: "sdd-design"
       purpose: "Create architecture and technical specification"
       input: "DEFINE_{FEATURE}.md"
       output: "DESIGN_{FEATURE}.md"
-      model: "opus"
 
     - name: "Build"
       number: 3
       command: "/build"
       agent: "build-agent"
+      skill: "sdd-build"
       purpose: "Execute implementation with verification"
       input: "DESIGN_{FEATURE}.md"
       output: "Code files + BUILD_REPORT_{FEATURE}.md"
-      model: "sonnet"
 
     - name: "Ship"
       number: 4
       command: "/ship"
       agent: "ship-agent"
+      skill: "sdd-ship"
       purpose: "Archive feature with lessons learned"
       input: "All feature artifacts"
       output: "archive/{FEATURE}/SHIPPED_{DATE}.md"
-      model: "haiku"
 
   cross_phase:
     - name: "Iterate"
       command: "/iterate"
       agent: "iterate-agent"
+      skill: "sdd-iterate"
       purpose: "Update any phase document when changes needed"
       works_with: ["Brainstorm", "Define", "Design"]
       phase_3_note: "To change code during Build, update DESIGN then run /build"
-      model: "sonnet"
+
+  # Agent model/tools live in each agent's frontmatter (authoritative, mirrored in
+  # routing.json). They were previously duplicated here and in the phase blocks and
+  # had drifted from the real values — state facts once, reference the owner.
+
+  # The skills layer: each phase's methodology (process, question frameworks, gates
+  # detail, anti-patterns) lives in the named sdd-* skill. Phase agents are thin
+  # executors and phase commands thin entrypoints; both load the skill. This file
+  # keeps only contract-grade facts: inputs, outputs, status values, quality gates.
 
 # =============================================================================
 # AGENT RESOLUTION (Local-First Precedence)
@@ -160,14 +169,17 @@ contract_enforcement:
 
   consumer_bindings:
     note: |
-      Each phase agent declares its binding in its own definition. The bindings
-      below are the contract-level summary. Currently wired: the Define and
-      Design agents run a pre-handoff validation of the produced phase document
-      against its phase contract (required_sections) via the spec-lint wrapper,
-      branching on the exit code (0 proceed, 1 block, 2 record a VISIBLE skip and
-      proceed — never assume PASS on exit 2). Phases without required_sections
-      (Brainstorm, Build, Ship) have no phase contract yet, so the document-level
-      check is N/A for them today. Specified TARGET: a two-pass
+      The bindings below are where a phase's binding is DECLARED — this file is
+      the single source for which phase binds on what. The procedure that runs
+      the binding lives in that phase's skill (sdd-define, sdd-design,
+      sdd-iterate), per the component model: agents execute, skills teach how.
+      Currently wired: the Define and Design phases run a pre-handoff validation
+      of the produced phase document against its phase contract
+      (required_sections) via the spec-lint wrapper, branching on the exit code
+      (0 proceed, 1 block, 2 record a VISIBLE skip and proceed — never assume
+      PASS on exit 2). Phases without required_sections (Brainstorm, Build, Ship)
+      have no phase contract yet, so the document-level check is N/A for them
+      today. Specified TARGET: a two-pass
       spec -> validate -> document -> validate binding (the Gate A
       pattern) activates when upstream phase-spec schemas land.
     bindings:
@@ -225,14 +237,11 @@ brainstorm:
   agent:
     name: "brainstorm-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/brainstorm-agent.md"
-    model: "opus"
-    tools:
-      - Read
-      - Write
-      - AskUserQuestion
-      - Glob
-      - Grep
-      - TodoWrite
+
+  skill:
+    name: "sdd-brainstorm"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-brainstorm/SKILL.md"
+    owns: "Phase methodology — process steps, questioning principles, approach comparison, YAGNI, incremental validation, sample collection, anti-patterns"
 
   input:
     types:
@@ -250,70 +259,6 @@ brainstorm:
       - "Approaches Identified"
       - "Ready for Define"
 
-  process:
-    steps:
-      - name: "Gather Context"
-        description: "Read project files, recent commits, existing patterns"
-      - name: "Discovery Questions"
-        description: "Ask one question at a time, minimum 3 questions"
-      - name: "Collect Samples"
-        description: "Ask about sample inputs, outputs, ground truth for LLM grounding"
-      - name: "Explore Approaches"
-        description: "Present 2-3 approaches with trade-offs and recommendation"
-      - name: "Apply YAGNI"
-        description: "Remove unnecessary features, document what was removed"
-      - name: "Validate Incrementally"
-        description: "Present design in sections, check after each (min 2)"
-      - name: "Generate Document"
-        description: "Write BRAINSTORM file with draft requirements and sample inventory"
-
-  questioning:
-    principles:
-      - one_question_at_a_time: "Never ask multiple questions in one message"
-      - multiple_choice_preferred: "Easier to answer than open-ended"
-      - minimum_questions: 3
-      - open_ended_ok: "When exploring unknown territory"
-
-  approaches:
-    minimum: 2
-    maximum: 3
-    format:
-      - name: "Descriptive name"
-      - description: "What it does"
-      - pros: "Clear advantages"
-      - cons: "Honest trade-offs"
-      - recommendation: "Why or why not"
-    rules:
-      - lead_with_recommendation: "Always state your preferred option first"
-      - explain_reasoning: "Don't just list, explain why"
-
-  yagni:
-    questions:
-      - "Do we need this for MVP?"
-      - "Does this solve the core problem?"
-      - "Would the user miss this?"
-    action: "If answer is 'no' to any, remove the feature"
-    documentation: "All removed features must be documented with reasoning"
-
-  validation:
-    incremental: true
-    section_size: "200-300 words"
-    minimum_validations: 2
-    checkpoint_format: "Does this look right so far?"
-
-  sample_collection:
-    purpose: "Improve LLM accuracy through in-context learning"
-    question: "Do you have samples that could help ground the solution?"
-    sample_types:
-      - input_files: "Sample inputs (images, documents, data)"
-      - output_examples: "Expected output (JSON, CSV, schema)"
-      - ground_truth: "Verified correct values"
-      - related_code: "Existing patterns to reuse"
-    benefits:
-      - "Few-shot prompting increases accuracy by 30-50%"
-      - "Ground truth prevents hallucination"
-      - "Schema examples ensure format consistency"
-
   quality_gate:
     minimum_questions: 3
     sample_collection_asked: true
@@ -322,14 +267,6 @@ brainstorm:
     user_confirmed_approach: true
     yagni_applied: true
     draft_requirements_included: true
-
-  anti_patterns:
-    - question_dump: "Asking multiple questions at once"
-    - assuming_answers: "Not asking, just proceeding"
-    - single_approach: "Only presenting one option"
-    - skipping_validation: "Not checking understanding"
-    - feature_creep: "Not applying YAGNI"
-    - jumping_to_solution: "Skipping problem understanding"
 
 # =============================================================================
 # PHASE 1: DEFINE
@@ -348,12 +285,11 @@ define:
   agent:
     name: "define-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/define-agent.md"
-    model: "opus"
-    tools:
-      - Read
-      - Write
-      - AskUserQuestion
-      - TodoWrite
+
+  skill:
+    name: "sdd-define"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-define/SKILL.md"
+    owns: "Phase methodology — input classification, entity extraction patterns, clarity scoring procedure, gap-filling questions, anti-patterns"
 
   input:
     types:
@@ -372,49 +308,6 @@ define:
       - "In Progress"
       - "Needs Clarification"
       - "Ready for Design"
-
-  process:
-    steps:
-      - name: "Load Context"
-        description: "Read template and input files"
-      - name: "Classify Input"
-        description: "Identify input type (meeting notes, email, etc.)"
-      - name: "Extract Entities"
-        description: "Pull structured data from unstructured input"
-      - name: "Calculate Clarity Score"
-        description: "Score each element 0-3, total must be >= 12"
-      - name: "Fill Gaps"
-        description: "Ask clarifying questions if score < 12"
-      - name: "Generate Document"
-        description: "Write DEFINE file following template"
-
-  extraction_elements:
-    - name: "problem"
-      patterns: ["We're struggling with...", "The issue is...", "Pain point:"]
-    - name: "users"
-      patterns: ["For the team...", "Customers want...", "Users need..."]
-    - name: "goals_with_priority"
-      patterns: ["We need to...", "Must have...", "Should have...", "Nice-to-have..."]
-      priority_classification:
-        MUST: "MVP fails without this (non-negotiable)"
-        SHOULD: "Important, but workaround exists"
-        COULD: "Nice-to-have, cut first if timeline tight"
-    - name: "success_criteria"
-      patterns: ["Success means...", "We'll know when...", "Measured by..."]
-    - name: "acceptance_tests"
-      patterns: ["Given/When/Then", "Test case:", "Scenario:"]
-    - name: "constraints"
-      patterns: ["Must work with...", "Can't change...", "Limited by..."]
-    - name: "out_of_scope"
-      patterns: ["Not including...", "Deferred to...", "Excluded:"]
-    - name: "assumptions"
-      patterns: ["Assuming that...", "We expect...", "If X then...", "Depends on..."]
-      format:
-        id: "A-001, A-002, etc."
-        statement: "What we're assuming"
-        impact_if_wrong: "What happens if assumption is invalid"
-        validated: "Yes/No checkbox"
-      note: "BRAINSTORM captures exploratory assumptions; DEFINE formalizes them into trackable risks"
 
   quality_gate:
     clarity_score:
@@ -441,11 +334,6 @@ define:
     - open_questions
     - revision_history
 
-  anti_patterns:
-    - vague_language: "Words like 'improve', 'better', 'faster' without metrics"
-    - missing_users: "No identified target users"
-    - untestable_criteria: "Success criteria that can't be measured"
-    - implementation_details: "How-to in Define phase (belongs in Design)"
 
 # =============================================================================
 # PHASE 2: DESIGN
@@ -464,14 +352,11 @@ design:
   agent:
     name: "design-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/design-agent.md"
-    model: "opus"
-    tools:
-      - Read
-      - Write
-      - Glob
-      - Grep
-      - TodoWrite
-      - WebSearch
+
+  skill:
+    name: "sdd-design"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-design/SKILL.md"
+    owns: "Phase methodology — architecture design process, inline decision records, file manifest construction, code patterns, testing strategy, anti-patterns"
 
   input:
     file: ".claude/sdd/features/DEFINE_{FEATURE}.md"
@@ -484,23 +369,6 @@ design:
     file: ".claude/sdd/features/DESIGN_{FEATURE}.md"
     template: "${CLAUDE_PLUGIN_ROOT}/sdd/templates/DESIGN_TEMPLATE.md"
 
-  process:
-    steps:
-      - name: "Load Context"
-        description: "Read DEFINE document, template, and explore codebase patterns"
-      - name: "Create Architecture"
-        description: "Design system with ASCII diagram, components, data flow"
-      - name: "Document Decisions"
-        description: "Record inline ADRs with status, date, context, choice, rationale"
-      - name: "Create File Manifest"
-        description: "List all files with #, path, action, purpose, dependencies"
-      - name: "Define Code Patterns"
-        description: "Provide copy-paste ready code snippets"
-      - name: "Plan Testing Strategy"
-        description: "Define unit, integration, E2E tests with coverage goals"
-      - name: "Save Document"
-        description: "Write DESIGN file following template"
-
   required_sections:
     - architecture_overview
     - components
@@ -508,30 +376,6 @@ design:
     - file_manifest
     - code_patterns
     - testing_strategy
-
-  inline_decisions:
-    format:
-      status: "Accepted"
-      date: "YYYY-MM-DD"
-      context: "Why decision was needed"
-      choice: "What we decided"
-      rationale: "Why this is right"
-      alternatives_rejected: "What we didn't choose and why"
-      consequences: "Trade-offs accepted"
-
-  file_manifest:
-    columns:
-      - number
-      - file_path
-      - action
-      - purpose
-      - dependencies
-
-  anti_patterns:
-    - shared_code: "Dependencies across deployable units"
-    - hardcoded_config: "Values that should be in YAML"
-    - circular_deps: "A depends on B depends on A"
-    - missing_tests: "No testing strategy defined"
 
 # =============================================================================
 # PHASE 3: BUILD
@@ -548,15 +392,11 @@ build:
   agent:
     name: "build-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/build-agent.md"
-    model: "sonnet"
-    tools:
-      - Read
-      - Write
-      - Edit
-      - Bash
-      - Glob
-      - Grep
-      - TodoWrite
+
+  skill:
+    name: "sdd-build"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-build/SKILL.md"
+    owns: "Phase methodology — task extraction, delegation flow and protocol, verification procedures, data-engineering delegation map, error handling, build-report mechanics, anti-patterns"
 
   input:
     files:
@@ -574,40 +414,6 @@ build:
     verification: "after each file"
     retry_limit: 3
 
-  verification:
-    per_file:
-      - "{language-specific import check}"
-      - "{linter} check {file}"
-    full:
-      - "{linter} check ."
-      - "{type checker} (if configured)"
-      - "{test runner}"
-
-  code_standards:
-    - no_inline_comments
-    - type_hints_required
-    - self_documenting_names
-    - config_over_hardcode
-
-  data_engineering_delegation:
-    description: "When DESIGN contains pipeline architecture, Build delegates to DE agents"
-    agent_map:
-      dbt_models: "dbt-specialist"
-      airflow_dags: "pipeline-architect"
-      spark_jobs: "spark-engineer"
-      data_contracts: "data-contracts-engineer"
-      quality_checks: "data-quality-analyst"
-      schema_design: "schema-designer"
-    de_verification:
-      - "dbt build --select {model}"
-      - "sqlfluff lint {file} --dialect {dialect}"
-      - "great_expectations suite run {suite}"
-
-  anti_patterns:
-    - improvising: "Creating files not in manifest"
-    - skipping_verify: "Not testing after creation"
-    - todo_comments: "Leaving TODOs in code"
-    - inline_comments: "Explaining code with comments"
 
 # =============================================================================
 # PHASE 4: SHIP
@@ -624,12 +430,11 @@ ship:
   agent:
     name: "ship-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/ship-agent.md"
-    model: "haiku"
-    tools:
-      - Read
-      - Write
-      - Bash
-      - Glob
+
+  skill:
+    name: "sdd-ship"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-ship/SKILL.md"
+    owns: "Phase methodology — completion verification, archive procedure, lessons-learned extraction, anti-patterns"
 
   input:
     required:
@@ -648,13 +453,6 @@ ship:
     - "DESIGN_{FEATURE}.md"
     - "BUILD_REPORT_{FEATURE}.md"
     - "SHIPPED_{DATE}.md"
-
-  lessons_learned:
-    categories:
-      - process
-      - technical
-      - communication
-      - tools
 
   pre_ship_checklist:
     - build_report_complete
@@ -679,13 +477,11 @@ iterate:
   agent:
     name: "iterate-agent"
     file: "${CLAUDE_PLUGIN_ROOT}/agents/workflow/iterate-agent.md"
-    model: "sonnet"
-    tools:
-      - Read
-      - Write
-      - Edit
-      - AskUserQuestion
-      - TodoWrite
+
+  skill:
+    name: "sdd-iterate"
+    file: "${CLAUDE_PLUGIN_ROOT}/skills/sdd-iterate/SKILL.md"
+    owns: "Phase methodology — change classification, cascade analysis and rules, user confirmation flow, version tracking, anti-patterns"
 
   works_with:
     - phase: "Brainstorm"
@@ -698,63 +494,6 @@ iterate:
       file_pattern: "DESIGN_*.md"
       cascade_to: "Code"
 
-  process:
-    steps:
-      - name: "Load Target Document"
-        description: "Read target file and identify document type (BRAINSTORM/DEFINE/DESIGN)"
-      - name: "Analyze Change"
-        description: "Classify change type and assess impact level"
-      - name: "Apply Changes"
-        description: "Make change, bump version, add change note"
-      - name: "Assess Cascade Need"
-        description: "Determine if downstream documents need updates"
-      - name: "Execute Cascade"
-        description: "Prompt user and apply cascade updates if confirmed"
-      - name: "Save Updates"
-        description: "Write updated document(s)"
-
-  change_types:
-    additive:
-      impact: "low"
-      example: "Add new feature"
-    modifying:
-      impact: "medium"
-      example: "Change existing behavior"
-    removing:
-      impact: "medium"
-      example: "Remove feature"
-    architectural:
-      impact: "high"
-      example: "Change fundamental approach"
-
-  cascade_rules:
-    brainstorm_to_define:
-      - changed_approach: "DEFINE may need different problem focus"
-      - new_yagni_items: "Out of scope needs update"
-      - changed_users: "Target users section needs update"
-      - changed_constraints: "Constraints section needs update"
-      - new_discovery_answers: "May affect requirements"
-
-    define_to_design:
-      - new_requirement: "May need new component"
-      - changed_success_criteria: "May need different approach"
-      - scope_expansion: "Needs new sections"
-      - scope_reduction: "Can simplify"
-      - new_constraint: "Must be accommodated"
-
-    design_to_code:
-      - new_file: "Create file"
-      - removed_file: "Delete file"
-      - changed_pattern: "Update affected files"
-      - new_decision: "May need refactor"
-      - architecture_change: "Significant updates needed"
-
-  cascade_prompt:
-    options:
-      - "(a) Update downstream automatically"
-      - "(b) Just update this document, I'll handle downstream manually"
-      - "(c) Show me what would change first"
-
   thresholds:
     use_iterate: "< 30% change"
     consider_new_define: "> 50% change"
@@ -762,14 +501,6 @@ iterate:
       - "Different problem entirely"
       - "Different target users"
       - "Fundamental approach change"
-
-  version_tracking:
-    location: "Revision History section"
-    format:
-      - version
-      - date
-      - author
-      - changes
 
 # =============================================================================
 # FOLDER STRUCTURE
@@ -964,6 +695,16 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.4.0"
+    date: "2026-07-15"
+    changes:
+      - "Skills layer: each SDD phase's methodology now lives in a per-phase skill (sdd-brainstorm, sdd-define, sdd-design, sdd-build, sdd-ship, sdd-iterate); phase agents are thin executors and phase commands thin entrypoints — both load the skill"
+      - "Phase blocks now carry a skill: reference and keep only contract-grade facts (inputs, outputs, status values, quality gates, thresholds); methodology sub-blocks (process, questioning, extraction_elements, inline_decisions, cascade_rules, anti_patterns, etc.) moved into the skills"
+      - "Removed duplicated agent model/tools from the workflow overview and phase blocks — agent frontmatter is authoritative (mirrored in routing.json); the duplicated copies had drifted from the real values"
+      - "Grounded in the component model (kb/shared/component-model.md): agents execute, skills teach how, commands are entrypoints, KBs are source-of-truth"
+      - "Contract-gate procedure relocated from the phase agents into the phase skills (sdd-define, sdd-design, sdd-iterate) under the same component-model split; the skills name the artifact and phase to validate and point at the linter's USAGE, while the exit-code contract and verdict semantics stay owned by contract_enforcement here and by ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md — consumers do not restate them"
+      - "Dropped the Brainstorm/Build/Ship gate stubs that narrated a missing required_sections key: the phase blocks here already own that fact and the linter reports the case itself (exit 2 — record a visible skip and proceed)"
+
   - version: "3.3.1"
     date: "2026-06-19"
     changes:
