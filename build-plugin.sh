@@ -164,6 +164,26 @@ else
     warn "tools/spec-linter not found — skipping linter packaging"
 fi
 
+# ─── Step 2d: Copy the spec-judge tool ───────────────────────────────────────
+# Ships the behavioral evaluation engine (the Judger) alongside the Linter. Same
+# copy-then-prune shape; at runtime it imports the sibling Linter's value objects
+# via the wrapper's PYTHONPATH, so both tool dirs must ship side by side.
+
+if [[ -d "${SCRIPT_DIR}/tools/spec-judge" ]]; then
+    info "Copying spec-judge tool..."
+    mkdir -p "${PLUGIN_DIR}/tools"
+    cp -r "${SCRIPT_DIR}/tools/spec-judge" "${PLUGIN_DIR}/tools/spec-judge"
+    rm -rf "${PLUGIN_DIR}/tools/spec-judge/.venv"
+    rm -rf "${PLUGIN_DIR}/tools/spec-judge/tests"
+    find "${PLUGIN_DIR}/tools/spec-judge" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-judge" -name '.pytest_cache' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-judge" -name '.ruff_cache' -type d -exec rm -rf {} + 2>/dev/null || true
+    find "${PLUGIN_DIR}/tools/spec-judge" -name '*.egg-info' -type d -exec rm -rf {} + 2>/dev/null || true
+    ok "spec-judge copied"
+else
+    warn "tools/spec-judge not found — skipping judge packaging"
+fi
+
 # ─── Step 2b: Copy plugin-extras (plugin-only content) ───────────────────────
 
 if [[ -d "${EXTRAS_DIR}" ]]; then
@@ -231,6 +251,7 @@ while IFS= read -r -d '' file; do
         -e 's|\.claude/sdd/_index\.md|${CLAUDE_PLUGIN_ROOT}/sdd/_index.md|g' \
         -e 's|\.claude/sdd/README\.md|${CLAUDE_PLUGIN_ROOT}/sdd/README.md|g' \
         -e 's|tools/spec-linter/|${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/|g' \
+        -e 's|tools/spec-judge/|${CLAUDE_PLUGIN_ROOT}/tools/spec-judge/|g' \
         "$file" > "$tmp" && mv "$tmp" "$file" || { rm -f "$tmp"; exit 1; }
 done < <(find "${PLUGIN_DIR}" \( -name "*.md" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) \
     -type f ! -path "${PLUGIN_DIR}/.claude-plugin/*" -print0)
@@ -260,6 +281,25 @@ ok "Absolute paths rewritten"
 
 chmod +x "${PLUGIN_DIR}/scripts/"*.sh 2>/dev/null || true
 chmod +x "${PLUGIN_DIR}/tools/spec-linter/spec-lint" 2>/dev/null || true
+chmod +x "${PLUGIN_DIR}/tools/spec-judge/spec-judge" 2>/dev/null || true
+
+# ─── Step 5d: spec-judge cross-package import smoke-check (opportunistic) ─────
+# The Judger imports the sibling Linter's value objects at runtime via the
+# PYTHONPATH its wrapper sets. Verify that resolves in the BUILT plugin when a
+# suitable interpreter is available — warn (never fail) if deps are absent, to
+# match this build's "don't block on a missing optional dependency" rule.
+
+if [[ -x "${PLUGIN_DIR}/tools/spec-judge/spec-judge" ]]; then
+    if python3 -c "import pydantic, yaml" >/dev/null 2>&1; then
+        if "${PLUGIN_DIR}/tools/spec-judge/spec-judge" --selfcheck >/dev/null 2>&1; then
+            ok "spec-judge import smoke-check passed (spec_linter resolves in the built plugin)"
+        else
+            warn "spec-judge --selfcheck failed in the built plugin — check the sibling import"
+        fi
+    else
+        warn "python3 lacks pydantic/pyyaml — skipping spec-judge import smoke-check"
+    fi
+fi
 
 # ─── Step 5c: Sync root .claude-plugin/marketplace.json ─────────────────────
 # `claude plugin marketplace add <owner>/<repo>` fetches
@@ -329,6 +369,11 @@ if [[ -x "${PLUGIN_DIR}/tools/spec-linter/spec-lint" ]]; then
 else
     LINTER_STATUS="not bundled"
 fi
+if [[ -x "${PLUGIN_DIR}/tools/spec-judge/spec-judge" ]]; then
+    JUDGE_STATUS="bundled"
+else
+    JUDGE_STATUS="not bundled"
+fi
 
 echo ""
 echo "============================================"
@@ -339,6 +384,7 @@ echo "  Commands: ${COMMAND_COUNT}"
 echo "  Skills:   ${SKILL_COUNT}"
 echo "  KB:       ${KB_COUNT} domains"
 echo "  Linter:   ${LINTER_STATUS}"
+echo "  Judger:   ${JUDGE_STATUS}"
 echo ""
 echo "  Output:   ${PLUGIN_DIR}/"
 echo ""
