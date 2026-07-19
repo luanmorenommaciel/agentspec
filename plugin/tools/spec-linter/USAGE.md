@@ -85,7 +85,7 @@ already on the interpreter being used.
 |------|---------|
 | 0 | PASS or WARN verdict |
 | 1 | FAIL verdict — a loadable artifact that violates its contract |
-| 2 | ERROR — operational failure: file not found, YAML syntax error, non-mapping top level, unknown phase, missing dependencies, or any unexpected exception |
+| 2 | ERROR — operational failure: file not found, YAML syntax error, non-mapping top level, a `.md` file with no frontmatter block or an invalid/non-mapping frontmatter block, unknown phase, missing dependencies, or any unexpected exception |
 
 The boundary is decisive: a valid YAML mapping that breaks the contract is a
 FAIL (exit 1, decided by the engine); input that cannot be loaded as a YAML
@@ -94,15 +94,33 @@ verdict output goes to stdout.
 
 ### Modes
 
-- **Spec linting** (default): lints a YAML spec file, or a directory of
-  `.yaml`/`.yml` files (a directory run adds the cross-file duplicate-id check),
-  against the agent-spec contract.
+- **Spec linting** (default): lints a single spec file, or every spec file
+  under a directory, against the agent-spec contract.
+  - A `.yaml`/`.yml` file is loaded as a YAML mapping, as before.
+  - A `.md` file is treated as a **self-contained artifact**: its leading
+    `---`-fenced YAML frontmatter block IS the spec. The extracted mapping is
+    linted exactly as a YAML spec file's mapping is — same contract, same
+    verdicts, same output, same exit codes. A `.md` file with no frontmatter
+    block, or a frontmatter block that is not valid YAML or not a mapping, is
+    an operational ERROR (exit 2) — LOUD, never a silent pass.
+  - **Directory walk**: recurses into subdirectories, so a category tree
+    (e.g. `plugin/agents/<category>/*.md`) lints as one fleet in a single run. It
+    selects every `.yaml`, `.yml`, and `.md` file. Files named exactly
+    `README.md`, or whose name starts with `_` (scaffolding/templates), are
+    excluded and reported once in a single `skipped (non-spec): ...` summary
+    line — never silently dropped. The cross-file duplicate-id (L4) check
+    spans YAML and MD entries alike; per-file verdicts and the final
+    `OVERALL:` line are otherwise unchanged.
 - **Phase linting** (`--phase NAME`): lints the path as a Markdown phase
   document against an `SddPhaseContract` whose `required_sections` are read from a
   WORKFLOW_CONTRACTS-style YAML. The source defaults to the repo's
   `${CLAUDE_PLUGIN_ROOT}/sdd/architecture/WORKFLOW_CONTRACTS.yaml`; override it with
   `--contracts-file PATH`. Each required section must appear as a Markdown
   heading (matched case/punctuation-insensitively); a missing one is a FAIL.
+  `--phase` takes precedence over frontmatter extraction exactly as before: a
+  `.md` path given with `--phase` is always read as a raw phase document,
+  never as a self-contained spec, even if it happens to open with a `---`
+  block.
 - **Schema emission** (`--emit-schema OUT.json`): writes the reference
   contract's JSON Schema to `OUT.json`, creating parent directories as needed
   (combine with a path to also lint; alone it just writes and exits 0).

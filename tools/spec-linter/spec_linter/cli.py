@@ -1,19 +1,21 @@
 """CLI: `python -m spec_linter.cli [path] [--phase NAME] [--emit-schema OUT.json]`.
 
-Lints a spec file or a directory of specs against the baked-in agent-spec
-contract, or (with `--phase`) a Markdown phase document against an
+Lints a spec file — a YAML mapping, or a self-contained `.md` whose leading
+YAML frontmatter IS the spec — or a directory of specs, against the baked-in
+agent-spec contract; or (with `--phase`) a Markdown phase document against an
 `SddPhaseContract`. The CLI is a consumer of the engine and owns the usage
-policy: YAML/Markdown loading, directory iteration, the cross-file duplicate-id
-(L4) check, and contract selection.
+policy: YAML/frontmatter/Markdown loading, directory iteration, the
+cross-file duplicate-id (L4) check, and contract selection.
 
 Exit codes form a three-way contract:
 
 - 0 — PASS or WARN verdict.
 - 1 — FAIL verdict (a loadable artifact that violates its contract).
 - 2 — ERROR: an operational failure (file not found, YAML syntax error, a
-  non-mapping top level, an unknown phase, or any unexpected exception). ERROR
-  is a process concern only — it is NOT a Verdict Level; the Verdict surface
-  stays exactly PASS/WARN/FAIL.
+  non-mapping top level, a `.md` file with no frontmatter or an invalid/
+  non-mapping frontmatter block, an unknown phase, or any unexpected
+  exception). ERROR is a process concern only — it is NOT a Verdict Level;
+  the Verdict surface stays exactly PASS/WARN/FAIL.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from . import rules
 from .contracts.agent_spec import AgentSpecContract, emit_json_schema
 from .contracts.sdd_phase import SddPhaseContract
 from .engine import lint
+from .frontmatter import FrontmatterError, split_frontmatter
 from .verdict import Level, Verdict
 
 _CONTRACT = AgentSpecContract()
@@ -62,27 +65,79 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _load_md_frontmatter(path: Path) -> dict[str, Any]:
+    """Load a `.md` file's leading YAML frontmatter as the spec mapping.
+
+    The frontmatter IS the spec for a self-contained agent `.md` file. No
+    frontmatter block, or a present-but-invalid one, is an operational
+    failure (exit 2) — never a silent pass.
+    """
+    text = path.read_text(encoding="utf-8")
+    try:
+        frontmatter, _ = split_frontmatter(text)
+    except FrontmatterError as exc:
+        raise _OperationalError(f"{path.name}: {exc}") from exc
+    if frontmatter is None:
+        raise _OperationalError(f"{path.name}: no YAML frontmatter block found")
+    return frontmatter
+
+
+def _load_spec(path: Path) -> dict[str, Any]:
+    """Load a spec mapping from `path`: `.md` frontmatter, or a YAML mapping."""
+    return _load_md_frontmatter(path) if path.suffix == ".md" else _load_yaml(path)
+
+
 def _lint_file(path: Path) -> Verdict:
-    """Lint one YAML spec file against the agent-spec contract."""
-    return lint(_load_yaml(path), _CONTRACT)
+    """Lint one spec file against the agent-spec contract.
+
+    `.yaml`/`.yml` are loaded as a plain YAML mapping. `.md` is treated as a
+    self-contained artifact: its leading YAML frontmatter IS the spec (see
+    `frontmatter.split_frontmatter`) — everything else about the file body is
+    irrelevant to the contract check.
+    """
+    return lint(_load_spec(path), _CONTRACT)
+
+
+_SKIP_EXACT_NAMES = frozenset({"README.md"})
+
+
+def _is_spec_skip(name: str) -> bool:
+    """Non-spec files the directory walk excludes: `_`-prefixed, or `README.md`."""
+    return name.startswith("_") or name in _SKIP_EXACT_NAMES
 
 
 def _lint_dir(path: Path) -> dict[str, Verdict]:
-    """Lint every `.yaml`/`.yml` file in a directory, keyed by file name.
+    """Lint every `.yaml`/`.yml`/`.md` spec file under `path`, keyed by its
+    path relative to it.
+
+    Walks subdirectories, so a category tree (e.g. `plugin/agents/<category>/*.md`)
+    lints as one fleet in a single run. Files named exactly `README.md`, or
+    whose name starts with `_` (scaffolding/templates), are excluded from
+    linting; they are reported once in a single summary line so the exclusion
+    is visible, never silent.
 
     Adds the cross-file duplicate-id (L4) check on top of the per-file
-    verdicts: a duplicated id appends the same finding to every file that
-    claims it.
+    verdicts, spanning YAML and MD sources alike: a duplicated id appends the
+    same finding to every file that claims it.
     """
-    files = sorted(p for p in path.iterdir() if p.suffix in (".yaml", ".yml"))
+    candidates = sorted(
+        p for p in path.rglob("*") if p.is_file() and p.suffix in (".yaml", ".yml", ".md")
+    )
+    selected = [p for p in candidates if not _is_spec_skip(p.name)]
+    skipped = [p for p in candidates if _is_spec_skip(p.name)]
+    if skipped:
+        names = ", ".join(sorted(str(p.relative_to(path)) for p in skipped))
+        print(f"skipped (non-spec): {names}")
+
     verdicts: dict[str, Verdict] = {}
     ids_by_source: dict[str, list[str]] = {}
-    for file in files:
-        data = _load_yaml(file)
-        verdicts[file.name] = lint(data, _CONTRACT)
+    for file in selected:
+        label = str(file.relative_to(path))
+        data = _load_spec(file)
+        verdicts[label] = lint(data, _CONTRACT)
         spec_id = data.get("id")
         if isinstance(spec_id, str):
-            ids_by_source.setdefault(spec_id, []).append(file.name)
+            ids_by_source.setdefault(spec_id, []).append(label)
     for spec_id, sources in ids_by_source.items():
         for finding in rules.l4_identity_findings({spec_id: sources}):
             for source in sources:
