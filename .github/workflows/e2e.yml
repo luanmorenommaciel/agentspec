@@ -1,0 +1,261 @@
+name: e2e
+# Deterministic end-to-end runtime checks. Zero LLM/API calls — everything here
+# is install mechanics and the Linter/Judger's exit-code contracts, not model
+# behavior (that belongs to tools/spec-judge's own --tier evaluation, which is
+# never invoked here).
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  install-runtime:
+    name: Install runtime simulation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Mirrors plugin-validate.yml's job: no actions/setup-python step —
+      # ubuntu-latest's ambient python3 is what build-plugin.sh itself relies on
+      # (pytest and the spec-judge smoke-check inside it degrade to a warning,
+      # never a failure, when optional deps are absent).
+      - name: Build the plugin
+        run: ./build-plugin.sh
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Claude Code CLI version (forensics)
+        run: claude --version
+
+      - name: Prepare sandbox HOME
+        run: mkdir -p "${{ runner.temp }}/e2e-home"
+
+      - name: Add the local marketplace
+        env:
+          HOME: ${{ runner.temp }}/e2e-home
+          CI: "1"
+        run: claude plugin marketplace add "$GITHUB_WORKSPACE"
+
+      - name: Install agentspec@agentspec
+        env:
+          HOME: ${{ runner.temp }}/e2e-home
+          CI: "1"
+        run: claude plugin install agentspec@agentspec
+
+      - name: Assert install landed with the expected shape
+        env:
+          HOME: ${{ runner.temp }}/e2e-home
+        run: |
+          set -uo pipefail
+          REGISTRY="$HOME/.claude/plugins/installed_plugins.json"
+          if [ ! -f "$REGISTRY" ]; then
+            echo "::error::registry not found at $REGISTRY"
+            exit 1
+          fi
+
+          IP=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['plugins']['agentspec@agentspec'][0]['installPath'])" "$REGISTRY")
+          if [ -z "$IP" ] || [ ! -d "$IP" ]; then
+            echo "::error::installPath '$IP' from $REGISTRY does not exist"
+            exit 1
+          fi
+          echo "IP=$IP" >> "$GITHUB_ENV"
+
+          VERSION=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['plugins']['agentspec@agentspec'][0]['version'])" "$REGISTRY")
+          echo "registry installPath: $IP"
+          echo "registry version: $VERSION"
+
+          count_md() { find "$1" -name '*.md' | wc -l | tr -d ' '; }
+          count_dirs() { find "$1" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' '; }
+
+          SRC_AGENTS=$(count_md "$GITHUB_WORKSPACE/plugin/agents")
+          INS_AGENTS=$(count_md "$IP/agents")
+          if [ "$SRC_AGENTS" != "$INS_AGENTS" ]; then
+            echo "::error::agent count mismatch — source(plugin/agents)=$SRC_AGENTS installed=$INS_AGENTS"
+            exit 1
+          fi
+
+          SRC_SKILLS=$(count_dirs "$GITHUB_WORKSPACE/plugin/skills")
+          INS_SKILLS=$(count_dirs "$IP/skills")
+          if [ "$SRC_SKILLS" != "$INS_SKILLS" ]; then
+            echo "::error::skill count mismatch — source(plugin/skills)=$SRC_SKILLS installed=$INS_SKILLS"
+            exit 1
+          fi
+
+          SRC_COMMANDS=$(count_md "$GITHUB_WORKSPACE/plugin/commands")
+          INS_COMMANDS=$(count_md "$IP/commands")
+          if [ "$SRC_COMMANDS" != "$INS_COMMANDS" ]; then
+            echo "::error::command count mismatch — source(plugin/commands)=$SRC_COMMANDS installed=$INS_COMMANDS"
+            exit 1
+          fi
+
+          if [ ! -d "$IP/tools/spec-linter" ]; then
+            echo "::error::tools/spec-linter missing from the installed copy at $IP"
+            exit 1
+          fi
+          if [ ! -d "$IP/tools/spec-judge" ]; then
+            echo "::error::tools/spec-judge missing from the installed copy at $IP"
+            exit 1
+          fi
+
+          echo "install-runtime assertions: OK (agents=$INS_AGENTS skills=$INS_SKILLS commands=$INS_COMMANDS, source==installed)"
+
+      # --break-system-packages: ubuntu-latest's ambient python3 is PEP 668
+      # externally-managed. The wrappers' documented fallback order is
+      # $SPEC_LINTER_PYTHON -> local .venv -> ambient python3/python — this
+      # step deliberately targets that ambient interpreter (not a venv), since
+      # a venv here would just be invisible to the wrapper and every fixture
+      # below would collapse to exit 2 regardless of what's being tested.
+      - name: Install engine deps for the wrappers' ambient-python fallback
+        run: python3 -m pip install --break-system-packages pydantic pyyaml
+
+      - name: Linter exit-code contract (against the INSTALLED copy)
+        run: |
+          set -uo pipefail
+          FIX="$RUNNER_TEMP/lint-fixtures"
+          mkdir -p "$FIX"
+
+          # design phase required_sections (.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml):
+          # architecture_overview, components, key_decisions, file_manifest,
+          # code_patterns, testing_strategy. No --contracts-file flag anywhere
+          # below: resolving it from the installed layout ($IP/sdd/architecture/...)
+          # is exactly the regression this job guards.
+          printf '%s\n' \
+            '# Design doc fixture' \
+            '' \
+            '## Architecture Overview' \
+            'text' \
+            '' \
+            '## Components' \
+            'text' \
+            '' \
+            '## Key Decisions' \
+            'text' \
+            '' \
+            '## File Manifest' \
+            'text' \
+            '' \
+            '## Code Patterns' \
+            'text' \
+            '' \
+            '## Testing Strategy' \
+            'text' \
+            > "$FIX/complete.md"
+
+          printf '%s\n' \
+            '# Design doc fixture (missing Testing Strategy)' \
+            '' \
+            '## Architecture Overview' \
+            'text' \
+            '' \
+            '## Components' \
+            'text' \
+            '' \
+            '## Key Decisions' \
+            'text' \
+            '' \
+            '## File Manifest' \
+            'text' \
+            '' \
+            '## Code Patterns' \
+            'text' \
+            > "$FIX/incomplete.md"
+
+          # NOTE: each check is the condition of an `if` on purpose — under GitHub
+          # Actions' default `bash -e`, a bare non-zero exit from spec-lint (which
+          # exit 1 and exit 2 fixtures deliberately produce) would otherwise abort
+          # the step immediately, before the exit code could even be compared.
+
+          if "$IP/tools/spec-linter/spec-lint" "$FIX/complete.md" --phase design; then
+            code=0
+          else
+            code=$?
+          fi
+          if [ "$code" -ne 0 ]; then
+            echo "::error::expected exit 0 on a complete design doc, got $code"
+            exit 1
+          fi
+
+          if "$IP/tools/spec-linter/spec-lint" "$FIX/incomplete.md" --phase design; then
+            code=0
+          else
+            code=$?
+          fi
+          if [ "$code" -ne 1 ]; then
+            echo "::error::expected exit 1 on a design doc missing a required section, got $code"
+            exit 1
+          fi
+
+          if "$IP/tools/spec-linter/spec-lint" "$FIX/does-not-exist.md" --phase design; then
+            code=0
+          else
+            code=$?
+          fi
+          if [ "$code" -ne 2 ]; then
+            echo "::error::expected exit 2 on a nonexistent path, got $code"
+            exit 1
+          fi
+
+          echo "linter exit-code contract: OK (0/1/2 as designed)"
+
+      - name: Judge selfcheck (against the INSTALLED copy)
+        run: |
+          set -uo pipefail
+          if "$IP/tools/spec-judge/spec-judge" --selfcheck; then
+            code=0
+          else
+            code=$?
+          fi
+          if [ "$code" -ne 0 ]; then
+            echo "::error::expected exit 0 from spec-judge --selfcheck, got $code"
+            exit 1
+          fi
+          echo "judge selfcheck: OK"
+
+  fleet-lint:
+    name: Fleet-lint conformance counter (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install engine deps
+        run: python3 -m pip install --break-system-packages pydantic pyyaml
+
+      # Report-only burn-down counter, NOT a blocking gate: the reference
+      # contract (tools/spec-linter's agent-spec contract) is failed by all 58
+      # agents today. Flips to a blocking check at zero (issue #79). Only PASS
+      # (0) and FAIL (1) are burn-down data — any other exit (2 operational,
+      # 126/127 broken wrapper, crashes) fails this job, and so does an empty
+      # file set: a counter that could read 0/0 on a broken run would fake the
+      # very milestone #79 waits for.
+      - name: Run the Linter across the agent fleet
+        run: |
+          set -uo pipefail
+          set +e
+          tools/spec-linter/spec-lint plugin/agents 2>&1 | tee "$RUNNER_TEMP/fleet-lint.out"
+          code="${PIPESTATUS[0]}"
+          set -e
+
+          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
+            echo "::error::spec-lint exited ${code} (operational failure) — not a burn-down datum, failing the job"
+            exit 1
+          fi
+
+          n=$(grep -c '^VERDICT: FAIL$' "$RUNNER_TEMP/fleet-lint.out" || true)
+          total=$(grep -c '^== ' "$RUNNER_TEMP/fleet-lint.out" || true)
+          if [ "$total" -eq 0 ]; then
+            echo "::error::fleet lint selected zero spec files — the counter would be meaningless, failing the job"
+            exit 1
+          fi
+          line="FLEET-LINT: ${n}/${total} files failing agent-spec contract"
+          echo "$line"
+          echo "$line" >> "$GITHUB_STEP_SUMMARY"
