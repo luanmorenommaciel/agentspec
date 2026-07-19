@@ -104,7 +104,7 @@ verdict output goes to stdout.
     block, or a frontmatter block that is not valid YAML or not a mapping, is
     an operational ERROR (exit 2) — LOUD, never a silent pass.
   - **Directory walk**: recurses into subdirectories, so a category tree
-    (e.g. `plugin/agents/<pod>/*.md`) lints as one fleet in a single run. It
+    (e.g. `plugin/agents/<category>/*.md`) lints as one fleet in a single run. It
     selects every `.yaml`, `.yml`, and `.md` file. Files named exactly
     `README.md`, or whose name starts with `_` (scaffolding/templates), are
     excluded and reported once in a single `skipped (non-spec): ...` summary

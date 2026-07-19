@@ -110,7 +110,7 @@ def _lint_dir(path: Path) -> dict[str, Verdict]:
     """Lint every `.yaml`/`.yml`/`.md` spec file under `path`, keyed by its
     path relative to it.
 
-    Walks subdirectories, so a category tree (e.g. `plugin/agents/<pod>/*.md`)
+    Walks subdirectories, so a category tree (e.g. `plugin/agents/<category>/*.md`)
     lints as one fleet in a single run. Files named exactly `README.md`, or
     whose name starts with `_` (scaffolding/templates), are excluded from
     linting; they are reported once in a single summary line so the exclusion

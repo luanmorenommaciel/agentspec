@@ -27,7 +27,7 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
     hrule in the body *after* the real closing fence is left untouched.
 
     Returns ``(None, text)`` when no frontmatter block is structurally
-    present — the text does not open with a standalone ``---`` fence, or no
+    present — the text does not open with a ``---``-prefixed line, or no
     closing fence follows. That is the ordinary "no spec attached" case.
 
     Diverges from spec-judge once an opening AND closing fence are both
