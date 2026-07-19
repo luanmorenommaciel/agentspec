@@ -10,6 +10,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   install-runtime:
     name: Install runtime simulation
@@ -229,9 +232,11 @@ jobs:
 
       # Report-only burn-down counter, NOT a blocking gate: the reference
       # contract (tools/spec-linter's agent-spec contract) is failed by all 58
-      # agents today. Flips to a blocking check at zero (issue #79). An
-      # operational bug (exit 2) is never a burn-down datum, so that alone
-      # fails this job.
+      # agents today. Flips to a blocking check at zero (issue #79). Only PASS
+      # (0) and FAIL (1) are burn-down data — any other exit (2 operational,
+      # 126/127 broken wrapper, crashes) fails this job, and so does an empty
+      # file set: a counter that could read 0/0 on a broken run would fake the
+      # very milestone #79 waits for.
       - name: Run the Linter across the agent fleet
         run: |
           set -uo pipefail
@@ -240,13 +245,17 @@ jobs:
           code="${PIPESTATUS[0]}"
           set -e
 
-          if [ "$code" -eq 2 ]; then
-            echo "::error::spec-lint returned 2 (operational error) — not a burn-down datum, failing the job"
+          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
+            echo "::error::spec-lint exited ${code} (operational failure) — not a burn-down datum, failing the job"
             exit 1
           fi
 
           n=$(grep -c '^VERDICT: FAIL$' "$RUNNER_TEMP/fleet-lint.out" || true)
           total=$(grep -c '^== ' "$RUNNER_TEMP/fleet-lint.out" || true)
+          if [ "$total" -eq 0 ]; then
+            echo "::error::fleet lint selected zero spec files — the counter would be meaningless, failing the job"
+            exit 1
+          fi
           line="FLEET-LINT: ${n}/${total} files failing agent-spec contract"
           echo "$line"
           echo "$line" >> "$GITHUB_STEP_SUMMARY"
