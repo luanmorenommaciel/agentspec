@@ -72,7 +72,8 @@ jobs:
           shellcheck -S warning \
             build-plugin.sh \
             .claude/skills/visual-explainer/scripts/share.sh \
-            plugin-extras/scripts/init-workspace.sh
+            plugin-extras/scripts/init-workspace.sh \
+            scripts/bump.sh
 
   spec-linter:
     name: Spec-linter component tests

@@ -1,0 +1,27 @@
+name: bump-gate
+# PR gate: a shipped (plugin/ + .claude-plugin/) change must carry a version > main
+# when targeting main, or an unchanged version vs main when targeting develop
+# (see scripts/bump.sh for the full doctrine). Validate-only — never writes.
+# The `no-release` label waives it (dormant — the label does not exist yet).
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  bump-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # need full history to compare against origin/main
+      - name: Enforce the version-bump doctrine
+        env:
+          HAS_NO_RELEASE: ${{ contains(github.event.pull_request.labels.*.name, 'no-release') }}
+        run: bash scripts/bump.sh --check
+        # GITHUB_BASE_REF is set automatically on pull_request events (main or
+        # develop here, per the `branches:` filter above) — scripts/bump.sh reads
+        # it directly, so no --base-ref flag is passed.
