@@ -48,10 +48,10 @@ _plugin_json_version_at() {  # <git-ref> — plugin.json's "version" as of that 
   git show "${1}:${PLUGIN_JSON}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])'
 }
 
-# --- semver (pure bash, portable — ported from the reference gate) ---
-require_semver() {  # accept only plain X.Y.Z integers — fail fast on pre-release/build suffixes
-  printf '%s' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
-    || die "version '$1' is not plain X.Y.Z (pre-release/build suffixes unsupported)"
+# --- semver (pure bash, portable) ---
+require_semver() {  # accept only plain X.Y.Z integers — no leading zeros, no pre-release/build suffixes
+  printf '%s' "$1" | grep -Eq '^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){2}$' \
+    || die "version '$1' is not plain X.Y.Z (leading zeros and pre-release/build suffixes unsupported)"
 }
 semver_gt() {  # "is A > B ?" -> exit 0 if yes
   local aM aN aP bM bN bP
@@ -93,8 +93,8 @@ check_manifests_agree() {
 
   if [ "${#mismatched[@]}" -gt 0 ]; then
     local joined
-    joined="$(IFS='; '; echo "${mismatched[*]}")"
-    die "manifest version mismatch — $PLUGIN_JSON says $canonical but ${joined}"
+    joined="$(printf '; %s' "${mismatched[@]}")"
+    die "manifest version mismatch — $PLUGIN_JSON says $canonical but ${joined:2}"
   fi
 
   printf '%s' "$canonical"
