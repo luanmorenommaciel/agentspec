@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Runs are branch-isolated (`feat/auto-*`) with per-phase checkpoint commits; Ship archives before `/create-pr` so one PR carries code + docs + archive
   - `WORKFLOW_CONTRACTS.yaml` 3.6.0: additive `autopilot:` block (entrypoints, RUN REPORT artifact, gates consumed, invariants) — no existing sensor or phase contract modified
   - Docs: `docs/getting-started/autopilot.md` + reference catalog entries; tests: `tests/test_autopilot_runner.py` with a stubbed `claude` on PATH + canonical intent fixture pair
+- **`rollout-agentspec` skill (repo-local)** — natural-language entrypoint for rolling out AgentSpec to the vendored consuming repos: drives `scripts/rollout-agentspec.sh` through fresh payload build → dry-run plan review → user-confirmed `--apply` (automatic backups) → verification → rollback guidance. Targets are machine-specific and live in the gitignored `.agentspec-rollout-targets` at the repo root — never hardcoded, never committed.
 
 ### Fixed
 

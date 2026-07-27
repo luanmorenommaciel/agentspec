@@ -6,7 +6,7 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 32 commands, 24 KB domains, and 21 skills (17 distributed in the plugin + 4 repo-local).
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 32 commands, 24 KB domains, and 22 skills (17 distributed in the plugin + 5 repo-local).
 
 **Component model (canonical: `.claude/kb/shared/component-model.md`):**
 
@@ -46,12 +46,13 @@ agentspec/
 │   │   ├── review/          # Review commands (2)
 │   │   └── visual-explainer/ # Visual documentation commands (8)
 │   │
-│   ├── skills/              # 20 source skills: sdd-* phase skills + sdd-workflow umbrella
+│   ├── skills/              # 21 source skills: sdd-* phase skills + sdd-workflow umbrella
 │   │   │                    #   + sdd-autopilot (single-source /auto gate policy),
 │   │   │                    #   GitHub trio (github-cr-adr/-issue, github-post-issue),
 │   │   │                    #   authoring (component-model, create-skill*, create-agent*),
 │   │   │                    #   kb-build, visuals (visual-explainer, excalidraw-diagram),
-│   │   │                    #   agent-router, team comms (meeting-analysis*, standup-report*)
+│   │   │                    #   agent-router, team comms (meeting-analysis*, standup-report*),
+│   │   │                    #   rollout-agentspec* (vendored-install rollout SOP)
 │   │   │                    #   (* = repo-local, excluded from the plugin; see docs/reference)
 │   │
 │   ├── sdd/                 # SDD framework
@@ -283,6 +284,7 @@ Data engineering example:
 | `.claude/skills/create-skill/` · `create-agent/` · `kb-build/` | Authoring SOPs: new skills and agents (repo-local; create-skill defers to upstream `skill-creator`), high-assurance KB domains |
 | `.claude/skills/sdd-*/` | Per-phase SDD methodology (brainstorm, define, design, build, ship, iterate) — loaded by the thin phase agents and commands; `sdd-workflow` is the umbrella; `sdd-autopilot` is the single-source gate policy behind `/auto` and `scripts/autopilot.sh` |
 | `.claude/skills/meeting-analysis/` · `standup-report/` | Team communication: transcript analysis, daily standup (repo-local — excluded from the distributed plugin via `REPO_LOCAL_SKILLS` in `build-plugin.sh`) |
+| `.claude/skills/rollout-agentspec/` | Vendored-install rollout (repo-local): drives `scripts/rollout-agentspec.sh` through dry-run → confirm → `--apply` → verify → rollback; targets live in the gitignored `.agentspec-rollout-targets` |
 
 ---
 
