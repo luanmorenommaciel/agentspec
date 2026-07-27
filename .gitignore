@@ -14,6 +14,9 @@ Thumbs.db
 # AgentSpec session-specific files
 .claude/sdd/.detected-stack.md
 
+# Rollout targets — machine-specific private repo paths, never committed
+.agentspec-rollout-targets
+
 # Python
 __pycache__/
 *.py[cod]

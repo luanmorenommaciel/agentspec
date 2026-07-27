@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Autopilot V0 (`/auto` + headless runner)** — one stated intent executes the full SDD workflow autonomously (self-answering Brainstorm → Define → Design → Build → Ship → open PR), with the existing quality gates deciding proceed/retry/abort; the run never waits for a human:
+  - `/auto "<intent>"` command (`.claude/commands/workflow/auto.md`) with opt-out flags `--no-brainstorm`, `--no-judge`, `--no-ship`, `--no-pr`, `--max-iterations N`
+  - `sdd-autopilot` skill — the single source of gate policy: intent gate (clarity < 12/15 aborts with a gap report), lint gate (exit 1 → 1 bounded regeneration; exit 2 → visible skip), judge gate (spec-judge standard tier after each lint PASS per ADR-003 `runs_after`; WARN feeds 1 refinement; exits 2/3/4 → visible skip), build gate (existing `retry_limit: 3`), pre-ship checklist gate
+  - `AUTOPILOT_RUN_{FEATURE}.md` written on every run (success or abort) from the new `AUTOPILOT_RUN_TEMPLATE.md` — gate ledger, autonomous decisions, budget accounting, gap report; the report doubles as the run's resume state (re-running `/auto` continues from the last approved gate, regenerating nothing already approved)
+  - `plugin-extras/scripts/autopilot.sh` — policy-free headless entrypoint (CI/cron): preflight, one `claude -p '/auto …'` invocation, exit-code mapping from the RUN REPORT, best-effort OS/webhook notification
+  - Runs are branch-isolated (`feat/auto-*`) with per-phase checkpoint commits; Ship archives before `/create-pr` so one PR carries code + docs + archive
+  - `WORKFLOW_CONTRACTS.yaml` 3.6.0: additive `autopilot:` block (entrypoints, RUN REPORT artifact, gates consumed, invariants) — no existing sensor or phase contract modified
+  - Docs: `docs/getting-started/autopilot.md` + reference catalog entries; tests: `tests/test_autopilot_runner.py` with a stubbed `claude` on PATH + canonical intent fixture pair
+
 ### Fixed
 
 - **Marketplace install path now works end-to-end** (#18) — `claude plugin marketplace add luanmorenommaciel/agentspec` previously returned HTTP 404 because the resolver fetches `.claude-plugin/marketplace.json` from the repository root, but the manifest only existed under `plugin/.claude-plugin/`:

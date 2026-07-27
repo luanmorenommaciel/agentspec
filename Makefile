@@ -72,7 +72,8 @@ lint: ## Lint shell scripts via shellcheck (skips gracefully if not installed)
 		shellcheck -S warning \
 			build-plugin.sh \
 			.claude/skills/visual-explainer/scripts/share.sh \
-			plugin-extras/scripts/init-workspace.sh; \
+			plugin-extras/scripts/init-workspace.sh \
+			plugin-extras/scripts/autopilot.sh; \
 	else \
 		echo "shellcheck not installed — brew install shellcheck"; \
 		exit 0; \

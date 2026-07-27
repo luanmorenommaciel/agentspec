@@ -2,9 +2,9 @@
 
 Complete catalog of commands, agents, KB domains, templates, and configuration.
 
-## Slash Commands (31 total)
+## Slash Commands (32 total)
 
-### Workflow Commands (7)
+### Workflow Commands (8)
 
 | Command | Purpose | Input | Output |
 |---------|---------|-------|--------|
@@ -15,6 +15,7 @@ Complete catalog of commands, agents, KB domains, templates, and configuration.
 | `/ship` | Archive completed work (Phase 4) | DEFINE file path | `SHIPPED_{DATE}.md` |
 | `/iterate` | Update any phase document | File path + change description | Updated document + cascades |
 | `/create-pr` | Create pull request | Optional title, `--draft`, `--review` | GitHub PR |
+| `/auto` | Execute the full workflow autonomously (Phases 0-4 + PR); gates decide proceed/retry/abort | Intent string, or feature name to resume | `AUTOPILOT_RUN_{FEATURE}.md` + open PR (or abort with gap report) |
 
 ### Data Engineering Commands (8)
 
@@ -285,7 +286,7 @@ All templates live in `.claude/kb/_templates/`:
 
 ---
 
-## Skills (15 core + 1 plugin-only + 4 repo-local)
+## Skills (16 core + 1 plugin-only + 4 repo-local)
 
 Skills are reusable capability packs in `.claude/skills/` that provide templates, references, and scripts for specialized generation tasks.
 
@@ -306,6 +307,7 @@ Skills are reusable capability packs in `.claude/skills/` that provide templates
 | `sdd-build` | Phase 3 methodology — task extraction, delegation, verification, build report | Loaded by build-agent + `/build` |
 | `sdd-ship` | Phase 4 methodology — completion verification, archival, lessons learned | Loaded by ship-agent + `/ship` |
 | `sdd-iterate` | Cross-phase methodology — change classification, cascade analysis, version tracking | Loaded by iterate-agent + `/iterate` |
+| `sdd-autopilot` | Autonomous full-workflow gate policy — proceed/retry/abort rules, auto-mode conduct overrides, resume protocol, RUN REPORT obligations | Loaded by `/auto` + `scripts/autopilot.sh` |
 
 ### Repo-Local Skills (not distributed)
 

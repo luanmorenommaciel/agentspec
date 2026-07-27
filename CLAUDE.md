@@ -6,7 +6,7 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 31 commands, 24 KB domains, and 20 skills (16 distributed in the plugin + 4 repo-local).
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 32 commands, 24 KB domains, and 21 skills (17 distributed in the plugin + 4 repo-local).
 
 **Component model (canonical: `.claude/kb/shared/component-model.md`):**
 
@@ -38,15 +38,16 @@ agentspec/
 │   │   ├── dev/             # 4 developer tools & productivity
 │   │   └── workflow/        # 6 SDD phase agents
 │   │
-│   ├── commands/            # 31 slash commands
-│   │   ├── workflow/        # SDD commands (7)
+│   ├── commands/            # 32 slash commands
+│   │   ├── workflow/        # SDD commands (8, incl. /auto autopilot)
 │   │   ├── data-engineering/ # DE commands (8)
 │   │   ├── core/            # Utility commands (5)
 │   │   ├── knowledge/       # KB commands (1)
 │   │   ├── review/          # Review commands (2)
 │   │   └── visual-explainer/ # Visual documentation commands (8)
 │   │
-│   ├── skills/              # 19 source skills: sdd-* phase skills + sdd-workflow umbrella,
+│   ├── skills/              # 20 source skills: sdd-* phase skills + sdd-workflow umbrella
+│   │   │                    #   + sdd-autopilot (single-source /auto gate policy),
 │   │   │                    #   GitHub trio (github-cr-adr/-issue, github-post-issue),
 │   │   │                    #   authoring (component-model, create-skill*, create-agent*),
 │   │   │                    #   kb-build, visuals (visual-explainer, excalidraw-diagram),
@@ -55,7 +56,7 @@ agentspec/
 │   │
 │   ├── sdd/                 # SDD framework
 │   │   ├── architecture/    # WORKFLOW_CONTRACTS.yaml, ARCHITECTURE.md
-│   │   ├── templates/       # 5 document templates (DE-aware)
+│   │   ├── templates/       # 6 document templates (DE-aware)
 │   │   ├── features/        # Active development
 │   │   ├── reports/         # Build reports
 │   │   └── archive/         # Shipped features
@@ -98,7 +99,7 @@ agentspec/
 │   ├── .claude-plugin/      # Plugin manifest + marketplace config
 │   ├── agents/              # Copied + path-rewritten agents
 │   ├── commands/            # Copied + path-rewritten commands
-│   ├── skills/              # 16 skills (15 from .claude/ + 1 plugin-only; repo-local excluded)
+│   ├── skills/              # 17 skills (16 from .claude/ + 1 plugin-only; repo-local excluded)
 │   ├── kb/                  # Copied KB domains
 │   ├── sdd/                 # Templates + architecture (no features/reports/archive)
 │   ├── hooks/               # SessionStart workspace init
@@ -107,7 +108,7 @@ agentspec/
 ├── plugin-extras/           # Plugin-only content (merged into plugin/ by build)
 │   ├── skills/              # data-engineering-guide
 │   ├── hooks/               # hooks.json
-│   └── scripts/             # init-workspace.sh
+│   └── scripts/             # init-workspace.sh, autopilot.sh (headless /auto runner)
 │
 ├── Makefile                 # Developer entry point — `make help` lists all targets
 ├── build-plugin.sh          # Builds plugin/ from .claude/ (invokes scripts/generate-agent-router.py)
@@ -171,6 +172,7 @@ Data engineering example:
 | Create CLAUDE.md.template | Pending | Template for user projects |
 | Judge Layer V0 (`/judge`) | Done | OpenRouter cross-model second opinion with budget ledger |
 | `--judge` flag on phase commands | Done | Inline cross-model verification on `/define`, `/design`, `/build` |
+| Autopilot V0 (`/auto` + headless runner) | Done | Full SDD workflow from one intent; gates decide, never a human (archived 2026-07-27) |
 | Judge Layer V1+ | Planned | Multi-model ensemble, PostToolUse hook, automated escalation |
 | Flag System (progressive enhancement) | Planned | Unified flag vocabulary across phase commands |
 | Add telemetry | Planned | Local usage tracking |
@@ -204,10 +206,11 @@ Data engineering example:
 
 ## Commands Available
 
-### SDD Workflow (7)
+### SDD Workflow (8)
 
 | Command | Purpose |
 |---------|---------|
+| `/auto` | Full workflow autonomously from one intent (Autopilot) |
 | `/brainstorm` | Explore ideas (Phase 0) |
 | `/define` | Capture requirements (Phase 1) |
 | `/design` | Create architecture (Phase 2) |
@@ -278,7 +281,7 @@ Data engineering example:
 | `.claude/skills/github-cr-adr/` · `github-cr-issue/` · `github-post-issue/` | GitHub workflow trio: draft ADRs/issues → guarded publish + curation (ephemeral drafts in `.claude/sdd/drafts/`) |
 | `.claude/skills/component-model/` + `.claude/kb/shared/component-model.md` | The layer-decision skill + the canonical component model it operationalizes |
 | `.claude/skills/create-skill/` · `create-agent/` · `kb-build/` | Authoring SOPs: new skills and agents (repo-local; create-skill defers to upstream `skill-creator`), high-assurance KB domains |
-| `.claude/skills/sdd-*/` | Per-phase SDD methodology (brainstorm, define, design, build, ship, iterate) — loaded by the thin phase agents and commands; `sdd-workflow` is the umbrella |
+| `.claude/skills/sdd-*/` | Per-phase SDD methodology (brainstorm, define, design, build, ship, iterate) — loaded by the thin phase agents and commands; `sdd-workflow` is the umbrella; `sdd-autopilot` is the single-source gate policy behind `/auto` and `scripts/autopilot.sh` |
 | `.claude/skills/meeting-analysis/` · `standup-report/` | Team communication: transcript analysis, daily standup (repo-local — excluded from the distributed plugin via `REPO_LOCAL_SKILLS` in `build-plugin.sh`) |
 
 ---
