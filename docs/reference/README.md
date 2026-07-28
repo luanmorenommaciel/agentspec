@@ -286,7 +286,7 @@ All templates live in `.claude/kb/_templates/`:
 
 ---
 
-## Skills (16 core + 1 plugin-only + 5 repo-local)
+## Skills (17 core + 1 plugin-only + 5 repo-local)
 
 Skills are reusable capability packs in `.claude/skills/` that provide templates, references, and scripts for specialized generation tasks.
 
@@ -308,6 +308,7 @@ Skills are reusable capability packs in `.claude/skills/` that provide templates
 | `sdd-ship` | Phase 4 methodology — completion verification, archival, lessons learned | Loaded by ship-agent + `/ship` |
 | `sdd-iterate` | Cross-phase methodology — change classification, cascade analysis, version tracking | Loaded by iterate-agent + `/iterate` |
 | `sdd-autopilot` | Autonomous full-workflow gate policy — proceed/retry/abort rules, auto-mode conduct overrides, resume protocol, RUN REPORT obligations | Loaded by `/auto` + `scripts/autopilot.sh` |
+| `specialist-autoprovision` | Citation-based specialist-gap sensor + JIT provisioning sub-flow (layer gate → SOP authoring → hygiene grep → router regeneration → citation verification); loud status-quo degradation, never silent | Hooked by `sdd-design` Step 4.5 + `sdd-build` delegation safety net; Gate P in `sdd-autopilot` |
 
 ### Repo-Local Skills (not distributed)
 

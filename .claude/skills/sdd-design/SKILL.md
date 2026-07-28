@@ -153,6 +153,16 @@ Discover specialists, then list every file the build will create or modify:
 
 Every file gets an agent or an explicit `(general)` fallback. Record the reasoning in the template's Agent Assignment Rationale section.
 
+#### Step 4.5: Resolve every assignment against the inventory (specialist-autoprovision)
+
+Before finalizing the manifest, load `.claude/skills/specialist-autoprovision/SKILL.md` and apply its citation rule to every row:
+
+- Row cites a `routing.json` agent entry (name + `kb_domains`/description signal) → resolved.
+- Row cites a covering skill → resolved as `(general)` with that skill loaded.
+- No citation possible → GAP: run the skill's provisioning sub-flow; the manifest finalizes only after the new component's citation verifies.
+
+Record every citation in the Agent Assignment Rationale table; record every provisioning event per the skill's provenance shape. That skill owns the match semantics and sub-flow; this step only invokes it.
+
 ### Step 5: Define Code Patterns
 
 1. Load patterns from the KB domains
@@ -215,6 +225,7 @@ PRE-FLIGHT CHECK
 ├─ [ ] At least one decision with full rationale (inline ADR)
 ├─ [ ] Complete file manifest (all files listed)
 ├─ [ ] Agent assigned to each file (or marked general)
+├─ [ ] Every manifest row carries a citation — gaps resolved via specialist-autoprovision
 ├─ [ ] Code patterns are syntactically correct and copy-paste ready
 ├─ [ ] Testing strategy covers acceptance tests
 ├─ [ ] No shared dependencies across deployable units

@@ -164,6 +164,15 @@ Has @agent-name in manifest?
          • Handle errors locally
 ```
 
+### Safety net — unresolvable `@agent` (specialist-autoprovision)
+
+When a manifest `@agent-name` does not resolve against the router inventory at
+delegation time (design→build drift), never fail on it and never fall back
+silently: load `${CLAUDE_PLUGIN_ROOT}/skills/specialist-autoprovision/SKILL.md` and run its
+provisioning sub-flow. Delegation proceeds only after the new specialist's
+citation verifies, or degrades to `(general)` + WARN per that skill's
+degradation rules. The skill owns the methodology; this branch only invokes it.
+
 ### Delegation protocol
 
 1. Extract the agent name from the manifest

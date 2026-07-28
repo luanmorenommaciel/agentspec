@@ -61,6 +61,7 @@ it and abort rather than creating a second feature identity.
 | **0 — Intent** | clarity score (sdd-define) | ≥ 12/15 → proceed | none — fail-fast | 0 | < 12/15 → ABORT with gap report | n/a (model-computed) |
 | **L — Lint** | `tools/spec-linter/spec-lint <artifact> --phase <phase>` exit code | 0 → proceed | exit 1 → regenerate the document once with the violations in context, re-lint | 1 per document | second exit 1 → ABORT, violations in report | exit 2, or CLI not executable → VISIBLE SKIP row, proceed — never assume PASS |
 | **J — Judge** | `tools/spec-judge/spec-judge <artifact> --spec <ephemeral spec> --tier standard` exit code | 0 with PASS → proceed | 0 with WARN → one refinement incorporating every finding verbatim, re-judge, then proceed regardless (standard tier is WARN-capped by construction) | 1 per document | none reachable at standard tier | exit 2 (config) / 3 (budget) / 4 (network), or CLI not executable → VISIBLE SKIP row with the code named, proceed |
+| **P — Provision** | specialist-autoprovision citation check after `scripts/generate-agent-router.py` regeneration (sub-flow owned by that skill; sensor contract: the `create-agent` parser contract) | new component citable in the oracle, core checklist items pass → proceed | authoring/validation failure → regenerate the component once with the violations in context | 1 per gap | budget exhausted → ABORT, gap report names the domain, attempts, failing checks | script not executable / oracle unreadable → VISIBLE SKIP row, fall back to `(general)` + WARN — never assume PASS |
 | **B — Build** | sdd-build per-file verification + BUILD_REPORT completeness | report shows 100% tasks complete, tests passing | per-file fix-and-retry (sdd-build owns it) | 3 per file | incomplete report after retries → ABORT, failed tasks listed | n/a |
 | **S — Ship** | pre-ship checklist (`WORKFLOW_CONTRACTS.yaml` → `ship.pre_ship_checklist`) | all 4 items pass | none | 0 | any unmet item → ABORT, item named | n/a |
 | **PR** | `/create-pr` outcome | PR URL returned | none | 0 | failure → terminal status **⚠ Partial Success**, exact manual command in report | n/a |
@@ -121,6 +122,7 @@ Phase skills assume an interactive user. Under autopilot, these overrides apply 
 | Define | Clarity < 12 → targeted `AskUserQuestion` rounds | Clarity < 12 → **Gate 0 ABORT**. No gap-filling questions, no padding entities to reach the gate — a fabricated requirement is worse than an abort |
 | Design | Open questions may go back to the user | Every open question becomes an inline ADR with the chosen default and an `[ASSUMED]` marker; confidence < 0.80 on a decision adds a WARN row to the ledger |
 | Build | Already decide-never-ask | Unchanged. CRITICAL-risk halt maps to ABORT-with-report (the halt is preserved; only the reporting surface changes) |
+| Provisioning (within Design/Build) | The specialist-autoprovision layer fork may ask once at the component-model gate | Assume skill + thin executor, record `[ASSUMED]`; Gate P governs proceed/retry/abort |
 | Ship | Minor issues → ask user (0.80 confidence branch) | Checklist is binding and mechanical: all 4 items pass → proceed; any unmet item → ABORT. The 0.80 "ask" branch maps to: record a WARN ledger row and proceed **iff** the checklist itself passes |
 
 Every self-answered question and every `[ASSUMED]` marker is mirrored into the RUN REPORT's Autonomous Decisions table — the run is reviewable after the fact precisely because it never asked during.
@@ -183,4 +185,5 @@ The RUN REPORT is the authoritative record; notifications are conveniences.
 - Report template: `.claude/sdd/templates/AUTOPILOT_RUN_TEMPLATE.md`
 - Sensor contracts: `.claude/sdd/architecture/WORKFLOW_CONTRACTS.yaml` (`contract_enforcement`, `behavioral_enforcement`, `build.execution`, `ship.pre_ship_checklist`) · `tools/spec-linter/USAGE.md` · `tools/spec-judge/USAGE.md`
 - Phase methodologies: `.claude/skills/sdd-brainstorm|define|design|build|ship/SKILL.md`
+- Provisioning methodology (Gate P's sub-flow): `.claude/skills/specialist-autoprovision/SKILL.md`
 - Design rationale: `.claude/sdd/features/DESIGN_AUTOPILOT.md` (Decisions 1–6)

@@ -6,7 +6,7 @@
 
 ## Project Context
 
-**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 32 commands, 24 KB domains, and 22 skills (17 distributed in the plugin + 5 repo-local).
+**What is AgentSpec?** A Claude Code plugin that provides structured AI-assisted development through a 5-phase SDD workflow, specialized for data engineering with 58 agents, 32 commands, 24 KB domains, and 23 skills (18 distributed in the plugin + 5 repo-local).
 
 **Component model (canonical: `.claude/kb/shared/component-model.md`):**
 
@@ -46,8 +46,9 @@ agentspec/
 │   │   ├── review/          # Review commands (2)
 │   │   └── visual-explainer/ # Visual documentation commands (8)
 │   │
-│   ├── skills/              # 21 source skills: sdd-* phase skills + sdd-workflow umbrella
+│   ├── skills/              # 22 source skills: sdd-* phase skills + sdd-workflow umbrella
 │   │   │                    #   + sdd-autopilot (single-source /auto gate policy),
+│   │   │                    #   specialist-autoprovision (JIT specialist-gap provisioning),
 │   │   │                    #   GitHub trio (github-cr-adr/-issue, github-post-issue),
 │   │   │                    #   authoring (component-model, create-skill*, create-agent*),
 │   │   │                    #   kb-build, visuals (visual-explainer, excalidraw-diagram),
@@ -100,7 +101,7 @@ agentspec/
 │   ├── .claude-plugin/      # Plugin manifest + marketplace config
 │   ├── agents/              # Copied + path-rewritten agents
 │   ├── commands/            # Copied + path-rewritten commands
-│   ├── skills/              # 17 skills (16 from .claude/ + 1 plugin-only; repo-local excluded)
+│   ├── skills/              # 18 skills (17 from .claude/ + 1 plugin-only; repo-local excluded)
 │   ├── kb/                  # Copied KB domains
 │   ├── sdd/                 # Templates + architecture (no features/reports/archive)
 │   ├── hooks/               # SessionStart workspace init
@@ -283,6 +284,7 @@ Data engineering example:
 | `.claude/skills/component-model/` + `.claude/kb/shared/component-model.md` | The layer-decision skill + the canonical component model it operationalizes |
 | `.claude/skills/create-skill/` · `create-agent/` · `kb-build/` | Authoring SOPs: new skills and agents (repo-local; create-skill defers to upstream `skill-creator`), high-assurance KB domains |
 | `.claude/skills/sdd-*/` | Per-phase SDD methodology (brainstorm, define, design, build, ship, iterate) — loaded by the thin phase agents and commands; `sdd-workflow` is the umbrella; `sdd-autopilot` is the single-source gate policy behind `/auto` and `scripts/autopilot.sh` |
+| `.claude/skills/specialist-autoprovision/` | Citation-based specialist-gap sensor + JIT provisioning sub-flow — hooked by `sdd-design` (Step 4.5) and `sdd-build` (delegation safety net); autonomous policy is Gate P in `sdd-autopilot` |
 | `.claude/skills/meeting-analysis/` · `standup-report/` | Team communication: transcript analysis, daily standup (repo-local — excluded from the distributed plugin via `REPO_LOCAL_SKILLS` in `build-plugin.sh`) |
 | `.claude/skills/rollout-agentspec/` | Vendored-install rollout (repo-local): drives `scripts/rollout-agentspec.sh` through dry-run → confirm → `--apply` → verify → rollback; targets live in the gitignored `.agentspec-rollout-targets` |
 
