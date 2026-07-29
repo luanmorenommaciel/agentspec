@@ -1,0 +1,7 @@
+# Arquivos gerados pelos scripts do Pod D3 (mudam a cada sign novo).
+# Comitar so o codigo dos scripts em `scripts/`, nao os artefatos.
+manifest.json
+manifest.sigstore.json
+
+# Se aparecerem outros bundles Sigstore no futuro, ja ignora
+*.sigstore.json
