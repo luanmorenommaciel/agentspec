@@ -29,6 +29,9 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
     Returns ``(None, text)`` when no frontmatter block is structurally
     present — the text does not open with a ``---``-prefixed line, or no
     closing fence follows. That is the ordinary "no spec attached" case.
+    A leading UTF-8 byte-order mark is ignored: ``str.lstrip()`` does not
+    strip ``\\ufeff``, so a BOM-prefixed artifact must not read as
+    "no frontmatter".
 
     Diverges from spec-judge once an opening AND closing fence are both
     present: if the enclosed YAML fails to parse, or parses to something
@@ -36,7 +39,7 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
     falling back to ``(None, text)``. A present-but-broken block must surface
     loudly, not read as "no frontmatter".
     """
-    stripped = text.lstrip()
+    stripped = text.removeprefix("\ufeff").lstrip()
     if not stripped.startswith("---"):
         return None, text
     parts = _FENCE.split(stripped, maxsplit=2)

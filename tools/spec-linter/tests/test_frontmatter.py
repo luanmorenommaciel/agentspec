@@ -46,6 +46,14 @@ def test_body_hrule_after_the_closing_fence_is_left_untouched() -> None:
     assert body == "Before the rule.\n---\nAfter the rule.\n"
 
 
+def test_bom_prefixed_frontmatter_is_parsed() -> None:
+    # `str.lstrip()` does not strip U+FEFF, so without explicit handling a
+    # BOM-prefixed artifact would silently read as "no frontmatter".
+    frontmatter, body = split_frontmatter("\ufeff---\nid: x\n---\nBody.\n")
+    assert frontmatter == {"id": "x"}
+    assert body == "Body.\n"
+
+
 def test_no_leading_fence_returns_none_mapping() -> None:
     text = "# Just a heading\n\nNo frontmatter here.\n"
     frontmatter, body = split_frontmatter(text)

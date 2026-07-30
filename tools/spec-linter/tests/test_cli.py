@@ -97,7 +97,8 @@ def test_duplicate_id_across_dir_is_fail(tmp_path: Path, valid_spec: dict[str, A
     _write_spec(tmp_path / "a.yaml", valid_spec)
     _write_spec(tmp_path / "b.yaml", valid_spec)  # same id in both files
 
-    verdicts = cli._lint_dir(tmp_path)
+    verdicts, errors = cli._lint_dir(tmp_path)
+    assert errors == {}
     assert set(verdicts) == {"a.yaml", "b.yaml"}
     for name in ("a.yaml", "b.yaml"):
         assert verdicts[name].level == Level.FAIL
@@ -146,11 +147,84 @@ def test_dir_lint_walks_subdirectories(
     assert "OVERALL: PASS" in out
 
 
+def test_dir_lint_unloadable_file_is_per_file_error_and_rest_still_lints(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    """One damaged spec must not abort the fleet: every other file still prints its
+    verdict, the damaged file gets an ERROR entry under its relative path, and the
+    run reports OVERALL: ERROR with exit 2."""
+    _write_spec(tmp_path / "good.yaml", valid_spec)
+    nested = tmp_path / "pod-a"
+    nested.mkdir()
+    (nested / "notes.md").write_text("# Just a heading\n\nNo frontmatter here.\n")
+    assert cli.main([str(tmp_path)]) == 2
+    out = capsys.readouterr().out
+    assert "== good.yaml ==" in out
+    assert "VERDICT: PASS" in out
+    assert "== pod-a/notes.md ==" in out
+    assert "ERROR: pod-a/notes.md: no YAML frontmatter block found" in out
+    assert "OVERALL: ERROR" in out
+
+
+def test_dir_lint_error_outranks_fail(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    valid_spec["observability"] = None  # loadable mapping, contract FAIL
+    _write_spec(tmp_path / "fail.yaml", valid_spec)
+    (tmp_path / "broken.md").write_text("---\nid: [unterminated\n---\nBody.\n")
+    assert cli.main([str(tmp_path)]) == 2
+    out = capsys.readouterr().out
+    assert "VERDICT: FAIL" in out
+    assert "== broken.md ==" in out
+    assert "OVERALL: ERROR" in out
+
+
+def test_dir_lint_matches_suffixes_case_insensitively(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    _write_md(tmp_path / "AGENT.MD", valid_spec)
+    _write_spec(tmp_path / "SPEC.YAML", {**valid_spec, "id": "another-agent"})
+    assert cli.main([str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "== AGENT.MD ==" in out
+    assert "== SPEC.YAML ==" in out
+    assert "OVERALL: PASS" in out
+
+
+def test_dir_lint_skips_readme_case_insensitively(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    _write_spec(tmp_path / "good.yaml", valid_spec)
+    (tmp_path / "ReadMe.MD").write_text("# Not a spec\n")
+    assert cli.main([str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "skipped (non-spec): ReadMe.MD" in out
+    assert "== ReadMe.MD ==" not in out
+
+
+def test_single_uppercase_md_file_routes_through_frontmatter(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    spec_file = _write_md(tmp_path / "AGENT.MD", valid_spec)
+    assert cli.main([str(spec_file)]) == 0
+    assert "VERDICT: PASS" in capsys.readouterr().out
+
+
+def test_bom_prefixed_md_file_lints_its_frontmatter(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], valid_spec: dict[str, Any]
+) -> None:
+    doc = tmp_path / "agent.md"
+    doc.write_text(f"\ufeff---\n{yaml.safe_dump(valid_spec)}---\n\n# Agent\n\nBody text.\n")
+    assert cli.main([str(doc)]) == 0
+    assert "VERDICT: PASS" in capsys.readouterr().out
+
+
 def test_duplicate_id_across_yaml_and_md(tmp_path: Path, valid_spec: dict[str, Any]) -> None:
     _write_spec(tmp_path / "a.yaml", valid_spec)
     _write_md(tmp_path / "b.md", valid_spec)  # same id in both files
 
-    verdicts = cli._lint_dir(tmp_path)
+    verdicts, errors = cli._lint_dir(tmp_path)
+    assert errors == {}
     assert set(verdicts) == {"a.yaml", "b.md"}
     for name in ("a.yaml", "b.md"):
         assert verdicts[name].level == Level.FAIL
