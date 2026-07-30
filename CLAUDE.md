@@ -19,7 +19,7 @@
 
 New logic goes to the layer that owns it — the `component-model` skill walks the decision; the SDD workflow components are the reference implementation.
 
-**Current Status:** v3.2.0 shipped (Agent Router v2 Phase 1, Judge V0, `--judge` flag, local-first agent overrides). Linear is the project tracker (source of truth).
+**Current Status:** v3.5.0 shipped (spec-linter contract gate, spec-judge behavioral gate, component-model skills suite, marketplace install fix). Linear is the project tracker (source of truth).
 
 ---
 
@@ -285,6 +285,6 @@ Data engineering example:
 
 ## Version
 
-- **Version:** 3.2.0
+- **Version:** 3.5.0
 - **Status:** Release
-- **Last Updated:** 2026-05-19
+- **Last Updated:** 2026-07-30
