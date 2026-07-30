@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "agentspec",
-      "version": "3.2.0",
+      "version": "3.5.0",
       "description": "Spec-Driven Development framework for Data Engineering — 58 agents, 24 KB domains, 5-phase SDD workflow, 31 commands",
       "source": "./",
       "keywords": [
