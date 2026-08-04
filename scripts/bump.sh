@@ -22,6 +22,11 @@
 # doctrine applies; it is not a ref this script diffs against (origin/develop
 # is never fetched or read).
 #
+# When a PR carries a shipped change, the gate additionally asserts that every
+# living documentation surface (README badge, CLAUDE.md status + version block,
+# SECURITY.md supported-versions table) states the same version, and that
+# CHANGELOG.md carries a section for it.
+#
 # Waiver: HAS_NO_RELEASE=true (wired from the `no-release` PR label by the
 # calling workflow) skips the gate entirely. Dormant today — the label does
 # not exist on the board yet.
@@ -99,6 +104,64 @@ check_manifest_version() {
   printf '%s' "$canonical"
 }
 
+# --- documentation version surfaces ---
+# Every living document that states the shipped version. Adding a surface is one
+# row: <path> TAB <python regex with one capture group> TAB <mode> TAB <expected>.
+# mode=first   the first capture must equal <expected>
+# mode=present some capture must equal <expected>
+# Point-in-time artifacts (decks, past release notes) are deliberately excluded —
+# retro-editing them would misrepresent what was presented at the time.
+_surface_rows() {  # <version>
+  local v="$1" minor="${1%.*}"
+  printf '%s\t%s\t%s\t%s\n' \
+    "README.md" '!\[Version\]\(https://img\.shields\.io/badge/v([0-9]+\.[0-9]+\.[0-9]+)-' "first" "$v"
+  printf '%s\t%s\t%s\t%s\n' \
+    "CLAUDE.md" '\*\*Current Status:\*\* v([0-9]+\.[0-9]+\.[0-9]+)' "first" "$v"
+  printf '%s\t%s\t%s\t%s\n' \
+    "CLAUDE.md" '^- \*\*Version:\*\* ([0-9]+\.[0-9]+\.[0-9]+)' "first" "$v"
+  printf '%s\t%s\t%s\t%s\n' \
+    "SECURITY.md" '^\| *([0-9]+\.[0-9]+)\.x *\| *Yes' "first" "$minor"
+  printf '%s\t%s\t%s\t%s\n' \
+    "CHANGELOG.md" '^## \[([0-9]+\.[0-9]+\.[0-9]+)\]' "present" "$v"
+}
+
+_check_surface() {  # <path> <regex> <mode> <expected> — prints a reason on failure
+  python3 - "$1" "$2" "$3" "$4" <<'PY'
+import pathlib, re, sys
+path, pattern, mode, expected = sys.argv[1:5]
+p = pathlib.Path(path)
+if not p.exists():
+    print(f"{path}: not found"); sys.exit(1)
+found = re.findall(pattern, p.read_text(encoding="utf-8"), flags=re.M)
+if not found:
+    print(f"{path}: no version string matched (expected {expected})"); sys.exit(1)
+if mode == "present":
+    if expected not in found:
+        print(f"{path}: no entry for {expected} (has {', '.join(found[:4])})"); sys.exit(1)
+elif found[0] != expected:
+    print(f"{path}: states {found[0]}, expected {expected}"); sys.exit(1)
+PY
+}
+
+# The manifests decide what ships; these documents announce it. A release whose
+# README still advertises the previous version undercuts the release itself, so
+# the gate treats an out-of-date surface as a failure rather than a cosmetic lag.
+check_doc_surfaces() {  # <canonical-version>
+  local failures=() path pattern mode expected reason
+  while IFS=$'\t' read -r path pattern mode expected; do
+    if ! reason="$(_check_surface "$path" "$pattern" "$mode" "$expected")"; then
+      failures+=("$reason")
+    fi
+  done < <(_surface_rows "$1")
+
+  if [ "${#failures[@]}" -gt 0 ]; then
+    local joined
+    joined="$(printf '; %s' "${failures[@]}")"
+    die "version surfaces out of date — ${joined:2}"
+  fi
+  echo "bump: version surfaces agree with $1 (README, CLAUDE.md, SECURITY.md, CHANGELOG)"
+}
+
 check_main_mode() {  # <current-version>
   local cur="$1" base
   if ! shipped_changed; then
@@ -156,5 +219,13 @@ main() {
     develop) check_develop_mode "$cur" ;;
     *) die "unsupported --base-ref '$base_ref' (only main|develop are recognized)" ;;
   esac
+
+  # Documentation surfaces are only asserted when this PR actually ships something.
+  # A docs-only or tooling-only PR is not the place to discover pre-existing drift.
+  if shipped_changed; then
+    check_doc_surfaces "$cur"
+  else
+    echo "bump: no shipped change — version surfaces not checked"
+  fi
 }
 main "$@"
