@@ -45,7 +45,33 @@ Dimensions whose evidence source was not supplied are **omitted, never zeroed**.
 `maturity_conformance` is the one neither sibling can answer: does the artifact's
 content support the maturity level it *declares*?
 
-## Quickstart
+## Run it
+
+Requires Python 3.12 with `pydantic` and `pyyaml`, and the sibling `spec-linter`
+next to this package (`../spec-linter`), whose value objects it reuses by import.
+
+```bash
+# from this directory
+uv venv --python 3.12 .venv
+. .venv/bin/activate
+uv pip install -e '.[dev]'      # pydantic>=2,<3, pyyaml, pytest
+
+pytest -q
+```
+
+> The venv install provides `pydantic`/`pyyaml`/`pytest` but **not** `spec_linter`
+> — it has no published package. It resolves from the sibling `../spec-linter`:
+> the test suite adds it to `sys.path` (see `tests/conftest.py`) and the
+> `spec-score` wrapper puts it on `PYTHONPATH`. Nothing to install for it, but the
+> sibling directory must be present.
+>
+> No `uv`? A plain venv works too: `python3.12 -m venv .venv && . .venv/bin/activate
+> && pip install -e '.[dev]'`.
+
+`spec-score` (the executable wrapper in this directory) is the entry point. It
+resolves an interpreter with the dependencies, puts the sibling `spec-linter` on
+`PYTHONPATH`, and exits 2 with a clear message if either is missing — never a
+silent skip.
 
 ```bash
 # Score an agent spec (YAML mapping, or a .md whose frontmatter is the spec)
@@ -55,8 +81,8 @@ content support the maturity level it *declares*?
 ./spec-score path/to/agent.yaml --kb-index .claude/kb/_index.yaml
 ```
 
-Requires Python 3.12 with `pydantic` and `pyyaml`, and the sibling `spec-linter`
-next to this package (whose value objects it reuses by import).
+`python -m spec_scorer.cli <args>` is equivalent when the interpreter already has
+the dependencies and the sibling on `PYTHONPATH`.
 
 ## Development
 
@@ -64,7 +90,8 @@ next to this package (whose value objects it reuses by import).
 make spec-scorer     # component test suite (offline, deterministic)
 ```
 
-Every test runs offline with zero network and zero model calls — the Scorer has
-no non-deterministic path to mock.
+The `make` target sets `PYTHONPATH` to include the sibling for you. Every test
+runs offline with zero network and zero model calls — the Scorer has no
+non-deterministic path to mock.
 
 See [`USAGE.md`](./USAGE.md) for the operator reference and the exit-code contract.
