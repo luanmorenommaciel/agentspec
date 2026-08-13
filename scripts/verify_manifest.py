@@ -2,7 +2,7 @@
 """
 verify_manifest.py — Verifica que os arquivos batem com o manifest.
 
-Materializa o passo 4 (VERIFICAR) do deck do Carlos, na parte de checagem de
+Materializa o passo 4 (VERIFICAR) do trust layer, na parte de checagem de
 integridade. NAO verifica a assinatura — isso e trabalho do verify_signature.sh
 (que primeiro chama cosign verify-blob, e depois este script pra checar hashes).
 
@@ -40,7 +40,7 @@ def verify(manifest_path: Path) -> int:
     """Executa a verificacao de integridade e imprime o resultado."""
 
     if not manifest_path.is_file():
-        print(f"ERRO: manifest nao encontrado em {manifest_path}", file=sys.stderr)
+        print(f"ERROR: manifest not found at {manifest_path}", file=sys.stderr)
         return 1
 
     with manifest_path.open() as f:
@@ -54,23 +54,23 @@ def verify(manifest_path: Path) -> int:
     # Indice { path: sha256 } pra lookup rapido durante a comparacao.
     listed_map = {entry["path"]: entry["sha256"] for entry in listed_entries}
 
-    modificados = []
-    removidos = []
+    modified = []
+    removed = []
 
     # (1) Percorre o que esta LISTADO no manifest e confere com o disco
     for entry in listed_entries:
         file_on_disk = base_path / entry["path"]
 
         if not file_on_disk.exists():
-            removidos.append(entry["path"])
+            removed.append(entry["path"])
             continue
 
         actual_hash = sha256_of_file(file_on_disk)
         if actual_hash != entry["sha256"]:
-            modificados.append(entry["path"])
+            modified.append(entry["path"])
 
     # (2) Percorre o disco pra ver se ha arquivos NAO listados (backdoor injetado)
-    nao_registrados = []
+    unregistered = []
     if base_path.is_dir():
         for file_on_disk in sorted(base_path.rglob("*")):
             if not file_on_disk.is_file():
@@ -80,42 +80,42 @@ def verify(manifest_path: Path) -> int:
 
             relative = file_on_disk.relative_to(base_path).as_posix()
             if relative not in listed_map:
-                nao_registrados.append(relative)
+                unregistered.append(relative)
 
     # Reporta o resultado
-    total_ok = len(listed_entries) - len(modificados) - len(removidos)
+    total_ok = len(listed_entries) - len(modified) - len(removed)
     print(f"Manifest: {manifest_path}")
-    print(f"  Base:              {base_path}")
-    print(f"  Arquivos listados: {len(listed_entries)}")
-    print(f"  OK:                {total_ok}")
-    print(f"  MODIFICADOS:       {len(modificados)}")
-    print(f"  REMOVIDOS:         {len(removidos)}")
-    print(f"  NAO REGISTRADOS:   {len(nao_registrados)}")
+    print(f"  Base:          {base_path}")
+    print(f"  Files listed:  {len(listed_entries)}")
+    print(f"  OK:            {total_ok}")
+    print(f"  MODIFIED:      {len(modified)}")
+    print(f"  REMOVED:       {len(removed)}")
+    print(f"  UNREGISTERED:  {len(unregistered)}")
 
-    if modificados:
-        print("\nARQUIVOS MODIFICADOS (hash divergiu):")
-        for p in modificados:
+    if modified:
+        print("\nMODIFIED FILES (hash mismatch):")
+        for p in modified:
             print(f"  ~ {p}")
-    if removidos:
-        print("\nARQUIVOS REMOVIDOS (listados no manifest, sumiram do disco):")
-        for p in removidos:
+    if removed:
+        print("\nREMOVED FILES (listed in manifest, missing from disk):")
+        for p in removed:
             print(f"  - {p}")
-    if nao_registrados:
-        print("\nARQUIVOS NAO REGISTRADOS (no disco, ausentes do manifest):")
-        for p in nao_registrados:
+    if unregistered:
+        print("\nUNREGISTERED FILES (on disk, absent from manifest):")
+        for p in unregistered:
             print(f"  + {p}")
 
-    if modificados or removidos or nao_registrados:
-        print("\nFALHA: manifest nao bate com o disco.")
+    if modified or removed or unregistered:
+        print("\nFAILURE: manifest does not match disk.")
         return 1
 
-    print("\nOK: todos batem.")
+    print("\nOK: all files match.")
     return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Verifica integridade dos arquivos contra o manifest (Pod D3 · Trust Layer)."
+        description="Verifica integridade dos arquivos contra o manifest (Trust Layer)."
     )
     parser.add_argument(
         "manifest",

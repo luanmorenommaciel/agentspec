@@ -1,9 +1,8 @@
-# ADR-XXX — Pod D3 Trust Layer V0 (cosign + manifest)
+# ADR-XXX — Trust Layer V0 (cosign + manifest)
 
 > **Status:** Proposed
-> **Author:** Giulia Parede (Pod D3)
 > **Date:** 2026-07-22
-> **Related:** Issue #23 (D3 marketplace/trust-layer spike). Builds on ADR-001 (#31) — the artifact is the source of truth we sign — and on ADR-002 (#54) + ADR-003 (#57), which handle "well-formed?" and "does it honor its contract?"; this ADR closes the outer question of "did this artifact reach the user unchanged, and from whom?". Family peer to the Scorer proposal (2026-07-19, Emerson). Companion PR: `feat/pod-d3-trust-layer-scripts` on `wallgiu/agentspec`.
+> **Related:** Issue #23. Builds on ADR-001 (#31), ADR-002 (#54), and ADR-003 (#57). Family peer to the Scorer proposal.
 
 ---
 
@@ -13,18 +12,16 @@ AgentSpec ships as a Claude Code plugin whose payload is entirely declarative: 5
 
 Git proves history, not integrity at rest. Once the plugin is packaged and pushed to the marketplace, the guarantees git offered on the source repository are gone: consumers install the payload without any mechanical way to verify that (a) the bytes on disk match what the author published, or (b) the publisher is who they claim to be.
 
-The Pod D3 was created in the Crew D internal sync of 2026-05-28 as the "marketplace / trust-layer spike" (issue #23) precisely to close this gap. Its scope was confirmed in Sync 04 with the Commander (2026-06-03) as a V0 based on Sigstore + cosign, deferring portability (npm, non-Claude runtimes) to V1/V2.
+Issue #23 tracks this gap as the "marketplace / trust-layer spike". V0 scope is Sigstore + cosign; portability (npm, non-Claude runtimes) is deferred to V1/V2.
 
-Two implementations have converged during the wave:
+Two implementation shapes converge here:
 
-- **Atomic PoC (2026-06-03, Giulia)** — a single `.md` agent signed via `cosign sign-blob` with keyless OIDC, verified end-to-end against a local checkout. Proved the primitive works and the toolchain is installable without private-key management.
-- **Collective manifest (2026-06-17, Carlos)** — a JSON manifest listing SHA-256 + size for every file under `.claude/agents/data-engineering/`, plus git provenance (commit, branch, dirty), with a single signature covering the whole lot. Proved the primitive scales to a directory without an N× cost in signatures.
+- **Atomic** — a single `.md` agent signed via `cosign sign-blob` with keyless OIDC, verified end-to-end against a local checkout. Proves the primitive works and the toolchain is installable without private-key management.
+- **Collective manifest** — a JSON manifest listing SHA-256 + size for every file under a target directory, plus git provenance (commit, branch, dirty), with a single signature covering the whole lot. Proves the primitive scales to a directory without an N× cost in signatures.
 
-The two coexist by construction, not by accident: they answer different granularity questions. The manifest form was recognized on 2026-06-26 by the Captain, in the formal report to the Commander, as aligning with the "envelope" concept the Commander had raised in Sync 04.
+The two coexist by construction, not by accident: they answer different granularity questions. The collective form is the "envelope" — one signature over N files.
 
-The design was presented in the Crew D sync of 2026-07-15 in a ten-slide deck ("AgentSpec Assinado — Cosign para Integridade de Supply Chain") and approved in principle by the Captain. It has stood without an issue, branch, or PR since then. This ADR is what closes that gap.
-
-The Scorer proposal (2026-07-19, Emerson) sets a precedent worth naming: a component in the enforcement family that is deterministic, off the gating path, symmetric in shape to its siblings. The trust layer proposed here follows the same discipline — it does not judge and does not block runtime, it *verifies*.
+The trust layer follows the same discipline as the Scorer proposal: deterministic, off the gating path, symmetric in shape to its siblings. It does not judge and does not block runtime; it *verifies*.
 
 ## 2. Problem
 
@@ -77,11 +74,11 @@ Any single divergence returns `exit 1`; a clean run returns `exit 0`. The verifi
 - **Atomic** — sign a single blob directly with `cosign sign-blob`. Retained for isolated agent handling, migration cases, and the original PoC path.
 - **Collective (envelope)** — sign the manifest that lists N files. This is the primary distribution mode: one signature covers the payload; verification cost is linear in files but constant in signatures.
 
-The two are not exclusive and neither supersedes the other. The manifest is the envelope form the Commander asked for in Sync 04 (2026-05-27) and that the Captain publicly recognized in the report of 2026-06-26.
+The two are not exclusive and neither supersedes the other.
 
 **The signed tree is the built `plugin/` payload, not the `.claude/` source.** `build-plugin.sh` rewrites `.claude/` paths to `${CLAUDE_PLUGIN_ROOT}/` on the way into `plugin/`, so the two trees are byte-different for the same logical file (e.g., `dbt-specialist.md` hashes `f034b047…` at 7307 bytes under `.claude/` and `fa7f7cab…` at 7419 bytes under `plugin/`). The consumer installs `plugin/`, so that is what the manifest must cover. The default target of `generate_manifest.py` is `plugin/agents/…`; the atomic variant (`cosign sign-blob <file>`) accepts either tree if a caller needs to sign a specific source file.
 
-**Keyless is non-negotiable for V0.** No private key is generated, stored, or rotated. The signature is bound to the OIDC identity that signed it, verifiable against the Rekor log. This trades key management for identity infrastructure — a trade V0 explicitly accepts because the Crew D consumer already lives inside identity-bound tooling (GitHub, Google).
+**Keyless is non-negotiable for V0.** No private key is generated, stored, or rotated. The signature is bound to the OIDC identity that signed it, verifiable against the Rekor log. This trades key management for identity infrastructure — a trade V0 explicitly accepts because the target consumer already lives inside identity-bound tooling (GitHub, Google).
 
 ## 4. Consequences
 
@@ -110,7 +107,7 @@ The two are not exclusive and neither supersedes the other. The manifest is the 
 | **Hashes only, no signature** | Answers integrity ("did it change?") but not authenticity ("who published this?"). A hash without a signer is a checksum, not a trust boundary — anyone can regenerate it after modifying the payload. |
 | **Full PKI with a Crew-D CA** | Overkill for the current scale (one publisher, one plugin, one distribution channel). The infrastructure cost of running a certificate authority dwarfs the trust decision it would enforce. Sigstore already runs this infrastructure publicly. |
 | **Signing only individual files (atomic-only)** | Signature count scales linearly with the payload; 58 signatures for the agents directory alone. Verification cost and orchestration overhead are unacceptable at the target scale. |
-| **Signing only the manifest (collective-only)** | Loses the atomic case validated by the PoC of 2026-06-03 and forces every use case through a manifest — including the ones that only need to sign one blob. The two variants coexist for one flat marginal cost. |
+| **Signing only the manifest (collective-only)** | Loses the atomic case validated by the earlier PoC and forces every use case through a manifest — including the ones that only need to sign one blob. The two variants coexist for one flat marginal cost. |
 | **In-repo trust (assume git is enough)** | Git guarantees stop at the source repository. Once the plugin is packaged and shipped, git offers nothing about the payload the consumer receives. This is exactly the gap this ADR closes. |
 | **Skip trust for V0, add it later** | The value scales with adoption: every day the plugin ships unverified is another day of consumers running code we cannot vouch for. The design is inexpensive; delay is not. |
 
@@ -119,13 +116,12 @@ The two are not exclusive and neither supersedes the other. The manifest is the 
 The decision holds if the following remain true:
 
 - **Deterministic manifest.** Regenerating the manifest on the same commit produces byte-identical `security/manifest.json`, modulo the `created_at` timestamp and git dirty flag. Enforced by `sort_keys=True` and stable file ordering.
-- **Byte-level match with the collective PoC (2026-06-17) — source-tree provenance.** The SHA-256 for `dbt-specialist.md` in `.claude/agents/data-engineering/` (`f034b047ab2072ec3e22e41a3c2ef81640d38d9d8bf6cf883a6af4945452241e`, size 7307) matches the entry Carlos committed to the PoC manifest of 2026-06-17. This confirms the generator is faithful to the design at the source level. The V0 that ships signs `plugin/agents/data-engineering/` instead — where the same file hashes to `fa7f7cab…` at 7419 bytes due to build-time path rewrites — but the equivalence with Carlos's source-level PoC is preserved in the record.
-- **Tampering is detected.** Three tampering scenarios were exercised against the signed tree (originally `.claude/agents/data-engineering/` on 2026-07-22 during authoring, then against `plugin/agents/data-engineering/` on 2026-08-13 after retargeting per PR #84 review; 15 files):
+- **Tampering is detected.** Three tampering scenarios were exercised against the signed tree (15 files under `plugin/agents/data-engineering/`):
     - Modifying one file → `MODIFIED: 1`, exit 1.
     - Removing one file → `REMOVED: 1`, exit 1.
     - Injecting an unregistered file → `UNREGISTERED: 1`, exit 1.
     - Restored state → `OK: 15/15`, exit 0.
-- **End-to-end signature.** A live Sigstore signature by the ADR author against the 15-file manifest of `plugin/agents/data-engineering/` returned `Verified OK` from `cosign verify-blob`, with the transparency entry recorded on Rekor (2026-08-13, after retargeting).
+- **End-to-end signature.** A live Sigstore signature against the 15-file manifest of `plugin/agents/data-engineering/` returned `Verified OK` from `cosign verify-blob`, with the transparency entry recorded on Rekor.
 - **Fitness for CI.** `verify_manifest.py` runs in under a second on the current corpus size on commodity hardware. `verify_signature.sh` adds only the cosign network call.
 
 Any regression in the first three items breaks the guarantee this ADR is establishing and should be treated as a release blocker.
@@ -134,16 +130,7 @@ Any regression in the first three items breaks the guarantee this ADR is establi
 
 - **Identity pinning (V1).** The `--certificate-identity-regexp=".*"` needs to be replaced with a real identity or a small allowlist. The right shape (single identity / OIDC-issuer + email allowlist / GitHub Actions workload identity) depends on how signing gets wired into `build-plugin.sh` and CI.
 - **Signing scope beyond agents.** ADR-005 (component model, #66) formalized four artifact types: agents, skills, commands, KBs. V0 covers agents; extending to the other three needs a decision on where the boundary of "one plugin release" is drawn — one manifest per type, one per plugin, or one per component tree.
-- **Harness integration point.** Two placements are on the table: `make sign` in the build (once per release) and a `SessionStart` hook that runs `verify_signature.sh` before Claude loads the agents. The first is uncontroversial; the second interacts with the plugin lifecycle in ways that need Lucas (D2, Captain) and Emerson (Observer / Scorer) at the table.
-- **Interaction with the release pipeline.** PR #82 introduces version gating and a headless e2e; the trust layer must not turn a legitimate release into a lint failure because the manifest is regenerated after a version bump. Sequencing needs to be worked out with the D2 owner of that PR.
+- **Harness integration point.** Two placements are on the table: `make sign` in the build (once per release) and a `SessionStart` hook that runs `verify_signature.sh` before Claude loads the agents. The first is uncontroversial; the second interacts with the plugin lifecycle in ways that need coordination with the release-pipeline and observability owners.
+- **Interaction with the release pipeline.** PR #82 introduces version gating and a headless e2e; the trust layer must not turn a legitimate release into a lint failure because the manifest is regenerated after a version bump. Sequencing needs to be worked out with the release-pipeline owner.
 - **Revocation.** Rekor makes signatures immutably logged, not revocable. A revoked signer is not un-published from the log; the check must move to "is the signer still on the allowlist at verification time?" Follow-up ADR territory.
-- **Adjacent auto-generated files.** Any file emitted by another script (agent-router output, generated schemas) that lands in a signed tree needs a policy: either it is added to the manifest (and the tool that produced it is now part of the signing chain), or it is placed outside the signed tree by convention. The generated `security/manifest.json` and `security/manifest.sigstore.json` are already excluded via `security/.gitignore` in the companion PR — the same problem for other generators is unresolved.
-
----
-
-### Notes for reviewers
-
-- **Companion PR:** [`wallgiu/agentspec`, branch `feat/pod-d3-trust-layer-scripts`](https://github.com/wallgiu/agentspec/tree/feat/pod-d3-trust-layer-scripts) — five new files under `scripts/` and a `security/.gitignore`, tested against `.claude/agents/data-engineering/`.
-- **Design credit:** Carlos Medeiros (Pod D3). Deck presented 2026-07-15; the scripts in the companion PR are a faithful materialization of that design, with a byte-level match to Carlos's collective manifest of 2026-06-17 for the shared file.
-- **Implementation credit:** Giulia Parede (Pod D3). Atomic PoC of 2026-06-03, replication guide of 2026-06-03, and the companion PR of 2026-07-22.
-- **Endorsements to date:** Luan Moreno (approved in principle at Sync 04, 2026-06-03; re-approved in principle at Sync of 2026-07-15). Lucas Brandão / Captain (formal report to the Commander of 2026-06-26 recognizing the manifest as the "envelope" of Sync 04).
+- **Adjacent auto-generated files.** Any file emitted by another script (agent-router output, generated schemas) that lands in a signed tree needs a policy: either it is added to the manifest (and the tool that produced it is now part of the signing chain), or it is placed outside the signed tree by convention. The trust layer's own outputs (`plugin/security/manifest.json` and `plugin/security/manifest.sigstore.json`) are committed as release artifacts and live in a sibling directory to the signed tree, so they are outside the scan by convention.

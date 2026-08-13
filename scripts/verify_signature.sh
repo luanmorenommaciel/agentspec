@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # verify_signature.sh — Verifica assinatura + integridade do manifest.
 #
-# Materializa o passo 4 (VERIFICAR) COMPLETO do deck do Carlos:
+# Materializa o passo 4 (VERIFICAR) COMPLETO do trust layer:
 #   1. cosign verify-blob confirma que a assinatura e valida (a autoria)
 #   2. verify_manifest.py confirma que cada arquivo bate com o hash listado (integridade)
 #
@@ -24,22 +24,22 @@ MANIFEST_PATH="${1:-plugin/security/manifest.json}"
 BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 
 if [[ ! -f "$MANIFEST_PATH" ]]; then
-    echo "ERRO: manifest nao encontrado em $MANIFEST_PATH" >&2
+    echo "ERROR: manifest not found at $MANIFEST_PATH" >&2
     exit 1
 fi
 
 if [[ ! -f "$BUNDLE_PATH" ]]; then
-    echo "ERRO: bundle de assinatura nao encontrado em $BUNDLE_PATH" >&2
-    echo "     Rode antes: bash scripts/sign_manifest.sh" >&2
+    echo "ERROR: signature bundle not found at $BUNDLE_PATH" >&2
+    echo "       Run first: bash scripts/sign_manifest.sh" >&2
     exit 1
 fi
 
 if ! command -v cosign &> /dev/null; then
-    echo "ERRO: cosign nao esta instalado." >&2
+    echo "ERROR: cosign is not installed." >&2
     exit 1
 fi
 
-echo "==> [1/2] Verificando assinatura com cosign..."
+echo "==> [1/2] Verifying signature with cosign..."
 cosign verify-blob "$MANIFEST_PATH" \
     --bundle "$BUNDLE_PATH" \
     --new-bundle-format \
@@ -47,11 +47,11 @@ cosign verify-blob "$MANIFEST_PATH" \
     --certificate-oidc-issuer-regexp=".*"
 
 echo ""
-echo "==> [2/2] Verificando integridade dos arquivos com verify_manifest.py..."
+echo "==> [2/2] Verifying file integrity with verify_manifest.py..."
 
 # Descobre onde este script mora pra achar verify_manifest.py no mesmo diretorio.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 python3 "$SCRIPT_DIR/verify_manifest.py" "$MANIFEST_PATH"
 
 echo ""
-echo "OK: assinatura valida e todos os arquivos batem."
+echo "OK: signature valid and all files match."

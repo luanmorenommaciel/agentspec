@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # sign_manifest.sh — Assina o manifest.json usando cosign (Sigstore keyless).
 #
-# Materializa em codigo o passo 2 (ASSINAR) do deck do Carlos.
+# Materializa em codigo o passo 2 (ASSINAR) do trust layer.
 # Nao gerencia chaves: usa OIDC (Google, GitHub) na hora do sign, e o registro
 # publico do Rekor guarda a prova de que voce assinou.
 #
@@ -23,20 +23,20 @@ BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 
 # Confere que o manifest existe antes de tentar assinar
 if [[ ! -f "$MANIFEST_PATH" ]]; then
-    echo "ERRO: manifest nao encontrado em $MANIFEST_PATH" >&2
-    echo "     Rode antes: python3 scripts/generate_manifest.py --dir <pasta>" >&2
+    echo "ERROR: manifest not found at $MANIFEST_PATH" >&2
+    echo "       Run first: python3 scripts/generate_manifest.py --dir <folder>" >&2
     exit 1
 fi
 
 # Confere que o cosign esta instalado
 if ! command -v cosign &> /dev/null; then
-    echo "ERRO: cosign nao esta instalado." >&2
-    echo "     Instale com: brew install cosign" >&2
+    echo "ERROR: cosign is not installed." >&2
+    echo "       Install with: brew install cosign" >&2
     exit 1
 fi
 
-echo "==> Assinando $MANIFEST_PATH..."
-echo "    Bundle sera salvo em: $BUNDLE_PATH"
+echo "==> Signing $MANIFEST_PATH..."
+echo "    Bundle will be written to: $BUNDLE_PATH"
 echo ""
 
 # --new-bundle-format: formato de bundle moderno do cosign (2024+).
@@ -48,5 +48,5 @@ cosign sign-blob "$MANIFEST_PATH" \
     --yes
 
 echo ""
-echo "OK: assinatura gerada em $BUNDLE_PATH"
-echo "    Registrada no Rekor (log publico de transparencia)."
+echo "OK: signature written to $BUNDLE_PATH"
+echo "    Recorded in Rekor (public transparency log)."

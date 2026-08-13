@@ -2,8 +2,7 @@
 """
 generate_manifest.py — Gera um manifest JSON com hash SHA-256 dos arquivos.
 
-Materializa em codigo o design apresentado pelo Carlos no deck
-"AgentSpec Assinado — Cosign para Integridade de Supply Chain" (15/jul/2026).
+Materializa em codigo o passo 1 (HASH) do trust layer.
 
 Uso:
     python3 scripts/generate_manifest.py --dir .claude/agents/data-engineering
@@ -21,8 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Extensoes aceitas por padrao (conforme deck do Carlos).
-# Sao os tipos de arquivo que compoem o plugin AgentSpec.
+# Extensoes aceitas por padrao — arquivos declarativos do plugin AgentSpec.
 DEFAULT_EXTENSIONS = [".md", ".yaml", ".yml", ".json", ".toml"]
 
 # Versao do schema do manifest. Se o formato mudar no futuro, subimos essa versao
@@ -94,7 +92,7 @@ def scan_directory(target_dir: Path, allowed_extensions):
 
 
 def build_manifest(target_dir: Path, allowed_extensions, repo_root: Path) -> dict:
-    """Monta o dicionario final do manifest, no formato acordado com o Carlos."""
+    """Monta o dicionario final do manifest no schema V1.0."""
     files = scan_directory(target_dir, allowed_extensions)
 
     # base_path relativa ao repo root, pro manifest ser portavel entre maquinas.
@@ -118,7 +116,7 @@ def build_manifest(target_dir: Path, allowed_extensions, repo_root: Path) -> dic
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Gera manifest JSON com SHA-256 de arquivos (Pod D3 · Trust Layer)."
+        description="Gera manifest JSON com SHA-256 de arquivos (Trust Layer)."
     )
     parser.add_argument(
         "--dir",
@@ -142,11 +140,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.dir.is_dir():
-        print(f"ERRO: {args.dir} nao e uma pasta valida.", file=sys.stderr)
+        print(f"ERROR: {args.dir} is not a valid directory.", file=sys.stderr)
         return 1
 
     # Descobre o repo root pra normalizar caminhos e ler metadata git.
-    repo_root = Path.cwd()
+    # Path(__file__).resolve().parent.parent = <repo>/scripts/generate_manifest.py -> <repo>
+    # Padrao ja usado por generate-agent-router.py e bump.sh; independente de cwd.
+    repo_root = Path(__file__).resolve().parent.parent
 
     # Normaliza extensoes pra ter ponto e ser minusculas.
     exts = [e if e.startswith(".") else f".{e}" for e in args.extensions]
@@ -162,7 +162,7 @@ def main() -> int:
         json.dump(manifest, f, indent=2, sort_keys=True)
         f.write("\n")  # newline final e boa pratica POSIX + Git
 
-    print(f"OK: manifest com {manifest['file_count']} arquivos gerado em {args.out}")
+    print(f"OK: manifest with {manifest['file_count']} files written to {args.out}")
     return 0
 
 

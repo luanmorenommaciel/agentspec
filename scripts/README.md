@@ -1,7 +1,7 @@
-# scripts/ — Trust Layer do Pod D3
+# scripts/ — Trust Layer
 
-Materializacao em codigo do design apresentado pelo Carlos no deck
-**"AgentSpec Assinado — Cosign para Integridade de Supply Chain"** (Sync Crew D · 2026-07-15).
+Materializacao em codigo do design de assinatura + verificacao de integridade
+para a supply chain do plugin AgentSpec.
 
 ## O que faz
 
@@ -56,8 +56,3 @@ O `verify_signature.sh` usa `--certificate-identity-regexp=".*"` — aceita QUAL
 assinatura, e nao apenas a de um signatario autorizado. **Isso e V0 do trust layer.**
 V1 vai fixar na identidade OIDC especifica (ex.: `--certificate-identity="giulia.luca@owshq.com"`).
 
-## Autoria
-
-- **Design:** Carlos Medeiros (Pod D3) — deck de 15/jul/2026
-- **Implementacao:** Giulia Parede (Pod D3) — 22/jul/2026, baseada em spec do deck
-- **A revisar com:** Carlos, pra confirmar fidelidade do codigo ao design original
