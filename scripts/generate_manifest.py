@@ -129,8 +129,8 @@ def main() -> int:
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path("security/manifest.json"),
-        help="Onde salvar o manifest (default: security/manifest.json)",
+        default=Path("plugin/security/manifest.json"),
+        help="Onde salvar o manifest (default: plugin/security/manifest.json)",
     )
     parser.add_argument(
         "--extensions",

@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # Caminho do manifest (default: security/manifest.json)
-MANIFEST_PATH="${1:-security/manifest.json}"
+MANIFEST_PATH="${1:-plugin/security/manifest.json}"
 # Onde salvar a assinatura (bundle Sigstore no mesmo diretorio, com sufixo .sigstore.json)
 BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 

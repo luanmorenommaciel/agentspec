@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-MANIFEST_PATH="${1:-security/manifest.json}"
+MANIFEST_PATH="${1:-plugin/security/manifest.json}"
 BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 
 if [[ ! -f "$MANIFEST_PATH" ]]; then

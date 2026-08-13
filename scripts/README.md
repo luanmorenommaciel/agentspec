@@ -21,9 +21,13 @@ distribuidos pelo plugin AgentSpec (58 agentes, 31 comandos, 24 KB domains):
 
 ## Uso tipico
 
+O alvo padrao e o **`plugin/`** — o payload buildado que o consumidor recebe
+via marketplace. Assinar `.claude/` (source) e possivel via `--dir`, mas nao
+casa com o que o cliente instala (paths sao reescritos pelo `build-plugin.sh`).
+
 ```bash
-# 1. Publicar (quando shippar uma nova versao do plugin)
-python3 scripts/generate_manifest.py --dir .claude/agents/data-engineering
+# 1. Publicar (rodar apos `./build-plugin.sh` gerar plugin/)
+python3 scripts/generate_manifest.py --dir plugin/agents/data-engineering
 bash scripts/sign_manifest.sh
 
 # 2. Verificar (o Session Hook fara isso automaticamente no futuro)
@@ -33,8 +37,12 @@ bash scripts/verify_signature.sh
 
 ## Arquivos produzidos
 
-- `security/manifest.json` — lista de arquivos + hashes + metadata git
-- `security/manifest.sigstore.json` — bundle de assinatura Sigstore
+- `plugin/security/manifest.json` — lista de arquivos + hashes + metadata git
+- `plugin/security/manifest.sigstore.json` — bundle de assinatura Sigstore
+
+Ambos vivem sob `plugin/` **de proposito**: assim viajam junto quando o
+consumidor instala o plugin via marketplace. Sao commitados no repo (nao
+gitignorados) — o consumidor precisa deles pra rodar o verify.
 
 ## Cenarios de falha detectados pelo verify
 

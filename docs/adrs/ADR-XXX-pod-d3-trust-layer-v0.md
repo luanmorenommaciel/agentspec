@@ -59,9 +59,9 @@ manifest.py     sign-blob      bundle ship     signature.sh
 
 The four steps map to a single command each and are implemented as four scripts under `scripts/`, all shipped in the companion PR:
 
-1. **HASH — `scripts/generate_manifest.py`.** Walks a target directory, computes SHA-256 of every file with an allowed extension (`.md`, `.yaml`, `.yml`, `.json`, `.toml` by default), captures git provenance (commit hash, branch, dirty flag), and writes a deterministic JSON manifest (`security/manifest.json`) with `sort_keys=True`. The same input directory at the same commit produces the same manifest bytes.
-2. **SIGN — `scripts/sign_manifest.sh`.** Runs `cosign sign-blob` in keyless mode against the manifest, using an OIDC identity (Google or GitHub) at signing time and recording the transparency entry in the public **Rekor** log. Produces `security/manifest.sigstore.json` (the signature bundle).
-3. **DISTRIBUTE.** The manifest and the bundle travel with the plugin payload under `security/`. The consumer receives both together; the bundle carries the transparency log entry that allows offline verification of the identity.
+1. **HASH — `scripts/generate_manifest.py`.** Walks a target directory, computes SHA-256 of every file with an allowed extension (`.md`, `.yaml`, `.yml`, `.json`, `.toml` by default), captures git provenance (commit hash, branch, dirty flag), and writes a deterministic JSON manifest (`plugin/security/manifest.json`) with `sort_keys=True`. The same input directory at the same commit produces the same manifest bytes (modulo `created_at`).
+2. **SIGN — `scripts/sign_manifest.sh`.** Runs `cosign sign-blob` in keyless mode against the manifest, using an OIDC identity (Google or GitHub) at signing time and recording the transparency entry in the public **Rekor** log. Produces `plugin/security/manifest.sigstore.json` (the signature bundle).
+3. **DISTRIBUTE.** The manifest and the bundle live under `plugin/security/` — inside the plugin payload itself — and are committed to the repository (no `.gitignore` exclusion). The consumer receives both together when installing the plugin; the bundle carries the transparency log entry that allows offline verification of the identity. No separate distribution step is needed.
 4. **VERIFY — `scripts/verify_signature.sh`.** Two-stage: `cosign verify-blob` establishes authenticity (Rekor lookup, certificate identity check), then `scripts/verify_manifest.py` recomputes SHA-256 of every file on disk and diffs against the manifest.
 
 The verifier detects **three failure modes**, each with a distinct label in the report:
@@ -78,6 +78,8 @@ Any single divergence returns `exit 1`; a clean run returns `exit 0`. The verifi
 - **Collective (envelope)** — sign the manifest that lists N files. This is the primary distribution mode: one signature covers the payload; verification cost is linear in files but constant in signatures.
 
 The two are not exclusive and neither supersedes the other. The manifest is the envelope form the Commander asked for in Sync 04 (2026-05-27) and that the Captain publicly recognized in the report of 2026-06-26.
+
+**The signed tree is the built `plugin/` payload, not the `.claude/` source.** `build-plugin.sh` rewrites `.claude/` paths to `${CLAUDE_PLUGIN_ROOT}/` on the way into `plugin/`, so the two trees are byte-different for the same logical file (e.g., `dbt-specialist.md` hashes `f034b047…` at 7307 bytes under `.claude/` and `fa7f7cab…` at 7419 bytes under `plugin/`). The consumer installs `plugin/`, so that is what the manifest must cover. The default target of `generate_manifest.py` is `plugin/agents/…`; the atomic variant (`cosign sign-blob <file>`) accepts either tree if a caller needs to sign a specific source file.
 
 **Keyless is non-negotiable for V0.** No private key is generated, stored, or rotated. The signature is bound to the OIDC identity that signed it, verifiable against the Rekor log. This trades key management for identity infrastructure — a trade V0 explicitly accepts because the Crew D consumer already lives inside identity-bound tooling (GitHub, Google).
 
@@ -117,13 +119,13 @@ The two are not exclusive and neither supersedes the other. The manifest is the 
 The decision holds if the following remain true:
 
 - **Deterministic manifest.** Regenerating the manifest on the same commit produces byte-identical `security/manifest.json`, modulo the `created_at` timestamp and git dirty flag. Enforced by `sort_keys=True` and stable file ordering.
-- **Byte-level match with the collective PoC (2026-06-17).** The SHA-256 for `dbt-specialist.md` produced by `generate_manifest.py` on 2026-07-22 (`f034b047ab2072ec3e22e41a3c2ef81640d38d9d8bf6cf883a6af4945452241e`, size 7307) matches the entry Carlos committed to the PoC manifest of 2026-06-17. Same tool would have produced the same output.
-- **Tampering is detected.** On 2026-07-22, three tampering scenarios were exercised against `.claude/agents/data-engineering/` (15 files):
+- **Byte-level match with the collective PoC (2026-06-17) — source-tree provenance.** The SHA-256 for `dbt-specialist.md` in `.claude/agents/data-engineering/` (`f034b047ab2072ec3e22e41a3c2ef81640d38d9d8bf6cf883a6af4945452241e`, size 7307) matches the entry Carlos committed to the PoC manifest of 2026-06-17. This confirms the generator is faithful to the design at the source level. The V0 that ships signs `plugin/agents/data-engineering/` instead — where the same file hashes to `fa7f7cab…` at 7419 bytes due to build-time path rewrites — but the equivalence with Carlos's source-level PoC is preserved in the record.
+- **Tampering is detected.** Three tampering scenarios were exercised against the signed tree (originally `.claude/agents/data-engineering/` on 2026-07-22 during authoring, then against `plugin/agents/data-engineering/` on 2026-08-13 after retargeting per PR #84 review; 15 files):
     - Modifying one file → `MODIFIED: 1`, exit 1.
     - Removing one file → `REMOVED: 1`, exit 1.
     - Injecting an unregistered file → `UNREGISTERED: 1`, exit 1.
     - Restored state → `OK: 15/15`, exit 0.
-- **End-to-end signature.** A live Sigstore signature by the ADR author against the 15-file manifest returned `Verified OK` from `cosign verify-blob`, with the transparency entry recorded on Rekor.
+- **End-to-end signature.** A live Sigstore signature by the ADR author against the 15-file manifest of `plugin/agents/data-engineering/` returned `Verified OK` from `cosign verify-blob`, with the transparency entry recorded on Rekor (2026-08-13, after retargeting).
 - **Fitness for CI.** `verify_manifest.py` runs in under a second on the current corpus size on commodity hardware. `verify_signature.sh` adds only the cosign network call.
 
 Any regression in the first three items breaks the guarantee this ADR is establishing and should be treated as a release blocker.

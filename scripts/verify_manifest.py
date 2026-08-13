@@ -120,9 +120,9 @@ def main() -> int:
     parser.add_argument(
         "manifest",
         nargs="?",
-        default=Path("security/manifest.json"),
+        default=Path("plugin/security/manifest.json"),
         type=Path,
-        help="Caminho do manifest (default: security/manifest.json)",
+        help="Caminho do manifest (default: plugin/security/manifest.json)",
     )
     args = parser.parse_args()
 
