@@ -1,8 +1,11 @@
-"""Shared fixtures for the spec-scorer test suite.
+"""Test bootstrap: make both packages importable without an editable install, and
+supply shared fixtures.
 
-The Scorer reuses the sibling Linter's value objects by import. There is no
-published `spec_linter` package, so — exactly as the `spec-score` wrapper does at
-runtime — the test session puts the sibling `tools/spec-linter` on `sys.path`.
+The Scorer imports its own `spec_scorer` package and reuses the sibling Linter's
+value objects (`spec_linter`). In a dev checkout — or under an IDE that discovers
+from the workspace root rather than this directory — neither is on `sys.path`, so
+we inject this package's own root AND the sibling `spec-linter` dir at conftest
+import time, before any test module imports run. Mirrors spec-judge's conftest.
 """
 
 from __future__ import annotations
@@ -13,9 +16,12 @@ from typing import Any
 
 import pytest
 
-_LINTER = Path(__file__).resolve().parents[2] / "spec-linter"
-if _LINTER.is_dir() and str(_LINTER) not in sys.path:
-    sys.path.insert(0, str(_LINTER))
+_TESTS = Path(__file__).resolve().parent  # tools/spec-scorer/tests
+_PKG_ROOT = _TESTS.parent  # tools/spec-scorer (contains spec_scorer/)
+_LINTER = _TESTS.parents[1] / "spec-linter"  # tools/spec-linter (contains spec_linter/)
+for _path in (_PKG_ROOT, _LINTER):
+    if _path.is_dir() and str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 
 @pytest.fixture
