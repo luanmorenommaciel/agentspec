@@ -5,6 +5,12 @@ declares and returns a `DimensionScore`. No I/O, no model calls. The two
 repo-dependent dimensions (reference integrity, actual reuse) take their evidence
 as an argument, so this module never reaches out to the filesystem itself.
 
+Each score carries both a terse `detail` (the compact view) and a list of
+`CheckItem`s (the per-topic breakdown `--explain` prints). The checks are the
+same measurement rendered at finer grain — the dimension's numerator is the sum
+of its checks' contributions (with `risk_surface` additionally capped) — so the
+number is always traceable to the topics that produced it.
+
 The maturity evidence table mirrors the Linter's L2 maturity rules
 (`spec_linter.rules.l2_governance_findings`): whatever the Linter FAILs a level
 for, the Scorer counts as that level's required evidence. Where the Linter asks
@@ -16,7 +22,7 @@ from __future__ import annotations
 
 from spec_linter import AgentSpec
 
-from .scorecard import DimensionScore
+from .scorecard import CheckItem, DimensionScore
 
 # The optional enrichment fields — present beyond bare schema validity. Governance
 # staples (stop_conditions, escalation_rules) are excluded: they are not optional
@@ -44,14 +50,19 @@ def _is_populated(spec: AgentSpec, field: str) -> bool:
     return True
 
 
+def _bool_check(label: str, ok: bool, note: str = "") -> CheckItem:
+    return CheckItem(label=label, contribution=1 if ok else 0, kind="bool", note=note)
+
+
 def completeness(spec: AgentSpec) -> DimensionScore:
     """Spec Quality — populated enrichment fields / total enrichment fields.
 
     The dimension a pure fold-over-findings is blind to: absent optional fields
     break no rule, so the Linter emits zero findings whether 3 or 8 are filled.
     """
-    populated = [f for f in _ENRICHMENT_FIELDS if _is_populated(spec, f)]
-    missing = [f for f in _ENRICHMENT_FIELDS if f not in populated]
+    checks = [_bool_check(f, _is_populated(spec, f)) for f in _ENRICHMENT_FIELDS]
+    populated = [c for c in checks if c.contribution]
+    missing = [c.label for c in checks if not c.contribution]
     detail = f"missing: {', '.join(missing)}" if missing else "all enrichment fields present"
     return DimensionScore(
         dimension="completeness",
@@ -59,6 +70,7 @@ def completeness(spec: AgentSpec) -> DimensionScore:
         numerator=len(populated),
         denominator=len(_ENRICHMENT_FIELDS),
         detail=detail,
+        checks=checks,
     )
 
 
@@ -70,8 +82,12 @@ def reference_integrity(spec: AgentSpec, known_kb_domains: set[str]) -> Dimensio
     check as a measured ratio.
     """
     declared = list(spec.kb_domains)
-    resolved = [d for d in declared if d in known_kb_domains]
-    dangling = [d for d in declared if d not in known_kb_domains]
+    checks = [
+        _bool_check(d, d in known_kb_domains, note="" if d in known_kb_domains else "dangling")
+        for d in declared
+    ]
+    resolved = [c for c in checks if c.contribution]
+    dangling = [c.label for c in checks if not c.contribution]
     detail = f"dangling: {', '.join(dangling)}" if dangling else "all references resolve"
     return DimensionScore(
         dimension="reference_integrity",
@@ -79,6 +95,7 @@ def reference_integrity(spec: AgentSpec, known_kb_domains: set[str]) -> Dimensio
         numerator=len(resolved),
         denominator=len(declared),
         detail=detail,
+        checks=checks,
     )
 
 
@@ -89,14 +106,15 @@ def convention_conformance(spec: AgentSpec) -> DimensionScore:
     File placement, size limits, and thin-executor body length need the file on
     disk and are out of V0's static-spec scope.
     """
-    checks = {
+    results = {
         "description_present": bool(spec.description.strip()),
         "description_is_one_liner": len(spec.description) <= 400,
         "tools_declared": len(spec.tools) > 0,
         "kb_domains_declared": len(spec.kb_domains) > 0,
     }
-    passed = [name for name, ok in checks.items() if ok]
-    failed = [name for name, ok in checks.items() if not ok]
+    checks = [_bool_check(name, ok) for name, ok in results.items()]
+    passed = [c for c in checks if c.contribution]
+    failed = [c.label for c in checks if not c.contribution]
     detail = f"failed: {', '.join(failed)}" if failed else "all conventions met"
     return DimensionScore(
         dimension="convention_conformance",
@@ -104,6 +122,7 @@ def convention_conformance(spec: AgentSpec) -> DimensionScore:
         numerator=len(passed),
         denominator=len(checks),
         detail=detail,
+        checks=checks,
     )
 
 
@@ -116,12 +135,22 @@ def actual_reuse(spec: AgentSpec, inbound_references: int) -> DimensionScore:
     same 0..1 scale; the raw inbound count stays visible.
     """
     target = 3  # nominal: referenced by at least a few peers reads as "reused"
+    credit = min(inbound_references, target)
+    checks = [
+        CheckItem(
+            label="inbound_references",
+            contribution=credit,
+            kind="points",
+            note=f"{inbound_references} total, target {target}",
+        )
+    ]
     return DimensionScore(
         dimension="actual_reuse",
         family="Platform Fit",
-        numerator=min(inbound_references, target),
+        numerator=credit,
         denominator=target,
         detail=f"{inbound_references} inbound reference(s)",
+        checks=checks,
     )
 
 
@@ -136,13 +165,18 @@ def risk_surface(spec: AgentSpec) -> DimensionScore:
     se = spec.output_contract.side_effects
     git_ops = [op for op in se.git_operations if op != "none"]
     tier_weight = {"T1": 0, "T2": 1, "T3": 2}.get(spec.tier, 0)
-    points = (
-        (1 if se.files_written else 0)
-        + len(git_ops)
-        + len(se.external_apis)
-        + len(spec.tools)
-        + tier_weight
-    )
+    checks = [
+        CheckItem(label="files_written", contribution=1 if se.files_written else 0,
+                  kind="points", note=str(se.files_written).lower()),
+        CheckItem(label="git_operations", contribution=len(git_ops),
+                  kind="points", note=f"{len(git_ops)} non-none"),
+        CheckItem(label="external_apis", contribution=len(se.external_apis),
+                  kind="points", note=f"{len(se.external_apis)}"),
+        CheckItem(label="tools", contribution=len(spec.tools),
+                  kind="points", note=f"{len(spec.tools)}"),
+        CheckItem(label="tier", contribution=tier_weight, kind="points", note=spec.tier),
+    ]
+    points = sum(c.contribution for c in checks)
     cap = 12
     detail = (
         f"writes={se.files_written}, git={len(git_ops)}, apis={len(se.external_apis)}, "
@@ -155,6 +189,7 @@ def risk_surface(spec: AgentSpec) -> DimensionScore:
         denominator=cap,
         higher_is_better=False,
         detail=detail,
+        checks=checks,
     )
 
 
@@ -172,8 +207,9 @@ def mitigation_coverage(spec: AgentSpec) -> DimensionScore:
     }
     if spec.publish:
         applicable["security_review"] = spec.security_review
-    present = [name for name, ok in applicable.items() if ok]
-    absent = [name for name, ok in applicable.items() if not ok]
+    checks = [_bool_check(name, ok) for name, ok in applicable.items()]
+    present = [c for c in checks if c.contribution]
+    absent = [c.label for c in checks if not c.contribution]
     detail = f"absent: {', '.join(absent)}" if absent else "all applicable mitigations present"
     return DimensionScore(
         dimension="mitigation_coverage",
@@ -181,6 +217,7 @@ def mitigation_coverage(spec: AgentSpec) -> DimensionScore:
         numerator=len(present),
         denominator=len(applicable),
         detail=detail,
+        checks=checks,
     )
 
 
@@ -192,8 +229,9 @@ def maturity_conformance(spec: AgentSpec) -> DimensionScore:
     here while still passing structural validity.
     """
     required = _MATURITY_EVIDENCE.get(spec.maturity, ())
-    satisfied = [f for f in required if _is_populated(spec, f)]
-    missing = [f for f in required if f not in satisfied]
+    checks = [_bool_check(f, _is_populated(spec, f)) for f in required]
+    satisfied = [c for c in checks if c.contribution]
+    missing = [c.label for c in checks if not c.contribution]
     detail = (
         f"declared {spec.maturity}; missing: {', '.join(missing)}"
         if missing
@@ -205,4 +243,5 @@ def maturity_conformance(spec: AgentSpec) -> DimensionScore:
         numerator=len(satisfied),
         denominator=len(required),
         detail=detail,
+        checks=checks,
     )

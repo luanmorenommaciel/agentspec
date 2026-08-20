@@ -14,7 +14,42 @@ built-in default — so this module offers grouping (`by_family`), not a total.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
+
+
+class CheckItem(BaseModel):
+    """One checkpoint inside a dimension — what `--explain` prints per topic.
+
+    Two kinds. A `bool` check either holds or not (rendered ✓/✗): the topics of
+    `completeness`, `convention_conformance`, `mitigation_coverage`,
+    `maturity_conformance`, `reference_integrity`, and `behavioral_cleanliness`.
+    A `points` check contributes a magnitude (rendered `+N`): the components of
+    `risk_surface` and the count-based `actual_reuse`.
+
+    `contribution` is what this topic added to its dimension's numerator (0/1 for
+    a bool, the points for a `points` check). `note` carries the raw value that
+    produced it (`false`, `T2`, `3 inbound`), so the number never floats free of
+    its evidence — the same discipline the dimension ratio follows.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    label: str
+    contribution: int
+    kind: Literal["bool", "points"] = "bool"
+    note: str = ""
+
+    def render(self) -> str:
+        if self.kind == "bool":
+            mark = "✓" if self.contribution > 0 else "✗"
+            line = f"    {mark} {self.label}"
+        else:
+            line = f"    +{self.contribution}  {self.label}"
+        if self.note:
+            line += f" ({self.note})"
+        return line
 
 
 class DimensionScore(BaseModel):
@@ -38,6 +73,7 @@ class DimensionScore(BaseModel):
     denominator: int
     higher_is_better: bool = True
     detail: str = ""
+    checks: list[CheckItem] = []
 
     @property
     def applicable(self) -> bool:
@@ -50,14 +86,18 @@ class DimensionScore(BaseModel):
         """The score in 0..1, or None when not applicable (denominator 0)."""
         return self.numerator / self.denominator if self.denominator > 0 else None
 
-    def render(self) -> str:
+    def render(self, explain: bool = False) -> str:
         polarity = "" if self.higher_is_better else "  (higher = more risk)"
         if not self.applicable:
             body = "n/a"
         else:
             body = f"{self.ratio:.2f}  [{self.numerator}/{self.denominator}]"
         line = f"  {self.dimension:<22} {body}{polarity}"
-        if self.detail:
+        if explain and self.checks:
+            # Per-topic breakdown supersedes the terse detail line.
+            for item in self.checks:
+                line += f"\n{item.render()}"
+        elif self.detail:
             line += f"\n{'':<24}{self.detail}"
         return line
 
@@ -86,7 +126,10 @@ class ScoreCard(BaseModel):
             grouped.setdefault(dim.family, []).append(dim)
         return grouped
 
-    def __str__(self) -> str:
+    def render(self, explain: bool = False) -> str:
+        """Render the card. `explain=True` expands each dimension into its
+        per-topic checkpoints (✓/✗ for boolean checks, `+N` for weighted ones);
+        the compact default prints only the ratios and terse detail lines."""
         tier = self.judger_tier or "none"
         header = (
             f"SCORECARD  (contract {self.contract_version}, judger_tier={tier}, "
@@ -97,5 +140,8 @@ class ScoreCard(BaseModel):
         lines = [header]
         for family, dims in self.by_family().items():
             lines.append(f"— {family}")
-            lines.extend(dim.render() for dim in dims)
+            lines.extend(dim.render(explain) for dim in dims)
         return "\n".join(lines)
+
+    def __str__(self) -> str:
+        return self.render(explain=False)

@@ -15,10 +15,11 @@ and makes no model calls — every metric is measured.
 from .contracts import AgentSpecScoringContract
 from .engine import score
 from .protocol import ScoringContract
-from .scorecard import DimensionScore, ScoreCard
+from .scorecard import CheckItem, DimensionScore, ScoreCard
 
 __all__ = [
     "AgentSpecScoringContract",
+    "CheckItem",
     "DimensionScore",
     "ScoreCard",
     "ScoringContract",

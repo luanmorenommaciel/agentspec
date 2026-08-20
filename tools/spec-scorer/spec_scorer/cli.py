@@ -87,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="a KB _index.yaml; enables the reference_integrity dimension",
     )
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="expand each dimension into its per-topic checkpoints (✓/✗ and +N)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -105,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     print(f"== {path.name} ==")
-    print(card)
+    print(card.render(explain=args.explain))
     return 0
 
 

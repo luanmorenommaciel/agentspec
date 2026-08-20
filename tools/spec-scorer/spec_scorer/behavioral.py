@@ -23,12 +23,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .scorecard import DimensionScore
+from .scorecard import CheckItem, DimensionScore
 
 if TYPE_CHECKING:
     from spec_linter import Verdict
 
 _BEHAVIORAL_CATEGORIES = ("B1", "B2", "B3", "B4")
+_CATEGORY_LABELS = {
+    "B1": "B1.vagueness",
+    "B2": "B2.capability_not_delivered",
+    "B3": "B3.internal_contradiction",
+    "B4": "B4.intent_drift",
+}
 
 
 def _category_of(rule: str) -> str:
@@ -44,19 +50,24 @@ def fold_behavioral(verdict: Verdict, artifact_text: str | None = None) -> list[
     behavioral findings — scores 4/4: absence of concern is the best behavioral
     result, never a zero.
     """
-    present = {
-        _category_of(f.rule)
-        for f in verdict.findings
-        if _category_of(f.rule) in _BEHAVIORAL_CATEGORIES
-    }
-    clean = [c for c in _BEHAVIORAL_CATEGORIES if c not in present]
     counts = {
-        c: sum(1 for f in verdict.findings if _category_of(f.rule) == c)
-        for c in sorted(present)
+        cat: sum(1 for f in verdict.findings if _category_of(f.rule) == cat)
+        for cat in _BEHAVIORAL_CATEGORIES
     }
+    clean = [cat for cat, n in counts.items() if n == 0]
+    checks = [
+        CheckItem(
+            label=_CATEGORY_LABELS[cat],
+            contribution=1 if counts[cat] == 0 else 0,
+            kind="bool",
+            note="" if counts[cat] == 0 else f"raised ×{counts[cat]}",
+        )
+        for cat in _BEHAVIORAL_CATEGORIES
+    ]
+    raised = {cat: n for cat, n in counts.items() if n}
     detail = (
-        "categories raised: " + ", ".join(f"{c}×{n}" for c, n in counts.items())
-        if counts
+        "categories raised: " + ", ".join(f"{c}×{n}" for c, n in raised.items())
+        if raised
         else "no behavioral categories raised"
     )
     return [
@@ -66,5 +77,6 @@ def fold_behavioral(verdict: Verdict, artifact_text: str | None = None) -> list[
             numerator=len(clean),
             denominator=len(_BEHAVIORAL_CATEGORIES),
             detail=detail,
+            checks=checks,
         )
     ]

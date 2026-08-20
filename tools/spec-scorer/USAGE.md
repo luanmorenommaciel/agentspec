@@ -3,7 +3,7 @@
 ## Invocation
 
 ```bash
-./spec-score <path> [--kb-index PATH]
+./spec-score <path> [--kb-index PATH] [--explain]
 ```
 
 - `<path>` — an agent spec: a `.yaml`/`.yml` mapping, or a `.md` file whose
@@ -12,6 +12,8 @@
 - `--kb-index PATH` — a KB `_index.yaml`. Supplying it enables the
   `reference_integrity` dimension, which checks each declared `kb_domains` entry
   against the index's `domains:` mapping (plus `shared`).
+- `--explain` — expand every dimension into its per-topic checkpoints, so the
+  ratio is self-explanatory (see [Per-topic breakdown](#per-topic-breakdown---explain)).
 
 The wrapper resolves an interpreter that can import `pydantic` and `pyyaml`
 (honoring `$SPEC_SCORER_PYTHON`, then a local `.venv`, then ambient
@@ -50,6 +52,52 @@ SCORECARD  (contract 0.1.0, judger_tier=none, sources=artifact)
   let you refuse to compare a smoke-tier card with a high-assurance one, or cards
   scored against different contract versions.
 
+## Per-topic breakdown (`--explain`)
+
+The compact card shows the ratio and a terse detail line. `--explain` expands
+each dimension into the individual checkpoints behind the number, so a `3/4` is
+never a mystery — you see exactly which topic failed and which passed.
+
+```
+$ ./spec-score agent.yaml --explain
+— Platform Fit
+  convention_conformance 0.75  [3/4]
+    ✓ description_present
+    ✓ description_is_one_liner
+    ✓ tools_declared
+    ✗ kb_domains_declared
+— Risk & Governance
+  risk_surface           0.17  [2/12]  (higher = more risk)
+    +0  files_written (false)
+    +0  git_operations (0 non-none)
+    +0  external_apis (0)
+    +1  tools (1)
+    +1  tier (T2)
+```
+
+- **Boolean checks** render `✓`/`✗` — the topic either holds or it doesn't.
+- **Weighted checks** render `+N` — the points that topic contributed, with the
+  raw value in parentheses.
+- The dimension's numerator reconciles with the breakdown: for the boolean
+  checklists it is the count of `✓`; for `risk_surface` it is the sum of the
+  `+N` (capped at 12).
+
+Leave `--explain` off for corpus scans (the compact ratios stay scannable); turn
+it on to debug or justify a single artifact's score.
+
+### What each dimension checks
+
+| Dimension | Checkpoints |
+|---|---|
+| `completeness` | one per enrichment field populated: `kb_domains`, `observability`, `memory_backend`, `recall_strategy`, `requirements`, `deliverables` |
+| `reference_integrity` | one per declared `kb_domains` entry — resolves in the KB index or is `dangling` *(needs `--kb-index`)* |
+| `convention_conformance` | `description_present` · `description_is_one_liner` (≤ 400 chars) · `tools_declared` (≥ 1) · `kb_domains_declared` (≥ 1) |
+| `actual_reuse` | inbound reference count vs. a nominal target of 3 *(needs injected counts)* |
+| `risk_surface` | `+1` files-written · `+1` per non-`none` git op · `+1` per external API · `+1` per tool · tier `T1=0 / T2=1 / T3=2`; cap 12 |
+| `mitigation_coverage` | `stop_conditions` · `escalation_rules` · `observability` · `security_review` *(only when `publish: true`)* |
+| `maturity_conformance` | evidence for the **declared** level — V1: `stop_conditions`, `escalation_rules`; V2: `+ observability`; V3: `+ memory_backend`, `recall_strategy` |
+| `behavioral_cleanliness` | one per behavioral category absent: `B1.vagueness`, `B2.capability_not_delivered`, `B3.internal_contradiction`, `B4.intent_drift` *(needs a Judger verdict)* |
+
 ## Comparability — the discipline the metadata enforces
 
 Two ScoreCards are comparable **only** when their `contract_version` and
@@ -67,6 +115,10 @@ card = score(spec_dict, AgentSpecScoringContract(known_kb_domains={"testing"}))
 for family, dims in card.by_family().items():
     for d in dims:
         print(family, d.dimension, d.ratio, f"[{d.numerator}/{d.denominator}]")
+        for item in d.checks:              # the per-topic checkpoints
+            print("   ", item.label, item.contribution, item.note)
+
+print(card.render(explain=True))           # the same breakdown, formatted
 ```
 
 Fold behavioral evidence from a Judger verdict (accept-only — the Scorer never
