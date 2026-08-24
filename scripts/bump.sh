@@ -4,7 +4,7 @@
 #   scripts/bump.sh --check [--base-ref <branch>]
 #
 # --check ONLY. There is no --apply: in this repo, version bumps are applied
-# by hand as part of the release PR (edit the "version" in
+# by hand on the release branch, as part of the release PR (edit the "version" in
 # plugin/.claude-plugin/plugin.json — the single source of truth — then run
 # ./build-plugin.sh to resync the generated root .claude-plugin/marketplace.json).
 # No automated executor writes the version today; if one is added later, give
@@ -15,9 +15,10 @@
 #                 -> version must be STRICTLY GREATER than origin/main's.
 #                 unchanged -> no-op, always OK.
 #   base=develop: version must EQUAL origin/main's version. develop never
-#                 carries a bump itself — a release PR (develop -> main) is
-#                 what advances the version, and back-merging main into
-#                 develop afterwards self-heals the equality.
+#                 carries a bump itself — a release branch cut from develop
+#                 (release/X.Y.Z -> main) is what advances the version, and
+#                 back-merging main into develop right after the release
+#                 restores the equality.
 # Both modes compare against origin/main ONLY. --base-ref selects which
 # doctrine applies; it is not a ref this script diffs against (origin/develop
 # is never fetched or read).
@@ -187,7 +188,7 @@ check_develop_mode() {  # <current-version>
     return 0
   fi
   die "develop never carries a version bump — version $cur must equal origin/main's $base" \
-    "(a release PR, develop -> main, is what advances the version; back-merge main into develop to self-heal)"
+    "(the version advances on a release branch, release/X.Y.Z -> main; back-merge main into develop to restore equality)"
 }
 
 main() {
