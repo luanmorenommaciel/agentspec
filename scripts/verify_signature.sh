@@ -6,21 +6,21 @@
 #   2. verify_manifest.py confirma que cada arquivo bate com o hash listado (integridade)
 #
 # Uso:
-#     bash scripts/verify_signature.sh                   # usa security/manifest.json
-#     bash scripts/verify_signature.sh caminho/manifest.json
+#     bash scripts/verify_signature.sh                   # usa plugin-extras/security/manifest.json (canonical)
+#     bash scripts/verify_signature.sh plugin/security/manifest.json  # verifica o built plugin
 #
 # Sai com:
 #     exit 0 -> tudo OK (assinatura valida + hashes batem)
 #     exit 1 -> qualquer falha
 #
-# NOTA IMPORTANTE (ponto aberto identificado no deck):
+# NOTA IMPORTANTE (ponto aberto ja identificado):
 # O --certificate-identity-regexp=".*" abaixo aceita QUALQUER assinatura.
 # Isso e V0. Em producao/V1 precisamos fixar na identidade OIDC especifica
 # (ex.: --certificate-identity="giulia.luca@owshq.com").
 
 set -euo pipefail
 
-MANIFEST_PATH="${1:-plugin/security/manifest.json}"
+MANIFEST_PATH="${1:-plugin-extras/security/manifest.json}"
 BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 
 if [[ ! -f "$MANIFEST_PATH" ]]; then

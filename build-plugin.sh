@@ -193,6 +193,7 @@ if [[ -d "${EXTRAS_DIR}" ]]; then
     fi
     [[ -d "${EXTRAS_DIR}/hooks" ]] && cp -r "${EXTRAS_DIR}/hooks" "${PLUGIN_DIR}/"
     [[ -d "${EXTRAS_DIR}/scripts" ]] && cp -r "${EXTRAS_DIR}/scripts" "${PLUGIN_DIR}/"
+    [[ -d "${EXTRAS_DIR}/security" ]] && cp -r "${EXTRAS_DIR}/security" "${PLUGIN_DIR}/"
     ok "Plugin-extras copied"
 fi
 

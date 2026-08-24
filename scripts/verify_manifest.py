@@ -12,8 +12,8 @@ Detecta tres tipos de divergencia:
     3. NAO REGISTRADO — arquivo no disco nao esta no manifest (backdoor injetado)
 
 Uso:
-    python3 scripts/verify_manifest.py                       # usa security/manifest.json
-    python3 scripts/verify_manifest.py caminho/manifest.json
+    python3 scripts/verify_manifest.py                       # usa plugin-extras/security/manifest.json
+    python3 scripts/verify_manifest.py caminho/manifest.json # ex.: plugin/security/manifest.json (built)
 
 Sai com:
     exit 0 -> OK: todos batem
@@ -120,9 +120,9 @@ def main() -> int:
     parser.add_argument(
         "manifest",
         nargs="?",
-        default=Path("plugin/security/manifest.json"),
+        default=Path("plugin-extras/security/manifest.json"),
         type=Path,
-        help="Caminho do manifest (default: plugin/security/manifest.json)",
+        help="Caminho do manifest (default: plugin-extras/security/manifest.json — canonical)",
     )
     args = parser.parse_args()
 

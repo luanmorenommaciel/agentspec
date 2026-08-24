@@ -15,7 +15,7 @@ distribuidos pelo plugin AgentSpec (58 agentes, 31 comandos, 24 KB domains):
 
 ## Requisitos
 
-- Python 3.10+
+- Python 3.11+ (usa `datetime.UTC`)
 - `cosign` (`brew install cosign`)
 - Login OIDC valido (Google/GitHub) — abre browser na primeira vez
 

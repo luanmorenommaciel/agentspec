@@ -6,7 +6,7 @@
 # publico do Rekor guarda a prova de que voce assinou.
 #
 # Uso:
-#     bash scripts/sign_manifest.sh                        # assina security/manifest.json
+#     bash scripts/sign_manifest.sh                        # assina plugin-extras/security/manifest.json
 #     bash scripts/sign_manifest.sh caminho/manifest.json
 #
 # Requer:
@@ -16,8 +16,8 @@
 # -e: para no primeiro erro; -u: erro se variavel nao definida; -o pipefail: erro em pipe
 set -euo pipefail
 
-# Caminho do manifest (default: security/manifest.json)
-MANIFEST_PATH="${1:-plugin/security/manifest.json}"
+# Caminho do manifest (default: plugin-extras/security/manifest.json — canonical source)
+MANIFEST_PATH="${1:-plugin-extras/security/manifest.json}"
 # Onde salvar a assinatura (bundle Sigstore no mesmo diretorio, com sufixo .sigstore.json)
 BUNDLE_PATH="${MANIFEST_PATH%.json}.sigstore.json"
 

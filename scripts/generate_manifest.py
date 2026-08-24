@@ -5,8 +5,8 @@ generate_manifest.py — Gera um manifest JSON com hash SHA-256 dos arquivos.
 Materializa em codigo o passo 1 (HASH) do trust layer.
 
 Uso:
-    python3 scripts/generate_manifest.py --dir .claude/agents/data-engineering
-    python3 scripts/generate_manifest.py --dir .claude/agents --out security/manifest.json
+    python3 scripts/generate_manifest.py --dir plugin/agents/data-engineering
+    python3 scripts/generate_manifest.py --dir plugin/agents --out plugin-extras/security/manifest.json
 
 O manifest resultante lista cada arquivo com seu SHA-256 + tamanho + metadata git.
 Serve como entrada pro cosign sign-blob (que assina o manifest todo com uma unica signature).
@@ -17,7 +17,7 @@ import hashlib
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Extensoes aceitas por padrao — arquivos declarativos do plugin AgentSpec.
@@ -104,7 +104,7 @@ def build_manifest(target_dir: Path, allowed_extensions, repo_root: Path) -> dic
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_by": "generate_manifest.py v1.0",
-        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "algorithm": "sha256",
         "base_path": base_path_str,
         "allowed_extensions": sorted(allowed_extensions),
@@ -127,8 +127,8 @@ def main() -> int:
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path("plugin/security/manifest.json"),
-        help="Onde salvar o manifest (default: plugin/security/manifest.json)",
+        default=Path("plugin-extras/security/manifest.json"),
+        help="Onde salvar o manifest (default: plugin-extras/security/manifest.json — canonical source; build-plugin.sh copies to plugin/security/)",
     )
     parser.add_argument(
         "--extensions",
