@@ -287,6 +287,21 @@ class RunContext:
         promoted = self.output_digest(stage, target.read_bytes())
         return any(row.output_hash == promoted for row in self.settled_stamps(stage))
 
+    def target_holds_the_subject(self, stage: Stage, index: int) -> bool:
+        """The emit target already holds exactly the bytes this run would promote.
+        A stamp alone cannot answer that: it says the target was promoted at some
+        point, not that it matches the artifact standing behind THIS run — so a
+        regenerated artifact that cleared every gate would otherwise be stamped,
+        reported `emitted`, and never actually written."""
+        target = self.request.target
+        if not target.is_file():
+            return False
+        try:
+            subject = self.subject_path(stage, index)
+        except ValueError:
+            return False
+        return subject.is_file() and target.read_bytes() == subject.read_bytes()
+
     def target_was_modified(self, stage: Stage, staged: Path) -> bool:
         """The emit target holds bytes no emit stamp certifies, and they are not the
         staged bytes either: the canonical artifact was edited in place after this
@@ -307,7 +322,7 @@ class RunContext:
         if not self.settled_stamps(stage):
             return False
         if stage.kind == "emit":
-            return self.target_is_stamped(stage)
+            return self.target_holds_the_subject(stage, index) and self.target_is_stamped(stage)
         expected_input = self.input_digest(stage, index)
         if expected_input is None:
             return False

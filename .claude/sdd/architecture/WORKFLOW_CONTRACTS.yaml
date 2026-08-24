@@ -403,8 +403,10 @@ orchestration:
       attempt's path; only PASS and WARN certify; freshness is judged against the
       whole log, so a new epoch resets the budget and never the evidence; staging
       is scoped per attempt AND per stage; evidence is append-only and fsynced;
-      generated artifacts stage then promote atomically, and a target holding
-      bytes no emit stamp accounts for is never promoted over. Restart-clean, not
+      generated artifacts stage then promote atomically; emit skips only when the
+      target already holds exactly the bytes this run would promote AND a stamp
+      certifies them, and a target holding bytes no emit stamp accounts for is
+      never promoted over. Restart-clean, not
       mid-stage-resumable; the durable journal is named as future work, not built.
 
   archive:

@@ -12,6 +12,7 @@ from spec_judge.evaluator import Concern, EvalRequest, EvalResult, FakeEvaluator
 from spec_linter import Level
 
 from spec_composer.contract import PipelineSpec
+from spec_composer.emit import resolve_archive_dir
 from spec_composer.engine import compose
 from spec_composer.generator import FakeGenerator
 from spec_composer.models import (
@@ -476,3 +477,72 @@ def test_a_foreign_verdict_token_never_grants_a_skip(spec_text: str, target: Pat
     assert resumed.stage == "generate-agent"
     gate_a = [row for row in RunLog(log_path).records() if row.kind == "stamp"]
     assert [row.verdict for row in gate_a if row.stage == "gate-a"] == ["SETTLED", Level.PASS.name]
+
+
+def _revised(body: str) -> str:
+    return body.replace("a structured report.", "a structured report, revised.")
+
+
+def test_regenerated_artifact_replaces_the_previously_emitted_one(
+    spec_text: str, agent_text: str, target: Path
+) -> None:
+    """A stamp says the target WAS promoted at some point, not that it matches the
+    artifact standing behind this run. An artifact regenerated after a spec edit
+    clears every gate, so it must actually reach the target — reporting `emitted`
+    over the previous version would be the conductor lying about its own output."""
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    request = ComposeRequest(name="code-reviewer", target=target)
+    first = _drive(pipeline, request, {"create-spec": spec_text, "generate-agent": agent_text})
+    assert first.disposition is Disposition.EMITTED
+    assert target.read_text(encoding="utf-8") == agent_text
+
+    spec_path = first.run_dir / "spec" / "code-reviewer.spec.md"
+    spec_path.write_text(_mutated_spec(spec_text), encoding="utf-8")
+
+    stale = compose(request, pipeline)
+    assert stale.disposition is Disposition.WAITING
+    assert stale.reason == "stale-artifact"
+    assert stale.expected_path is not None
+    stale.expected_path.write_text(_revised(agent_text), encoding="utf-8")
+
+    emitted = compose(request, pipeline)
+    assert emitted.disposition is Disposition.EMITTED
+    assert target.read_text(encoding="utf-8") == _revised(agent_text)
+
+    records = RunLog(run_dir(pipeline.pipeline, target) / "run.jsonl").records()
+    emit_stamps = [row for row in records if row.kind == "stamp" and row.stage == "emit-agent"]
+    assert len(emit_stamps) == 2
+
+    archive_dir = resolve_archive_dir(request.name, pipeline.archive)
+    provenance = json.loads((archive_dir / "provenance.json").read_text(encoding="utf-8"))
+    assert provenance["epoch"] == emitted.epoch
+
+
+def test_hand_copied_target_is_stamped_not_skipped(
+    spec_text: str, agent_text: str, target: Path
+) -> None:
+    """A target whose bytes happen to equal the subject but that no emit stamp
+    certifies is not evidence — it is a coincidence. The emit stage runs, so the
+    promotion is recorded and the archive is written rather than being skipped on
+    the strength of a file nobody accounted for."""
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    request = ComposeRequest(name="code-reviewer", target=target)
+    first = _drive(pipeline, request, {"create-spec": spec_text, "generate-agent": agent_text})
+    assert first.disposition is Disposition.EMITTED
+
+    spec_path = first.run_dir / "spec" / "code-reviewer.spec.md"
+    spec_path.write_text(_mutated_spec(spec_text), encoding="utf-8")
+    stale = compose(request, pipeline)
+    assert stale.expected_path is not None
+    stale.expected_path.write_text(_revised(agent_text), encoding="utf-8")
+
+    target.write_text(_revised(agent_text), encoding="utf-8")
+
+    emitted = compose(request, pipeline)
+    assert emitted.disposition is Disposition.EMITTED
+    assert target.read_text(encoding="utf-8") == _revised(agent_text)
+
+    records = RunLog(run_dir(pipeline.pipeline, target) / "run.jsonl").records()
+    emit_stamps = [row for row in records if row.kind == "stamp" and row.stage == "emit-agent"]
+    assert len(emit_stamps) == 2
+    assert emit_stamps[-1].output_hash != emit_stamps[0].output_hash
