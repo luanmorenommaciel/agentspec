@@ -138,7 +138,7 @@ The repository runs two long-lived branches:
 | Branch | What lands there |
 |---|---|
 | `develop` | All day-to-day work — features, fixes, documentation. Open your PR against this branch. |
-| `main` | Released code only. It receives release PRs from `develop`, never feature PRs. |
+| `main` | Released code only. It receives release PRs from `release/X.Y.Z` branches cut from `develop`, never feature PRs. |
 
 1. Fork the repository
 2. Create a feature branch from `develop`
@@ -155,6 +155,16 @@ The repository runs two long-lived branches:
 truth for it — the marketplace manifests deliberately do not declare one. The version is raised
 only in a release PR, so a feature PR should leave it exactly as it is on `develop`. An automated
 check enforces this and will fail your PR if the version moves.
+
+### How a release happens
+
+Maintainers cut a `release/X.Y.Z` branch from `develop`, raise the version there, open a PR from that
+branch into `main`, merge it with a merge commit, and immediately merge `main` back into `develop`.
+The version therefore moves only on `main` and on release branches; `develop` receives it through the
+back-merge. A change merged into `develop` ships with the next release cut after it.
+
+If your change is user-visible, add a line for it under `## [Unreleased]` in `CHANGELOG.md`; the
+release consolidates that section into the version's entry.
 
 Maintainers: the release procedure lives in [`docs/reference/releasing.md`](docs/reference/releasing.md).
 
