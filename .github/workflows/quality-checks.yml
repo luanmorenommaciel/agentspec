@@ -18,6 +18,7 @@ on:
       - 'plugin-extras/**'
       - 'tools/spec-linter/**'
       - 'tools/spec-judge/**'
+      - 'tools/spec-composer/**'
       - '.github/workflows/quality-checks.yml'
   pull_request:
     branches: [main]
@@ -30,6 +31,7 @@ on:
       - 'plugin-extras/**'
       - 'tools/spec-linter/**'
       - 'tools/spec-judge/**'
+      - 'tools/spec-composer/**'
       - '.github/workflows/quality-checks.yml'
 
 jobs:
@@ -111,3 +113,26 @@ jobs:
 
       - name: Verify cross-package import through the wrapper
         run: tools/spec-judge/spec-judge --selfcheck
+
+  spec-composer:
+    name: Spec-composer component tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install components (editable, with dev extras)
+        run: python3 -m pip install -e tools/spec-linter -e tools/spec-judge -e 'tools/spec-composer[dev]'
+
+      - name: Run component tests
+        run: python3 -m pytest tools/spec-composer/tests -v
+
+      - name: Validate the shipped pipeline contract
+        run: tools/spec-composer/spec-compose --check tools/spec-composer/pipelines/agent-creation.yaml
+
+      - name: Verify cross-package import through the wrapper
+        run: tools/spec-composer/spec-compose --selfcheck

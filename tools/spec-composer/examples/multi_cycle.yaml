@@ -1,0 +1,35 @@
+# A legal multi-cycle pipeline: every model-based stage sits behind a gate on its
+# own subject, so the ordering invariant holds even though a judge stage appears
+# before a later lint stage.
+pipeline: multi-cycle
+version: 1
+max_attempts: 3
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: draft
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: gate-draft
+    kind: lint
+    input_contract: agent-spec
+  - id: judge-draft
+    kind: judge
+    judge_tier: smoke
+  - id: refine
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: gate-refined
+    kind: lint
+    input_contract: agent-spec
+  - id: judge-refined
+    kind: judge
+    judge_tier: standard
+  - id: emit-agent
+    kind: emit

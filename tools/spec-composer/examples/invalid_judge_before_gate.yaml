@@ -1,0 +1,18 @@
+# A deliberately invalid contract: the model-based judge runs before any gate has
+# been applied to the artifact it would judge. The contract check must FAIL it,
+# naming P2.judge_after_gates.
+pipeline: judge-before-gate
+version: 1
+max_attempts: 3
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: judge-early
+    kind: judge
+    judge_tier: standard
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: emit-agent
+    kind: emit
