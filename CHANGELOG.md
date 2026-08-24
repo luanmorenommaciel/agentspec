@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.5.1] - 2026-08-25
+
 ### Added
 
 - **`docs/reference/releasing.md`** — the maintainer-only release procedure: branch topology, the version single-source rule, the step-by-step for cutting a release from a `release/X.Y.Z` branch, the hotfix back-merge requirement, and the full doctrine `scripts/bump.sh --check` enforces. Linked from `docs/README.md`.
