@@ -24,8 +24,8 @@ The authority for this procedure is [`docs/reference/releasing.md`](../../docs/r
 
 - [ ] Branch is `release/X.Y.Z`, cut from `develop` with `--no-track` and pushed explicitly; the version was not touched on `develop`
 - [ ] `plugin/.claude-plugin/plugin.json` version raised on this branch
-- [ ] `./build-plugin.sh` run — no diff produced (drift check)
-- [ ] Doc surfaces updated — `README.md` badge, `CLAUDE.md` status + version block, `SECURITY.md` supported-versions table
+- [ ] `./build-plugin.sh` run — `git status` clean afterwards (drift check)
+- [ ] Doc surfaces updated — `README.md` badge, `CLAUDE.md` status + version block, `SECURITY.md` supported-versions table (keyed to `X.Y.x` — only on a minor or major release)
 - [ ] `CHANGELOG.md` — `[Unreleased]` consolidated into `## [X.Y.Z] - <date>`, dated the day the release is cut; fresh empty `[Unreleased]` above it
 - [ ] `bump-gate` CI check green (locally: `GITHUB_BASE_REF=main bash scripts/bump.sh --check`)
 
@@ -35,6 +35,6 @@ The authority for this procedure is [`docs/reference/releasing.md`](../../docs/r
 
 ## After merge
 
-- [ ] Back-merge PR `main` → `develop` opened and merged immediately (merge commit); `bump-gate` green on it
+- [ ] Back-merge of `main` into `develop` opened from `chore/back-merge-X.Y.Z` and merged immediately (merge commit); `CHANGELOG.md` checked in that merge; `bump-gate` green on it
 - [ ] Annotated tag `vX.Y.Z` created on the merge commit and pushed; GitHub Release published from it
 - [ ] `release/X.Y.Z` deleted
