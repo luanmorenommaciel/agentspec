@@ -153,15 +153,15 @@ The repository runs two long-lived branches:
 
 `plugin/.claude-plugin/plugin.json` holds the project's version, and it is the single source of
 truth for it — the marketplace manifests deliberately do not declare one. The version is raised
-only in a release PR, so a feature PR should leave it exactly as it is on `develop`. An automated
+only on a release branch, so a feature PR should leave it exactly as it is on `develop`. An automated
 check enforces this and will fail your PR if the version moves.
 
 ### How a release happens
 
 Maintainers cut a `release/X.Y.Z` branch from `develop`, raise the version there, open a PR from that
 branch into `main`, merge it with a merge commit, and immediately merge `main` back into `develop`.
-The version therefore moves only on `main` and on release branches; `develop` receives it through the
-back-merge. A change merged into `develop` ships with the next release cut after it.
+The version therefore moves only on `main`, on release branches and on hotfix branches; `develop`
+receives it through the back-merge. A change merged into `develop` ships with the next release cut after it.
 
 If your change is user-visible, add a line for it under `## [Unreleased]` in `CHANGELOG.md`; the
 release consolidates that section into the version's entry.

@@ -2,8 +2,7 @@
 
 *Opt-in template for a `release/X.Y.Z` → `main` release PR — apply it explicitly with `?template=release.md`, since directory-form templates are not auto-applied. Feature and fix PRs are unaffected.*
 
-The authority for this procedure is [`docs/reference/releasing.md`](../../docs/reference/releasing.md).
-This checklist points at it; it does not restate it.
+The authority for this procedure is [`docs/reference/releasing.md`](../../docs/reference/releasing.md). This checklist points at it; it does not restate it.
 
 ## Release
 
@@ -23,9 +22,9 @@ This checklist points at it; it does not restate it.
 
 ## Before merge
 
-- [ ] Branch is `release/X.Y.Z`, cut from `develop`; the version was not touched on `develop`
+- [ ] Branch is `release/X.Y.Z`, cut from `develop` with `--no-track` and pushed explicitly; the version was not touched on `develop`
 - [ ] `plugin/.claude-plugin/plugin.json` version raised on this branch
-- [ ] `./build-plugin.sh` run — root `.claude-plugin/marketplace.json` regenerated, nothing else changed
+- [ ] `./build-plugin.sh` run — no diff produced (drift check)
 - [ ] Doc surfaces updated — `README.md` badge, `CLAUDE.md` status + version block, `SECURITY.md` supported-versions table
 - [ ] `CHANGELOG.md` — `[Unreleased]` consolidated into `## [X.Y.Z] - <date>`, dated the day the release is cut; fresh empty `[Unreleased]` above it
 - [ ] `bump-gate` CI check green (locally: `GITHUB_BASE_REF=main bash scripts/bump.sh --check`)

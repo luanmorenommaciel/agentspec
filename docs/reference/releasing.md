@@ -8,17 +8,18 @@ Maintainer procedure for cutting a release. Contributors do not need this docume
 | Branch | Role |
 |---|---|
 | `develop` | Integration branch. All feature, fix and documentation work lands here. Its version always equals `main`'s. |
-| `release/X.Y.Z` | Short-lived, cut from `develop` when a release is prepared. The only branch on which the version is raised. Deleted once the release is merged and back-merged. |
+| `release/X.Y.Z` | Short-lived, cut from `develop` when a release is prepared; the version for that release is raised here. Deleted once the release is merged and back-merged. |
 | `main` | Released code. It receives release PRs from `release/X.Y.Z` branches, and hotfixes. Every commit on it is a candidate release point. |
 
 `develop` was cut from the `v3.5.0` tag. A tag is created for every release and never moved.
 
-The version moves on the release branch and nowhere else. Raising it on `develop` breaks the equality
-with `main` that the gate checks on every pull request against `develop`, so all of them fail at once
-whatever they contain — and the gate cannot prevent it, because a direct push to `develop` is not a
-pull request. The release branch keeps the bump off `develop` until `main` has advanced; the
-back-merge then carries it over. `develop` keeps receiving work while a release is under review: the
-release ships what `develop` held when the branch was cut, and later merges ride the next one.
+The version moves on the release branch — and on a hotfix branch, see Hotfixes — never on `develop`.
+Raising it on `develop` breaks the equality with `main` that the gate checks on every pull request
+against `develop`, so all of them fail at once whatever they contain — and the gate cannot prevent
+it, because a direct push to `develop` is not a pull request. The release branch keeps the bump off
+`develop` until `main` has advanced; the back-merge then carries it over. `develop` keeps receiving
+work while a release is under review: the release ships what `develop` held when the branch was cut,
+and later merges ride the next one.
 
 ## The version
 
@@ -33,44 +34,59 @@ deliberately, so the explicit SemVer stays.
 
 ## Cutting a release
 
-1. Cut the release branch from the current `develop`: `git checkout -b release/X.Y.Z origin/develop`.
+1. Cut the release branch from the current `develop` without inheriting its upstream:
+   `git fetch origin && git switch -c release/X.Y.Z --no-track origin/develop`. The `--no-track`
+   matters: a release branch that tracks `develop` turns a bare `git push` into a push of the bump
+   onto `develop` under `push.default=upstream` — the one thing this procedure exists to prevent.
 2. On that branch, and only there, raise the version in `plugin/.claude-plugin/plugin.json`.
-3. Run `./build-plugin.sh` to regenerate the root `.claude-plugin/marketplace.json`. Never hand-edit
-   the generated file. The build must change nothing else; if it does, the committed `plugin/` tree
-   had drifted from `.claude/`, and that drift is fixed on `develop` first, not on the release branch.
+3. Run `./build-plugin.sh`. The bump itself produces no build output — the marketplace manifests
+   carry no version — so the build is a drift check: it must change nothing. If it does, the committed
+   `plugin/` tree had drifted from `.claude/`, and that drift is fixed on `develop` first, not on the
+   release branch. Never hand-edit the generated `plugin/` tree; `plugin/.claude-plugin/plugin.json`
+   is the one file under it that is source, not output.
 4. Update the documentation surfaces the gate checks — the `README.md` version badge, the
    `CLAUDE.md` status line and version block, and the `SECURITY.md` supported-versions table.
 5. Consolidate `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - <date>`, dated the day the
    release is cut, fill in whatever the merged pull requests did not record, and leave a fresh, empty
    `## [Unreleased]` above it.
-6. Open the release PR from `release/X.Y.Z` into `main`, with the release template
-   (`?template=release.md`). Its body is the release report: the pull requests merged into `develop`
-   since the previous release and the issues they close, what is deliberately left out, and the test
-   plan. The gate runs in its `main` mode — the version must be strictly greater than `main`'s.
+6. Push the branch, naming it explicitly — `git push -u origin release/X.Y.Z` — and open the release
+   PR from `release/X.Y.Z` into `main`, with the release template (`?template=release.md`). Its body
+   is the release report: the pull requests merged into `develop` since the previous release and the
+   issues they close, what is deliberately left out, and the test plan. The gate runs in its `main`
+   mode — the version must be strictly greater than `main`'s. This is also the first pull request in
+   the cycle on which `Validate Plugin` and `Quality Checks` run at all — both are scoped to
+   `main`-base pull requests — so expect them to surface anything `develop` accumulated since the
+   last release.
 7. Merge the release PR with a **merge commit**, never a squash. A squash collapses the commits
-   `develop` already carries into one new commit, so `main` and `develop` stop sharing history: the
-   back-merge then reconciles two different commits with the same content, and `main`'s history no
-   longer shows the individual changes the tag points at.
+   `develop` already carries into one new commit, so the release's commits never become ancestors of
+   `main`: the back-merge then reconciles two different commits with the same content, and `main`'s
+   history no longer shows the individual changes the tag points at.
 8. Immediately open a PR from `main` into `develop` and merge it, also with a merge commit. It carries
    only the bump and the changelog consolidation, and it restores the equality the `develop` gate
    checks. Between the release merge and this back-merge, any pull request against `develop` that is
    re-evaluated fails the gate — its version is one behind `main`'s — which is why the back-merge is
-   part of the same procedure and not a later chore.
+   part of the same procedure and not a later chore. If `develop` gained `[Unreleased]` entries after
+   the cut, this merge conflicts in `CHANGELOG.md`: keep both — the new bullets stay under
+   `## [Unreleased]`, the release's `## [X.Y.Z]` section stays below it. No other file should conflict.
 9. Create an annotated tag on the release merge commit (`git tag -a vX.Y.Z <sha>`) and push it, then
    publish the GitHub Release from that tag. Delete `release/X.Y.Z`.
 
 A release that goes stale under review ships what it holds; the next release picks up the rest. If it
-must absorb newer work instead, merge `develop` into the release branch and push — the reviewed
-artifact changed, so review starts over.
+must absorb newer work instead, merge `develop` into the release branch, redo step 5 for what was
+absorbed — otherwise its changelog entries stay under `[Unreleased]` and ship undocumented — and
+push. The reviewed artifact changed, so review starts over.
 
 Point-in-time artifacts — presentation decks, past release notes — are deliberately excluded from
 the surface check. Retro-editing them would misrepresent what was presented at the time.
 
 ## Hotfixes
 
-A fix that cannot wait for the next release may target `main` directly. Merge `main` back into
-`develop` immediately afterwards, exactly as after a release. Skipping the back-merge leaves `develop`
-behind `main`, and the next release will silently revert the hotfix.
+A fix that cannot wait for the next release may target `main` directly. A hotfix PR is checked in
+the gate's `main` mode, so if it touches `plugin/` or `.claude-plugin/` it carries its own patch
+bump plus steps 3–5 above — build, documentation surfaces, a `CHANGELOG.md` section. Merge `main`
+back into `develop` immediately afterwards, exactly as after a release; that PR passes the `develop`
+gate by construction. Skipping the back-merge leaves `develop` behind `main`, and the next release
+will silently revert the hotfix.
 
 ## What the gate enforces
 
@@ -108,5 +124,6 @@ repository setting, not something this script can enforce.
 
 The gate is a pull-request check. A commit pushed directly to `develop` or `main` never meets it, and
 a version raised that way on `develop` fails every open pull request against `develop` at once.
-Requiring a pull request for both branches — a repository ruleset — is what closes that gap; like the
+Requiring a pull request for both branches — a repository ruleset — is what closes that gap, provided
+no bypass actor is granted on it: an administrator with bypass can still push directly. Like the
 up-to-date rule above, it is a repository setting, not something this script can enforce.
