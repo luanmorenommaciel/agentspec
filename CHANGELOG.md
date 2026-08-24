@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Releases are cut from a `release/X.Y.Z` branch** — the version is raised on a branch cut from `develop`; the release PR goes from that branch into `main` and merges with a merge commit; `main` is merged back into `develop` immediately afterwards. `develop` never carries a bump: raising the version there fails every open PR against `develop` at once. `docs/reference/releasing.md`, the release PR template, `CONTRIBUTING.md`, and the gate's own messages describe this flow.
 - **`CHANGELOG.md`'s `[3.5.0]` date corrected** from 2026-07-19 to 2026-07-30, the day that release was actually cut.
 
+### Fixed
+
+- **`build-plugin.sh` no longer copies `tools/spec-judge/uv.lock` into the built plugin** — every build left it behind as an untracked file, so a build could never come back clean; the lockfile is a development artifact with no consumer in the shipped tree.
+
 ## [3.5.0] - 2026-07-30
 
 ### Fixed

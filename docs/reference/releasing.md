@@ -13,7 +13,7 @@ Maintainer procedure for cutting a release. Contributors do not need this docume
 
 `develop` was cut from the `v3.5.0` tag. A tag is created for every release and never moved.
 
-The version moves on the release branch — and on a hotfix branch, see Hotfixes — never on `develop`.
+The version moves on the release branch — and on a hotfix branch, see [Hotfixes](#hotfixes) — never on `develop`.
 Raising it on `develop` breaks the equality with `main` that the gate checks on every pull request
 against `develop`, so all of them fail at once whatever they contain — and the gate cannot prevent
 it, because a direct push to `develop` is not a pull request. The release branch keeps the bump off
@@ -40,12 +40,15 @@ deliberately, so the explicit SemVer stays.
    onto `develop` under `push.default=upstream` — the one thing this procedure exists to prevent.
 2. On that branch, and only there, raise the version in `plugin/.claude-plugin/plugin.json`.
 3. Run `./build-plugin.sh`. The bump itself produces no build output — the marketplace manifests
-   carry no version — so the build is a drift check: it must change nothing. If it does, the committed
-   `plugin/` tree had drifted from `.claude/`, and that drift is fixed on `develop` first, not on the
-   release branch. Never hand-edit the generated `plugin/` tree; `plugin/.claude-plugin/plugin.json`
-   is the one file under it that is source, not output.
+   carry no version — so the build is a drift check: `git status` must show no change afterwards. If a
+   tracked file moved, the committed `plugin/` tree had drifted from its sources (`.claude/`,
+   `plugin-extras/`, `tools/`), and that drift is fixed on `develop` first, not on the release branch.
+   Never hand-edit the generated `plugin/` tree. The exceptions the build preserves are
+   `plugin/.claude-plugin/` — both manifests; the root `.claude-plugin/marketplace.json` is generated
+   *from* `plugin/.claude-plugin/marketplace.json` — and `plugin/README.md`.
 4. Update the documentation surfaces the gate checks — the `README.md` version badge, the
-   `CLAUDE.md` status line and version block, and the `SECURITY.md` supported-versions table.
+   `CLAUDE.md` status line and version block, and the `SECURITY.md` supported-versions table, which is
+   keyed to `X.Y.x` and therefore changes only on a minor or major release.
 5. Consolidate `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - <date>`, dated the day the
    release is cut, fill in whatever the merged pull requests did not record, and leave a fresh, empty
    `## [Unreleased]` above it.
@@ -60,14 +63,19 @@ deliberately, so the explicit SemVer stays.
 7. Merge the release PR with a **merge commit**, never a squash. A squash collapses the commits
    `develop` already carries into one new commit, so the release's commits never become ancestors of
    `main`: the back-merge then reconciles two different commits with the same content, and `main`'s
-   history no longer shows the individual changes the tag points at.
+   history no longer shows the individual changes the tag points at. The repository allows all three
+   merge methods, so nothing but this rule enforces it; restricting `main` to merge commits is a
+   repository setting.
 8. Immediately open a PR from `main` into `develop` and merge it, also with a merge commit. It carries
-   only the bump and the changelog consolidation, and it restores the equality the `develop` gate
-   checks. Between the release merge and this back-merge, any pull request against `develop` that is
-   re-evaluated fails the gate — its version is one behind `main`'s — which is why the back-merge is
-   part of the same procedure and not a later chore. If `develop` gained `[Unreleased]` entries after
-   the cut, this merge conflicts in `CHANGELOG.md`: keep both — the new bullets stay under
-   `## [Unreleased]`, the release's `## [X.Y.Z]` section stays below it. No other file should conflict.
+   the bump, the documentation surfaces and the changelog consolidation — plus anything `main` gained
+   from a hotfix — and it restores the equality the `develop` gate checks. Between the release merge
+   and this back-merge, any pull request against `develop` that is re-evaluated fails the gate — its
+   version is one behind `main`'s — which is why the back-merge is part of the same procedure and not
+   a later chore. `CHANGELOG.md` needs a manual pass whenever `develop` gained `[Unreleased]` entries
+   after the cut: git may report a conflict, or — worse — merge cleanly and file those entries inside
+   the release's `## [X.Y.Z]` section. Either way, before merging, every entry added after the cut
+   goes back under `## [Unreleased]`, and `## [X.Y.Z]` ends up identical to `main`'s. No other file
+   should need attention.
 9. Create an annotated tag on the release merge commit (`git tag -a vX.Y.Z <sha>`) and push it, then
    publish the GitHub Release from that tag. Delete `release/X.Y.Z`.
 
@@ -83,10 +91,11 @@ the surface check. Retro-editing them would misrepresent what was presented at t
 
 A fix that cannot wait for the next release may target `main` directly. A hotfix PR is checked in
 the gate's `main` mode, so if it touches `plugin/` or `.claude-plugin/` it carries its own patch
-bump plus steps 3–5 above — build, documentation surfaces, a `CHANGELOG.md` section. Merge `main`
-back into `develop` immediately afterwards, exactly as after a release; that PR passes the `develop`
-gate by construction. Skipping the back-merge leaves `develop` behind `main`, and the next release
-will silently revert the hotfix.
+bump plus steps 3–4 above and a new `## [X.Y.Z]` section in `CHANGELOG.md` (`main`'s `[Unreleased]`
+is empty after a release, so there is nothing to rename). Merge `main` back into `develop`
+immediately afterwards, exactly as after a release; that PR passes the `develop` gate by
+construction. Skipping the back-merge leaves `develop` behind `main`, and the next release will
+silently revert the hotfix.
 
 ## What the gate enforces
 
