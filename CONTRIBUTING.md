@@ -8,6 +8,9 @@ Thank you for your interest in AgentSpec! This guide will help you contribute ef
 # Fork and clone
 git clone https://github.com/YOUR_USERNAME/agentspec.git
 cd agentspec
+
+# Branch from develop — that is where day-to-day work lands
+git checkout develop
 git checkout -b feature/your-feature
 
 # The framework lives in .claude/
@@ -117,7 +120,7 @@ See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples, and
 ## Bug Fixes
 
 1. Check [existing issues](https://github.com/luanmorenommaciel/agentspec/issues)
-2. Create a branch: `git checkout -b fix/description`
+2. Create a branch from `develop`: `git checkout develop && git checkout -b fix/description`
 3. Make your fix
 4. Submit a PR with a clear description of the problem and solution
 
@@ -130,14 +133,40 @@ See existing skills (`visual-explainer`, `excalidraw-diagram`) for examples, and
 
 ## Pull Request Process
 
+The repository runs two long-lived branches:
+
+| Branch | What lands there |
+|---|---|
+| `develop` | All day-to-day work — features, fixes, documentation. Open your PR against this branch. |
+| `main` | Released code only. It receives release PRs from `release/X.Y.Z` branches cut from `develop`, never feature PRs. |
+
 1. Fork the repository
-2. Create a feature branch from `main`
+2. Create a feature branch from `develop`
 3. Make changes following the style guidelines above
 4. Test with Claude Code to ensure commands and agents work
-5. Submit a PR with:
+5. Open the PR **against `develop`**, with:
    - Clear title (e.g., "Add redis KB domain" or "Fix brainstorm agent quality gate")
    - Description of what changed and why
    - Link to related issue if applicable
+
+### Do not change the version
+
+`plugin/.claude-plugin/plugin.json` holds the project's version, and it is the single source of
+truth for it — the marketplace manifests deliberately do not declare one. The version is raised
+only on a release branch, so a feature PR should leave it exactly as it is on `develop`. An automated
+check enforces this and will fail your PR if the version moves.
+
+### How a release happens
+
+Maintainers cut a `release/X.Y.Z` branch from `develop`, raise the version there, open a PR from that
+branch into `main`, merge it with a merge commit, and immediately merge `main` back into `develop`.
+The version therefore moves only on `main`, on release branches and on hotfix branches; `develop`
+receives it through the back-merge. A change merged into `develop` ships with the next release cut after it.
+
+If your change is user-visible, add a line for it under `## [Unreleased]` in `CHANGELOG.md`; the
+release consolidates that section into the version's entry.
+
+Maintainers: the release procedure lives in [`docs/reference/releasing.md`](docs/reference/releasing.md).
 
 ## Plugin Development
 
