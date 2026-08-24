@@ -4,8 +4,10 @@ Validates the ephemeral, pre-generation spec against the four published Gate A
 criteria: the nearest existing sibling must not already cover the scope, enough
 distinct triggers must be declared, the intent must be specific rather than a
 restatement of the name, and the tier must be one the output template defines.
-Every threshold is a constructor parameter, so revising a criterion changes call
-sites rather than code.
+When the spec enumerates its triggers, the declared count must agree with the
+enumeration — a count that outruns the scenarios behind it is exactly the claim
+the overlap and trigger criteria exist to test. Every threshold is a constructor
+parameter, so revising a criterion changes call sites rather than code.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ class CreationSpecContract:
         return [
             *self._overlap_findings(parsed),
             *self._trigger_findings(parsed),
+            *self._scenario_findings(parsed),
             *self._intent_findings(parsed),
             *self._tier_findings(parsed),
         ]
@@ -84,6 +87,39 @@ class CreationSpecContract:
                     "too few distinct trigger scenarios to justify a new artifact",
                     f">= {self._min_triggers}",
                     repr(value),
+                )
+            ]
+        return []
+
+    def _scenario_findings(self, spec: dict[str, Any]) -> list[Finding]:
+        """`trigger_scenarios` is optional, but a spec that enumerates its triggers
+        must not also claim a different number of them. The count is only compared
+        once it is itself well-formed, so a bad count is reported by one rule, not
+        two."""
+        scenarios = spec.get("trigger_scenarios")
+        if scenarios is None:
+            return []
+        count = spec.get("trigger_count")
+        if isinstance(count, bool) or not isinstance(count, int):
+            return []
+        if not isinstance(scenarios, (list, tuple)):
+            return [
+                _fail(
+                    "L2.trigger_count_mismatch",
+                    "trigger_scenarios",
+                    "trigger_scenarios must be a list of the scenarios trigger_count counts",
+                    f"a list of {count} scenarios",
+                    repr(scenarios),
+                )
+            ]
+        if len(scenarios) != count:
+            return [
+                _fail(
+                    "L2.trigger_count_mismatch",
+                    "trigger_scenarios",
+                    "trigger_count disagrees with the scenarios actually enumerated",
+                    f"{count} scenarios",
+                    f"{len(scenarios)} scenarios",
                 )
             ]
         return []

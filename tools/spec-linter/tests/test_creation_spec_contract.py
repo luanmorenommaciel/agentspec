@@ -59,6 +59,26 @@ def _spec(**overrides: Any) -> dict[str, Any]:
             id="intent-restates_name",
         ),
         pytest.param(_spec(tier="T9"), "L2.tier", id="tier-outside_allowed_set"),
+        pytest.param(
+            _spec(trigger_count=3, trigger_scenarios=["a", "b"]),
+            "L2.trigger_count_mismatch",
+            id="trigger_scenarios-fewer_than_claimed",
+        ),
+        pytest.param(
+            _spec(trigger_count=3, trigger_scenarios=["a", "b", "c", "d"]),
+            "L2.trigger_count_mismatch",
+            id="trigger_scenarios-more_than_claimed",
+        ),
+        pytest.param(
+            _spec(trigger_count=3, trigger_scenarios=[]),
+            "L2.trigger_count_mismatch",
+            id="trigger_scenarios-empty",
+        ),
+        pytest.param(
+            _spec(trigger_count=3, trigger_scenarios="a, b, c"),
+            "L2.trigger_count_mismatch",
+            id="trigger_scenarios-not_a_list",
+        ),
     ],
 )
 def test_gate_a_criteria(spec: dict[str, Any], expected_rule: str) -> None:
@@ -98,3 +118,29 @@ def test_non_mapping_is_unparseable() -> None:
 
 def test_contract_satisfies_protocol() -> None:
     assert isinstance(CreationSpecContract(), Contract)
+
+
+def test_matching_trigger_scenarios_have_no_findings() -> None:
+    """The enumeration is optional; declaring one that agrees with the count is
+    the whole point of declaring it."""
+    spec = _spec(
+        trigger_count=3, trigger_scenarios=["review a PR", "review a diff", "review a file"]
+    )
+    verdict = lint(spec, CreationSpecContract())
+    assert verdict.level == Level.PASS
+    assert verdict.findings == []
+
+
+def test_a_malformed_count_is_reported_once() -> None:
+    """A count that is not a count is one defect, not two: the mismatch rule stays
+    silent until the count it compares against is itself well-formed."""
+    spec = _spec(trigger_count="three", trigger_scenarios=["a", "b"])
+    verdict = lint(spec, CreationSpecContract())
+    assert verdict.level == Level.FAIL
+    assert [finding.rule for finding in verdict.findings] == ["L2.trigger_count"]
+
+
+def test_scenarios_are_only_compared_when_declared() -> None:
+    """A spec that never enumerates its triggers is judged on the count alone."""
+    verdict = lint(_spec(trigger_count=4), CreationSpecContract())
+    assert verdict.level == Level.PASS
