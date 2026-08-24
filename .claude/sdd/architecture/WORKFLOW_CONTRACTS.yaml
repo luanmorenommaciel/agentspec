@@ -1,9 +1,9 @@
 # AgentSpec - Workflow Contracts
 # 5-Phase Development Workflow with Agent Matching and Delegation
-# Version: 3.5.0
-# Date: 2026-07-15
+# Version: 3.6.0
+# Date: 2026-08-23
 
-version: "3.5.0"
+version: "3.6.0"
 name: "AgentSpec"
 description: "5-phase spec-driven development workflow with agent orchestration for software and data engineering"
 
@@ -300,6 +300,109 @@ behavioral_enforcement:
   cost_bound: "A shared, append-only per-day ledger (.claude/storage/judge-ledger.jsonl) caps spend across the judge family; the CLI preflights and refuses a panel it cannot finish."
 
   status: "prototype — re-scopes the shipped V0 reviewer's cross-model + budget mechanisms toward contract conformance; superseding V0 is a separate migration"
+
+# =============================================================================
+# ORCHESTRATION (the Composer — ADR-004)
+# =============================================================================
+# The conductor that drives ONE artifact through a declared create -> gate ->
+# archive lifecycle. It is not a fourth checker: it sequences the two enforcement
+# engines above and owns the sequencing policy they deliberately do not carry —
+# stage order, the shared repair-loop budget, the human-escalation anchor, and the
+# archival rule. The conductor is deterministic, token-free code; a model runs only
+# inside the create, generate and judge stages. The specific lifecycle is data: a
+# pipeline contract the engine validates with the Linter before it runs it.
+# Operator documentation: tools/spec-composer/USAGE.md
+
+orchestration:
+  component: "spec-composer"
+  usage_doc: "tools/spec-composer/USAGE.md"
+  entry_point: "spec_composer.engine.compose(request, pipeline_contract)"
+
+  runs: "the enforcement contracts above, as stages — it never re-implements them"
+
+  verdict_semantics:
+    note: |
+      The Composer emits NO verdict vocabulary of its own. It records the gates'
+      and the judge's PASS|WARN|FAIL unchanged in its evidence log and in the
+      verdict trail it returns, and it routes on FAIL only. Operational outcome is
+      carried by the run's disposition and the exit code, never by a fourth level.
+    rule: "Consumers MUST NOT reinterpret FAIL."
+
+  pipeline_contract:
+    file: "tools/spec-composer/pipelines/agent-creation.yaml"
+    shape: "an ordered list of typed stages; the policy is data, not code"
+    stage_kinds: [create, lint, generate, judge, emit]
+    policy_fields: [max_attempts, archive, input_contract, output_contract, judge_tier, require_approval_for]
+    ordering_invariant: |
+      No model-based stage may run before the deterministic gate on its own
+      subject, and nothing a model produced may be promoted ungated. The rules are
+      SUBJECT-AWARE, so a pipeline with several generate/judge cycles is legal
+      while every model stage still sits behind a gate. The invariant is a CHECKED
+      rule, not a property held by construction: a violating contract is
+      expressible and FAILs its own contract check (P2.judge_after_gates,
+      P2.judge_without_subject, P2.generate_gated, P2.emit_gated, P2.emit_last).
+    self_check: "tools/spec-composer/spec-compose --check <contract> — the conductor's own configuration is a valid artifact of its own schema"
+
+  stage_bindings:
+    - stage: "gate_a"
+      binds: "contract_enforcement"
+      contract: "creation-spec"
+      pattern: "pre_generation_validation"
+    - stage: "gate_b"
+      binds: "contract_enforcement"
+      contract: "agent-spec"
+      pattern: "post_generation_conformance"
+    - stage: "judge"
+      binds: "behavioral_enforcement"
+      tier: "selected by the pipeline's judge_tier; unavailability pauses the run and never equals PASS"
+      pattern: "post_lint_evaluation"
+
+  consumer_bindings:
+    note: |
+      A binding declares which host-side surface drives the conductor and what it
+      does with each disposition. Wiring a surface to the conductor is consumer
+      work; the conductor itself stays usage-agnostic.
+    bindings:
+      - consumer: "host-side agent creation"
+        pipeline: "tools/spec-composer/pipelines/agent-creation.yaml"
+        drives: "spec-compose <spec> --out <target>; on exit 4 write the reported path and re-run the identical command; on exit 3 clear the cause (or grant the class with --approve) and re-run; on exit 1 escalate to a human"
+        status: "specified target"
+
+  repair_loop:
+    budget: "max_attempts is the TOTAL number of generation attempts per artifact — one initial attempt plus up to max_attempts - 1 repairs; default 3. One budget is shared across both feedback edges"
+    routing: "a failing gate re-runs the nearest preceding producing stage — derived from stage position, recorded in the evidence log, never declared per stage"
+    escalation: "budget exhaustion escalates to a human (disposition blocked); it never becomes a silent pass"
+
+  exit_code_contract:
+    description: |
+      The spec-compose wrapper maps a run's disposition to an exit code. The VERDICT
+      surface stays PASS/WARN/FAIL and is unchanged; dispositions are operational
+      outcomes only. Any code >= 2 means NO verdict was reached — a consumer records
+      a visible skip and never assumes PASS.
+    codes:
+      "0": "EMITTED — every declared stage cleared and the artifact was promoted"
+      "1": "BLOCKED — a gate FAIL with the shared budget exhausted, or a high-assurance judge FAIL pending human review"
+      "2": "ERROR — operational failure (invalid pipeline contract, unresolvable contract reference, missing spec, invalid archive template, failed promotion, unparseable judge subject, sibling linter absent)"
+      "3": "PAUSED — a bound stage could not run, or an approval named by require_approval_for is outstanding; never PASS"
+      "4": "WAITING — a producing stage has no usable output for this attempt; the host produces it and re-runs the identical command"
+
+  run_state:
+    location: ".claude/storage/composer/{pipeline}/{stem}-{digest of the resolved target path}/ — runtime state, not version-controlled"
+    invariants: |
+      Crash-only rerun-and-skip resume; stamps certify content under a rule
+      (a digest over the content, the pipeline contract version in force and the
+      name of the contract bound at that stage — producing and emit stamps carry
+      both an input and an output digest) and the attempt count persists in the
+      log; evidence is append-only and fsynced; generated artifacts stage then
+      promote atomically. Restart-clean, not mid-stage-resumable; the durable
+      journal is named as future work, not built.
+
+  archive:
+    location: ".claude/sdd/archive/specs/{name}/ — provenance only; no code path reads it to operate"
+    contents: "the ephemeral spec verbatim plus provenance.json (pipeline, version, epoch, attempts, per-stage digests, the resolved target path)"
+    canonical_spec: "after emission the artifact's OWN frontmatter is the canonical spec; the archived spec is a build record, not a live source"
+
+  status: "prototype — one engine, one concrete pipeline (agent creation); ADR-004 is Proposed and nothing here ships in the distributed plugin"
 
 # =============================================================================
 # PHASE 0: BRAINSTORM (Optional)
@@ -776,6 +879,12 @@ quality:
 # =============================================================================
 
 version_history:
+  - version: "3.6.0"
+    date: "2026-08-23"
+    changes:
+      - "Added orchestration (the Composer, ADR-004): the conductor that drives one artifact through a declared create -> gate -> archive lifecycle. The lifecycle is data — an ordered, typed stage list in a pipeline contract that the conductor validates with the Linter before running it, including the subject-aware cheap-before-expensive ordering invariant, which a violating contract FAILs. Binds contract_enforcement at both gates and behavioral_enforcement behind them; carries the shared repair-loop budget, the human-escalation anchor, the five-code exit contract, the run-state invariants and the archive rule."
+      - "Additive change — no modification to contract_enforcement, behavioral_enforcement, or the existing phase contracts."
+
   - version: "3.5.0"
     date: "2026-07-15"
     changes:
