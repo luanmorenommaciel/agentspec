@@ -8,7 +8,14 @@ from pathlib import Path
 
 import pytest
 import yaml
-from conftest import AGENT_TEXT, EXAMPLES, REJECTED_AGENT_TEXT, SHIPPED_PIPELINE, TOOL_ROOT
+from _helpers import (
+    AGENT_TEXT,
+    EXAMPLES,
+    REJECTED_AGENT_TEXT,
+    SHIPPED_PIPELINE,
+    SPEC_TEXT,
+    TOOL_ROOT,
+)
 
 from spec_composer.cli import main
 
@@ -23,12 +30,22 @@ _REASONS = (
     "judge-unparseable",
     "promotion-failed",
     "archive-failed",
+    "target-modified",
+)
+
+# A failure before the run starts has no disposition of its own; these are the
+# reasons the CLI renders for one.
+_PRE_RUN_REASONS = (
+    "contract-unloadable",
+    "linter-absent",
+    "contract-invalid",
+    "out-required",
+    "spec-not-found",
+    "run-failed",
 )
 
 
 def _write_spec(tmp_path: Path) -> Path:
-    from conftest import SPEC_TEXT
-
     path = tmp_path / "code-reviewer.spec.md"
     path.write_text(SPEC_TEXT, encoding="utf-8")
     return path
@@ -155,12 +172,23 @@ def test_exit_code_table(
 
 
 @pytest.mark.parametrize(
-    "cause", ["invalid-contract", "unresolvable-reference", "missing-spec", "linter-absent"]
+    ("cause", "evidence"),
+    [
+        ("invalid-contract", "is invalid"),
+        ("unresolvable-reference", "no contract is bound to 'kb-spec'"),
+        ("missing-spec", "spec not found"),
+        ("linter-absent", "cannot import spec_linter"),
+    ],
 )
 def test_exit_code_table_error(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, cause: str
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    cause: str,
+    evidence: str,
 ) -> None:
-    """Exit 2 is the configuration-defect bucket: re-running cannot clear it."""
+    """Exit 2 is the configuration-defect bucket: re-running cannot clear it. Each
+    cause has to say which defect it was, or the bucket is unactionable."""
     spec = _write_spec(tmp_path)
     pipeline = _pipeline(tmp_path)
     argv = [str(spec), "--pipeline", str(pipeline), "--out", "a/code-reviewer.md"]
@@ -179,7 +207,9 @@ def test_exit_code_table_error(
     else:
         monkeypatch.setitem(sys.modules, "spec_linter", None)
     assert main(argv) == 2
-    assert "ERROR" in capsys.readouterr().err
+    captured = capsys.readouterr().err
+    assert "ERROR" in captured
+    assert evidence in captured
 
 
 def test_blocked_reason_distinguishes_budget_from_high_assurance(
@@ -314,3 +344,80 @@ def test_usage_documents_every_exit_code() -> None:
     for reason in _REASONS:
         assert reason in usage, reason
     assert ">= 2" in usage or "≥ 2" in usage
+
+
+@pytest.mark.parametrize(
+    ("cause", "reason", "code"),
+    [
+        ("missing-contract", "contract-unloadable", 2),
+        ("invalid-contract", "contract-invalid", 2),
+        ("missing-spec", "spec-not-found", 2),
+        ("no-out", "out-required", 2),
+    ],
+)
+def test_pre_run_failures_render_as_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], cause: str, reason: str, code: int
+) -> None:
+    """A host that asked for JSON gets JSON on every path. A failure before the
+    first stage has no disposition of its own, so it is rendered as one rather
+    than as a bare stderr line the caller then has to parse differently."""
+    argv = [
+        str(_write_spec(tmp_path)),
+        "--pipeline",
+        str(_pipeline(tmp_path)),
+        "--out",
+        "a/code-reviewer.md",
+    ]
+    if cause == "missing-contract":
+        argv[2] = str(tmp_path / "absent.yaml")
+    elif cause == "invalid-contract":
+        argv[2] = str(EXAMPLES / "invalid_ungated_emit.yaml")
+    elif cause == "missing-spec":
+        argv[0] = str(tmp_path / "absent.spec.md")
+    else:
+        argv = argv[:3]
+
+    assert main([*argv, "--json"]) == code
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["disposition"] == "error"
+    assert payload["reason"] == reason
+    assert payload["detail"]
+
+
+def test_check_on_a_non_mapping_document_is_a_fail_not_an_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`--check` is a verdict surface: a document that loads but is not a pipeline
+    contract gets the FAIL its own contract defines. Only a path that cannot be
+    read at all is an unloadable file."""
+    document = tmp_path / "not-a-contract.yaml"
+    document.write_text("- create\n- lint\n- emit\n", encoding="utf-8")
+
+    assert main(["--check", str(document)]) == 1
+    out = capsys.readouterr().out
+    assert "VERDICT: FAIL" in out
+    assert "pipeline-contract.unparseable" in out
+
+    assert main(["--check", str(tmp_path / "absent.yaml")]) == 2
+    assert "not found" in capsys.readouterr().err
+
+
+def test_pipeline_pointing_at_a_directory_reports_what_is_wrong(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A directory is a plausible mistype of a contract path; the message says so
+    instead of surfacing the operating system's read error."""
+    argv = [str(_write_spec(tmp_path)), "--pipeline", str(tmp_path), "--out", "a/x.md"]
+    assert main(argv) == 2
+    assert "not a file" in capsys.readouterr().err
+
+
+def test_usage_documents_the_operator_recovery_paths() -> None:
+    """Every stop the conductor can reach has to be clearable from the document
+    alone: where the run state lands with no workspace marker, how a modified
+    target is re-promoted, and why an archive can refuse to be written."""
+    usage = (TOOL_ROOT / "USAGE.md").read_text(encoding="utf-8")
+    for reason in _PRE_RUN_REASONS:
+        assert reason in usage, reason
+    assert "unique" in usage
+    assert "working directory" in usage

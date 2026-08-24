@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from conftest import REJECTED_AGENT_TEXT, SPEC_TEXT, judge_less_document
+from _helpers import REJECTED_AGENT_TEXT, SPEC_TEXT, judge_less_document
 
 from spec_composer.contract import PipelineSpec
 from spec_composer.engine import compose

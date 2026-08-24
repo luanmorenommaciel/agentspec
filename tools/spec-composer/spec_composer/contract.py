@@ -13,6 +13,7 @@ contract that did not FAIL.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -105,6 +106,18 @@ def shape_findings(doc: PipelineDocument) -> list[Finding]:
                 repr(budget),
             )
         )
+    template = doc.archive
+    if template is not None and (Path(template).is_absolute() or ".." in Path(template).parts):
+        findings.append(
+            _fail(
+                "P1.archive_template",
+                "archive",
+                "the archive template must be relative and must not escape the workspace root; "
+                "an invalid template ends the run in error before any stage can run",
+                "a relative path with no '..' segment",
+                repr(template),
+            )
+        )
     seen: set[str] = set()
     for index, stage in enumerate(doc.stages):
         label = _label(stage, index)
@@ -176,7 +189,8 @@ def ordering_findings(doc: PipelineDocument) -> list[Finding]:
                         "a model-based stage would run before the deterministic gate on its "
                         "own subject; the cheap gate must clear first",
                         "a lint stage between the producing stage and the judge",
-                        f"no lint stage between {_label(stages[producer], producer)!r} and this one",
+                        "no lint stage between "
+                        f"{_label(stages[producer], producer)!r} and this one",
                     )
                 )
         elif stage.kind == "generate":
@@ -222,11 +236,15 @@ def ordering_findings(doc: PipelineDocument) -> list[Finding]:
 
 
 def binding_findings(doc: PipelineDocument, known: frozenset[str]) -> list[Finding]:
+    """Contract-reference rules. A `create` stage's `input_contract` is exempt from
+    the chain rule: what a create stage consumes is the REQUEST, which no upstream
+    stage produces, so naming one describes an origin rather than an unbound
+    reference."""
     findings: list[Finding] = []
     produced: set[str] = set()
     for index, stage in enumerate(doc.stages):
         label = _label(stage, index)
-        if stage.input_contract and stage.input_contract not in produced:
+        if stage.kind != "create" and stage.input_contract and stage.input_contract not in produced:
             findings.append(
                 _fail(
                     "P3.stage_io_chain",

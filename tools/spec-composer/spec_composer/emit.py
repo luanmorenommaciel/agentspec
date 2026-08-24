@@ -68,7 +68,23 @@ def resolve_archive_dir(name: str, template: str | None, workspace: Path | None 
 
 def archive_spec(destination: Path, spec: Path, provenance: dict[str, Any]) -> Path:
     """Write the spec verbatim plus provenance. The live run log is deliberately
-    NOT copied: it belongs to the disposable run directory and is still open."""
+    NOT copied: it belongs to the disposable run directory and is still open.
+
+    The destination is keyed by the artifact NAME, so two artifacts sharing a name
+    would resolve to the same archive. Overwriting one build record with another's
+    would silently destroy provenance, so a destination already describing a
+    DIFFERENT target is refused rather than replaced."""
+    existing = destination / "provenance.json"
+    if existing.is_file():
+        try:
+            recorded = json.loads(existing.read_text(encoding="utf-8")).get("target")
+        except (OSError, ValueError):
+            recorded = None
+        if recorded is not None and recorded != provenance.get("target"):
+            raise EmitError(
+                f"{existing} already holds provenance for {recorded}; "
+                "artifact names must be unique across the archive"
+            )
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(spec, destination / spec.name)
     (destination / "provenance.json").write_text(

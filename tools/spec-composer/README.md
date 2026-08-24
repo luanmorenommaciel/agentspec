@@ -8,12 +8,12 @@ See [`USAGE.md`](./USAGE.md) for the full operator reference — the five exit c
 
 ## Design in one screen
 
-- **Entry point** — `compose(request, pipeline, *, resolver=None, generator=None, evaluator=None) -> ComposeResult`, keyword-only seams that each default to a working binding, mirroring the Judger's `judge(artifact, contract, panel=None)`.
+- **Entry point** — `compose(request, pipeline_contract, *, resolver=None, generator=None, evaluator=None) -> ComposeResult`, keyword-only seams that each default to a working binding, mirroring the Judger's `judge(artifact, contract, panel=None)`.
 - **The lifecycle is policy, not code** — an ordered, typed stage list in a pipeline contract; a contract that violates the ordering invariant FAILs its own check rather than being silently accepted (rule table below).
 - **Three injected seams, one per non-deterministic concern** — `ContractResolver` binds a stage's contract *name* to a Linter contract object; `Generator` produces a `create`/`generate` stage's output (the shipped binding does not generate — it reports whether the expected file exists and hands off; see `USAGE.md` §4); the Judger's own `Evaluator` runs a `judge` stage, referenced only under `TYPE_CHECKING` so the sibling stays optional.
-- **Evidence, not memory** — one append-only, fsynced `run.jsonl` per (pipeline, target). Every run folds it from scratch, so a crashed or killed run resumes by re-running the identical command, skipping whatever a matching stamp already certifies.
+- **Evidence, not memory** — one append-only, fsynced `run.jsonl` per (pipeline, target). Every run folds it from scratch, so a crashed or killed run resumes by re-running the identical command, skipping whatever a matching stamp already certifies. A stamp records the payload path it certified, and freshness is judged against the whole log: a new epoch resets the budget, never the evidence.
 - **A shared, total attempt budget** — `max_attempts` counts generation attempts, not repairs, across both feedback edges (a Gate A failure re-creates the spec, a Gate B failure regenerates the artifact); exhaustion escalates to a human rather than looping silently.
-- **Fail-closed emission** — the emit target is only ever replaced by an atomic rename staged beside it; a promotion that cannot complete leaves the target byte-identical to its pre-run state.
+- **Fail-closed emission** — the emit target is only ever replaced by an atomic rename staged beside it; a promotion that cannot complete leaves the target byte-identical to its pre-run state, and a target holding bytes no emit stamp accounts for is never promoted over at all.
 
 ## Lifecycle
 
@@ -34,9 +34,9 @@ Each `gate` is a `lint` stage — a `spec_linter.Contract` bound to what the pre
 | `spec_composer.contract` | `PipelineDocument` (permissive), `PipelineContract` (a Linter `Contract` owning every rule below), `PipelineSpec` (the strict run-time view), `bound_contract_name` |
 | `spec_composer.models` | Frozen value objects — `Disposition`, `ComposeRequest`, `GenerationRequest`, `GenerationOutcome`, `StageVerdict`, `StageRecord`, `ComposeResult`. Verdict tokens are imported from `spec_linter`, never re-declared |
 | `spec_composer.protocol` | The two Composer-owned structural seams — `ContractResolver`, `Generator` |
-| `spec_composer.resolver` | `DefaultResolver` — the shipped name-to-contract bindings (`creation-spec`, `agent-spec`) — and `UnresolvedContract` |
+| `spec_composer.resolver` | `DefaultResolver` — the shipped name-to-contract bindings (`creation-spec`, `agent-spec`) — and `UnresolvedContractError` |
 | `spec_composer.generator` | `StagedArtifactGenerator` (the shipped handoff) and `FakeGenerator(script)` for offline tests |
-| `spec_composer.judging` | `judge_artifact()` — imports `spec_judge` inside the call; every could-not-run cause becomes `JudgeUnavailable` |
+| `spec_composer.judging` | `judge_artifact()` — imports `spec_judge` inside the call; every could-not-run cause becomes `JudgeUnavailableError` |
 | `spec_composer.runstate` | Workspace-root resolution, run identity, the two digests, and `RunLog` (append + fold) |
 | `spec_composer.emit` | `promote()` (atomic, fail-closed) and `archive_spec()` (provenance only, never read back) |
 | `spec_composer.cli` | `main(argv) -> int` — the run / `--check` / `--selfcheck` modes and the five-code exit map |
@@ -51,6 +51,7 @@ Each `gate` is a `lint` stage — a `spec_linter.Contract` bound to what the pre
 | `pipeline-contract.unparseable` | FAIL | The document is not a mapping at the top level |
 | `P1.missing_field` | FAIL | `pipeline`, `version`, or `stages` is absent or empty; a stage has no `id` |
 | `P1.max_attempts` | FAIL | `max_attempts` is absent, a boolean, non-integer, or `< 1` |
+| `P1.archive_template` | FAIL | `archive` is an absolute path, or contains a `..` segment that would leave the workspace |
 | `P1.unknown_kind` | FAIL | A stage's `kind` is outside `create \| lint \| generate \| judge \| emit` |
 | `P1.duplicate_stage_id` | FAIL | Two stages declare the same `id` |
 | `P1.unknown_field` | WARN | An unrecognized top-level or stage key |

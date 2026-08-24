@@ -2,7 +2,7 @@
 
 `spec_judge` is imported INSIDE the call, never at module import time: contract
 checking, a judge-less pipeline and `--selfcheck` must all work with the sibling
-absent. Every could-not-run cause raises `JudgeUnavailable`, which the conductor
+absent. Every could-not-run cause raises `JudgeUnavailableError`, which the conductor
 turns into a pause — unavailability never equals PASS.
 """
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from spec_judge import Evaluator
 
 
-class JudgeUnavailable(RuntimeError):
+class JudgeUnavailableError(RuntimeError):
     """A bound judge stage could not be run. Never a verdict."""
 
 
@@ -34,7 +34,9 @@ def judge_artifact(
         from spec_judge.openrouter import ConfigError, NetworkError
         from spec_judge.panel import Panel
     except ImportError as exc:
-        raise JudgeUnavailable(f"the behavioral evaluation engine is unavailable: {exc}") from exc
+        raise JudgeUnavailableError(
+            f"the behavioral evaluation engine is unavailable: {exc}"
+        ) from exc
 
     _, body = split_frontmatter(artifact_text)
     try:
@@ -42,4 +44,4 @@ def judge_artifact(
         preflight(len(panel.seats))
         return judge(body or artifact_text, SpecConformanceContract(source_spec), panel)
     except (BudgetError, NetworkError, ConfigError) as exc:
-        raise JudgeUnavailable(str(exc)) from exc
+        raise JudgeUnavailableError(str(exc)) from exc

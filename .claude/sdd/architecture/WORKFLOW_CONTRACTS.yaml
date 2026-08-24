@@ -341,14 +341,19 @@ orchestration:
       rule, not a property held by construction: a violating contract is
       expressible and FAILs its own contract check (P2.judge_after_gates,
       P2.judge_without_subject, P2.generate_gated, P2.emit_gated, P2.emit_last).
+    archive_template: |
+      The archive template is CHECKED as well as enforced: it must be relative and
+      must not escape the workspace root (P1.archive_template), so --check rejects
+      at authoring time exactly what a run rejects before its first stage.
     self_check: "tools/spec-composer/spec-compose --check <contract> — the conductor's own configuration is a valid artifact of its own schema"
 
   stage_bindings:
-    - stage: "gate_a"
+    - stage: "gate-a"
       binds: "contract_enforcement"
       contract: "creation-spec"
+      rules: [L2.overlap_check, L2.trigger_count, L2.trigger_count_mismatch, L2.intent_missing, L2.intent_unspecific, L2.tier]
       pattern: "pre_generation_validation"
-    - stage: "gate_b"
+    - stage: "gate-b"
       binds: "contract_enforcement"
       contract: "agent-spec"
       pattern: "post_generation_conformance"
@@ -383,7 +388,7 @@ orchestration:
       "0": "EMITTED — every declared stage cleared and the artifact was promoted"
       "1": "BLOCKED — a gate FAIL with the shared budget exhausted, or a high-assurance judge FAIL pending human review"
       "2": "ERROR — operational failure (invalid pipeline contract, unresolvable contract reference, missing spec, invalid archive template, failed promotion, unparseable judge subject, sibling linter absent)"
-      "3": "PAUSED — a bound stage could not run, or an approval named by require_approval_for is outstanding; never PASS"
+      "3": "PAUSED — a bound stage could not run, an approval named by require_approval_for is outstanding, or the emit target holds bytes no emit stamp accounts for (target-modified); never PASS"
       "4": "WAITING — a producing stage has no usable output for this attempt; the host produces it and re-runs the identical command"
 
   run_state:
@@ -393,14 +398,20 @@ orchestration:
       (a digest over the content, the pipeline contract version in force and the
       name of the contract bound at that stage — producing and emit stamps carry
       both an input and an output digest) and the attempt count persists in the
-      log; evidence is append-only and fsynced; generated artifacts stage then
-      promote atomically. Restart-clean, not mid-stage-resumable; the durable
-      journal is named as future work, not built.
+      log; a producing stamp also records the payload path it certified, so a
+      resumed run reads the artifact that actually passed rather than the current
+      attempt's path; only PASS and WARN certify; freshness is judged against the
+      whole log, so a new epoch resets the budget and never the evidence; staging
+      is scoped per attempt AND per stage; evidence is append-only and fsynced;
+      generated artifacts stage then promote atomically, and a target holding
+      bytes no emit stamp accounts for is never promoted over. Restart-clean, not
+      mid-stage-resumable; the durable journal is named as future work, not built.
 
   archive:
     location: ".claude/sdd/archive/specs/{name}/ — provenance only; no code path reads it to operate"
     contents: "the ephemeral spec verbatim plus provenance.json (pipeline, version, epoch, attempts, per-stage digests, the resolved target path)"
     canonical_spec: "after emission the artifact's OWN frontmatter is the canonical spec; the archived spec is a build record, not a live source"
+    naming: "the archive is keyed by artifact NAME, so names must be unique across everything a workspace archives; a collision with a different target is refused, never overwritten"
 
   status: "prototype — one engine, one concrete pipeline (agent creation); ADR-004 is Proposed and nothing here ships in the distributed plugin"
 

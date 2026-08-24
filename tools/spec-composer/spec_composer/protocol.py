@@ -26,7 +26,7 @@ class ContractResolver(Protocol):
 
     def resolve(self, contract_name: str) -> Contract:
         """Return the contract bound to `contract_name`, or raise
-        `UnresolvedContract` when the name has no binding here."""
+        `UnresolvedContractError` when the name has no binding here."""
         ...
 
 

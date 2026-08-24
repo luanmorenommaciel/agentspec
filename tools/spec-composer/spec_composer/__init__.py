@@ -1,6 +1,6 @@
 """Spec Composer — the artifact-creation conductor.
 
-One mechanism: `compose(request, pipeline)` (`engine.py`) drives a single
+One mechanism: `compose(request, pipeline_contract)` (`engine.py`) drives a single
 artifact through a declared create -> gate -> generate -> gate -> judge -> emit
 lifecycle. The lifecycle itself is policy expressed as data — an ordered, typed
 stage list in a pipeline contract (`contract.py`) that the sibling Linter
@@ -35,7 +35,7 @@ from .models import (
     StageVerdict,
 )
 from .protocol import ContractResolver, Generator
-from .resolver import DefaultResolver, UnresolvedContract
+from .resolver import DefaultResolver, UnresolvedContractError
 from .runstate import RunLog, digest, run_dir, run_root, workspace_root
 
 __all__ = [
@@ -60,7 +60,7 @@ __all__ = [
     "StageRecord",
     "StageVerdict",
     "StagedArtifactGenerator",
-    "UnresolvedContract",
+    "UnresolvedContractError",
     "archive_spec",
     "bound_contract_name",
     "digest",
@@ -83,8 +83,8 @@ def __getattr__(name: str) -> object:
         from .judging import judge_artifact
 
         return judge_artifact
-    if name == "JudgeUnavailable":
-        from .judging import JudgeUnavailable
+    if name == "JudgeUnavailableError":
+        from .judging import JudgeUnavailableError
 
-        return JudgeUnavailable
+        return JudgeUnavailableError
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

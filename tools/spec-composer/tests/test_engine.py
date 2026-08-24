@@ -6,7 +6,13 @@ import os
 from pathlib import Path
 from typing import Any
 
-from conftest import AGENT_TEXT, REJECTED_AGENT_TEXT, SPEC_TEXT, judge_less_document
+from _helpers import (
+    AGENT_TEXT,
+    REJECTED_AGENT_TEXT,
+    SPEC_TEXT,
+    TWO_PRODUCER_PIPELINE,
+    judge_less_document,
+)
 from spec_judge.evaluator import Concern, EvalRequest, EvalResult, FakeEvaluator
 from spec_linter import Level
 
@@ -16,6 +22,9 @@ from spec_composer.generator import FakeGenerator
 from spec_composer.models import ComposeRequest, Disposition, GenerationRequest
 from spec_composer.runstate import RunLog
 
+# The judge's subject is whatever the producing stage nearest to it wrote. Staging
+# is stage-scoped, so `generate-empty` owns its own file and the judge reads that
+# one — the gate that already cleared `generate-agent`'s artifact is not disturbed.
 _UNPARSEABLE_SUBJECT_PIPELINE = {
     "pipeline": "inline-unparseable-judge-subject",
     "version": 1,
@@ -233,3 +242,56 @@ def test_emit_promotes_only_after_gate_passes(target: Path) -> None:
     result = compose(request, pipeline, generator=FakeGenerator(script))
     assert result.disposition is Disposition.EMITTED
     assert target.read_text(encoding="utf-8") == AGENT_TEXT
+
+
+def test_two_producers_do_not_share_a_staging_path(target: Path) -> None:
+    """Staging is scoped by stage as well as by attempt. Two producing stages in
+    one pipeline write to their own files, so neither can silently overwrite the
+    artifact a gate already cleared for the other."""
+    pipeline = PipelineSpec.from_mapping(TWO_PRODUCER_PIPELINE)
+    refined = AGENT_TEXT.replace("a structured report.", "a structured report, refined.")
+    seen: dict[str, Path] = {}
+
+    def script(request: GenerationRequest) -> str | None:
+        seen[request.stage] = request.output_path
+        if request.kind == "create":
+            return SPEC_TEXT
+        return AGENT_TEXT if request.stage == "draft-agent" else refined
+
+    request = ComposeRequest(name=target.stem, target=target)
+    result = compose(request, pipeline, generator=FakeGenerator(script))
+
+    assert result.disposition is Disposition.EMITTED
+    draft, refine = seen["draft-agent"], seen["refine-agent"]
+    assert draft != refine
+    assert "draft-agent" in draft.parts
+    assert "refine-agent" in refine.parts
+    assert draft.read_text(encoding="utf-8") == AGENT_TEXT
+    assert refine.read_text(encoding="utf-8") == refined
+    assert target.read_text(encoding="utf-8") == refined
+
+
+def test_high_assurance_unparseable_subject_is_an_error_not_a_block(target: Path) -> None:
+    """A subject that could not be parsed is an operational failure at every tier.
+    Reporting it as a high-assurance block would present "could not run" as a
+    behavioral verdict awaiting a human decision."""
+    pipeline = PipelineSpec.from_mapping(
+        _with_judge_tier(_UNPARSEABLE_SUBJECT_PIPELINE, "high-assurance")
+    )
+
+    def script(request: GenerationRequest) -> str | None:
+        if request.kind == "create":
+            return SPEC_TEXT
+        return AGENT_TEXT if request.stage == "generate-agent" else ""
+
+    request = ComposeRequest(name=target.stem, target=target)
+    result = compose(
+        request,
+        pipeline,
+        generator=FakeGenerator(script),
+        evaluator=FakeEvaluator(_unreachable_evaluate),
+    )
+
+    assert result.disposition is Disposition.ERROR
+    assert result.reason == "judge-unparseable"
+    assert result.trail[-1].verdict.findings[0].rule.endswith(".unparseable")

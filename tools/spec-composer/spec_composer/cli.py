@@ -17,7 +17,13 @@ reached and must never be read as PASS:
   4  WAITING — a producing stage has no usable output for this attempt; re-run
 
 `--check` is a different surface and follows the Linter's contract exactly:
-0 PASS/WARN, 1 FAIL, 2 unloadable.
+0 PASS/WARN, 1 FAIL, 2 unloadable. A document that loads but is not a pipeline
+contract is a FAIL (`pipeline-contract.unparseable`), not an unloadable file:
+only a path that cannot be read at all exits 2.
+
+A failure BEFORE the run starts has no disposition of its own to report, so under
+`--json` it is rendered as one — `{"disposition", "reason", "detail"}` — and the
+same closed reason vocabulary is used, so a host parses one shape either way.
 
 Engine imports are deferred until after `--selfcheck` so that mode reports a
 clean error even when the sibling `spec_linter` cannot be found.
@@ -43,6 +49,7 @@ _EXIT_BY_DISPOSITION = {
     "paused": 3,
     "waiting": 4,
 }
+_DISPOSITION_BY_EXIT = {code: name for name, code in _EXIT_BY_DISPOSITION.items()}
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -107,13 +114,31 @@ def _default_pipeline_path() -> Path:
     return Path(__file__).resolve().parents[1] / "pipelines" / "agent-creation.yaml"
 
 
-def _load_contract(path: Path) -> dict[str, Any]:
+def _load_contract(path: Path) -> Any:
+    """Read a pipeline contract as a document, not yet as a contract. A document
+    that loads but is not a mapping is handed to the Linter, so `--check` reports
+    `pipeline-contract.unparseable` as the FAIL verdict it is; only a path that
+    cannot be read at all is an unloadable file."""
     if not path.exists():
         raise ValueError(f"pipeline contract not found: {path}")
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if isinstance(data, dict):
-        return data
-    raise ValueError(f"{path.name}: expected a YAML mapping at the top level")
+    if not path.is_file():
+        raise ValueError(f"pipeline contract is not a file: {path}")
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _fail(reason: str, detail: str, code: int, as_json: bool) -> int:
+    """Report a failure the run never got far enough to give a disposition of its
+    own, on whichever surface the caller asked for."""
+    if as_json:
+        print(
+            json.dumps(
+                {"disposition": _DISPOSITION_BY_EXIT[code], "reason": reason, "detail": detail},
+                indent=2,
+            )
+        )
+    else:
+        print(f"ERROR: {detail}", file=sys.stderr)
+    return code
 
 
 def _result_to_json(result: ComposeResult) -> dict[str, Any]:
@@ -171,18 +196,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         document = _load_contract(contract_path)
     except (OSError, ValueError, yaml.YAMLError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 2
+        return _fail("contract-unloadable", str(exc), 2, args.json)
 
     try:
         from spec_linter import Level, lint
 
         from .contract import PipelineContract, PipelineSpec
     except ImportError as exc:
-        print(
-            f"ERROR: cannot import spec_linter (sibling component missing): {exc}", file=sys.stderr
+        return _fail(
+            "linter-absent",
+            f"cannot import spec_linter (sibling component missing): {exc}",
+            2,
+            args.json,
         )
-        return 2
 
     verdict = lint(document, PipelineContract())
     if args.check:
@@ -190,23 +216,24 @@ def main(argv: list[str] | None = None) -> int:
         print(verdict)
         return 1 if verdict.level is Level.FAIL else 0
     if verdict.level is Level.FAIL:
-        print(f"ERROR: pipeline contract {contract_path} is invalid", file=sys.stderr)
-        print(verdict, file=sys.stderr)
-        return 2
+        return _fail(
+            "contract-invalid",
+            f"pipeline contract {contract_path} is invalid\n{verdict}",
+            2,
+            args.json,
+        )
 
     if args.out is None:
-        print("ERROR: --out is required for a run", file=sys.stderr)
-        return 2
+        return _fail("out-required", "--out is required for a run", 2, args.json)
     spec_path = Path(args.spec).expanduser() if args.spec else None
     if spec_path is not None and not spec_path.exists():
-        print(f"ERROR: spec not found: {spec_path}", file=sys.stderr)
-        return 2
+        return _fail("spec-not-found", f"spec not found: {spec_path}", 2, args.json)
 
     from .emit import EmitError
     from .engine import compose
-    from .judging import JudgeUnavailable
+    from .judging import JudgeUnavailableError
     from .models import ComposeRequest
-    from .resolver import UnresolvedContract
+    from .resolver import UnresolvedContractError
 
     target = args.out.expanduser()
     request = ComposeRequest(
@@ -214,15 +241,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         result = compose(request, PipelineSpec.from_mapping(document))
-    except (UnresolvedContract, EmitError, ValueError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 2
-    except JudgeUnavailable as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 3
+    except (UnresolvedContractError, EmitError, ValueError) as exc:
+        return _fail("run-failed", str(exc), 2, args.json)
+    except JudgeUnavailableError as exc:
+        return _fail("judge-unavailable", str(exc), 3, args.json)
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: unexpected failure: {exc}", file=sys.stderr)
-        return 2
+        return _fail("run-failed", f"unexpected failure: {exc}", 2, args.json)
 
     _emit(result, args.json)
     return _EXIT_BY_DISPOSITION[result.disposition.value]

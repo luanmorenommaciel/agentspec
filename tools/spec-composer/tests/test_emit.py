@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections import Counter
 from pathlib import Path
 
 import pytest
-from conftest import judge_less_document
+from _helpers import judge_less_document
 
 from spec_composer import engine
 from spec_composer.contract import PipelineSpec
-from spec_composer.emit import EmitError, promote, resolve_archive_dir
+from spec_composer.emit import EmitError, archive_spec, promote, resolve_archive_dir
 from spec_composer.engine import compose
 from spec_composer.models import ComposeRequest, ComposeResult, Disposition, StageVerdict
 from spec_composer.runstate import RunLog, run_dir, slug
@@ -259,3 +260,124 @@ def test_promote_leaves_no_temporary_file(tmp_path: Path) -> None:
     promote(staged, target)
 
     assert list(target.parent.glob(f"{target.name}.tmp-*")) == []
+
+
+def test_hand_edited_target_pauses_instead_of_being_overwritten(
+    spec_text: str, agent_text: str, target: Path
+) -> None:
+    """After emission the artifact's own frontmatter is the canonical spec, so a
+    target edited in place is somebody's work, not the conductor's staging. No
+    stamp accounts for those bytes and they are not the staged bytes either, so
+    the run pauses and writes nothing."""
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    request = ComposeRequest(name="code-reviewer", target=target)
+    result = _drive(pipeline, request, {"create-spec": spec_text, "generate-agent": agent_text})
+    assert result.disposition is Disposition.EMITTED
+
+    edited = f"{agent_text}\n<!-- tightened by hand -->\n"
+    target.write_text(edited, encoding="utf-8")
+
+    paused = compose(request, pipeline)
+    assert paused.disposition is Disposition.PAUSED
+    assert paused.reason == "target-modified"
+    assert target.read_text(encoding="utf-8") == edited
+
+    kept = target.with_suffix(".md.kept")
+    target.rename(kept)
+    resumed = compose(request, pipeline)
+    assert resumed.disposition is Disposition.EMITTED
+    assert target.read_text(encoding="utf-8") == agent_text
+    assert kept.read_text(encoding="utf-8") == edited
+
+
+def test_unrelated_pre_existing_target_is_never_promoted_over(
+    spec_text: str, agent_text: str, target: Path
+) -> None:
+    """The guard does not need a previous emit to protect a file: a target that
+    was never this pipeline's output is left exactly as it was."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"an artifact from somewhere else")
+
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    request = ComposeRequest(name="code-reviewer", target=target)
+    result = _drive(pipeline, request, {"create-spec": spec_text, "generate-agent": agent_text})
+
+    assert result.disposition is Disposition.PAUSED
+    assert result.reason == "target-modified"
+    assert target.read_bytes() == b"an artifact from somewhere else"
+
+
+def test_archive_collision_is_refused_rather_than_overwritten(tmp_path: Path) -> None:
+    """The archive is keyed by artifact NAME, so two artifacts sharing a name
+    would land in one directory. Replacing one build record with another's would
+    destroy provenance, so the second write is refused."""
+    destination = tmp_path / "archive" / "code-reviewer"
+    spec = tmp_path / "code-reviewer.spec.md"
+    spec.write_text("---\nname: code-reviewer\n---\n", encoding="utf-8")
+
+    archive_spec(destination, spec, {"target": str(tmp_path / "one" / "code-reviewer.md")})
+    archive_spec(destination, spec, {"target": str(tmp_path / "one" / "code-reviewer.md")})
+    with pytest.raises(EmitError):
+        archive_spec(destination, spec, {"target": str(tmp_path / "two" / "code-reviewer.md")})
+
+
+def test_archive_collision_keeps_emitted_and_records_the_failure(
+    spec_text: str, agent_text: str, target: Path, tmp_path: Path
+) -> None:
+    """A collision is an archive failure, and an archive failure never restates
+    what happened to the artifact: the second target is emitted, the first
+    artifact's provenance survives untouched, and the run log carries the event."""
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    content = {"create-spec": spec_text, "generate-agent": agent_text}
+
+    first = ComposeRequest(name="code-reviewer", target=target)
+    assert _drive(pipeline, first, content).disposition is Disposition.EMITTED
+
+    other = tmp_path / "elsewhere" / "code-reviewer.md"
+    second = ComposeRequest(name="code-reviewer", target=other)
+    rebuilt = _drive(pipeline, second, content)
+
+    assert rebuilt.disposition is Disposition.EMITTED
+    assert other.read_text(encoding="utf-8") == agent_text
+
+    records = RunLog(run_dir(pipeline.pipeline, other) / "run.jsonl").records()
+    failures = [row for row in records if row.kind == "event" and row.reason == "archive-failed"]
+    assert len(failures) == 1
+
+    archive_dir = resolve_archive_dir(second.name, pipeline.archive)
+    provenance = json.loads((archive_dir / "provenance.json").read_text(encoding="utf-8"))
+    assert provenance["target"] == str(target.expanduser().resolve())
+
+
+def test_promotion_failure_is_an_error_that_leaves_the_target_absent(
+    spec_text: str, agent_text: str, target: Path
+) -> None:
+    """Promotion fails closed. When the target's directory cannot be written, the
+    run reports the operational failure and no partial artifact appears."""
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("a read-only directory does not stop a superuser write")
+
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+    request = ComposeRequest(name="code-reviewer", target=target)
+
+    result = compose(request, pipeline)
+    _write(result, spec_text)
+    result = compose(request, pipeline)
+    assert result.stage == "generate-agent"
+    _write(result, agent_text)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.parent.chmod(0o555)
+    try:
+        failed = compose(request, pipeline)
+    finally:
+        target.parent.chmod(0o755)
+
+    assert failed.disposition is Disposition.ERROR
+    assert failed.reason == "promotion-failed"
+    assert not target.exists()
+    assert list(target.parent.glob(f"{target.name}.tmp-*")) == []
+
+    records = RunLog(run_dir(pipeline.pipeline, target) / "run.jsonl").records()
+    events = [row for row in records if row.kind == "event" and row.reason == "promotion-failed"]
+    assert events

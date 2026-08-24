@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 import yaml
-from conftest import EXAMPLES
+from _helpers import EXAMPLES
 from pydantic import ValidationError
 from spec_linter import Contract, Level, lint
 
@@ -105,6 +105,18 @@ _RULE_CASES = (
         "P1.max_attempts",
         Level.FAIL,
         id="P1.max_attempts",
+    ),
+    pytest.param(
+        {
+            "pipeline": "p",
+            "version": 1,
+            "max_attempts": 1,
+            "archive": "/absolute/archive/{name}/",
+            "stages": [{"id": "create-spec", "kind": "create", "output_contract": "creation-spec"}],
+        },
+        "P1.archive_template",
+        Level.FAIL,
+        id="P1.archive_template",
     ),
     pytest.param(
         {
@@ -267,7 +279,7 @@ _RULE_CASES = (
 
 @pytest.mark.parametrize(("document", "rule", "level"), _RULE_CASES)
 def test_rule_severities(document: dict[str, Any], rule: str, level: Level) -> None:
-    """Each of the thirteen contract rules must fire alone, at its declared
+    """Each of the fourteen contract rules must fire alone, at its declared
     severity, from a document engineered to trip exactly that one rule."""
     verdict = lint(document, PipelineContract())
     assert len(verdict.findings) == 1
@@ -313,3 +325,44 @@ def test_pipeline_spec_from_mapping_builds_frozen_strict_view(
     assert all(isinstance(stage, Stage) for stage in spec.stages)
     with pytest.raises(ValidationError):
         spec.max_attempts = 99
+
+
+def test_escaping_archive_template_fails_the_check() -> None:
+    """`--check` rejects at authoring time exactly what a run would reject before
+    its first stage: a template that leaves the workspace."""
+    document = {
+        "pipeline": "p",
+        "version": 1,
+        "max_attempts": 1,
+        "archive": "../outside/{name}/",
+        "stages": [{"id": "create-spec", "kind": "create", "output_contract": "creation-spec"}],
+    }
+    verdict = lint(document, PipelineContract())
+    assert verdict.level == Level.FAIL
+    assert [finding.rule for finding in verdict.findings] == ["P1.archive_template"]
+
+
+def test_shipped_archive_template_is_accepted(shipped_document: dict[str, Any]) -> None:
+    verdict = lint(shipped_document, PipelineContract())
+    assert not any(finding.rule == "P1.archive_template" for finding in verdict.findings)
+
+
+def test_create_stage_input_contract_is_not_a_chain_violation() -> None:
+    """A create stage's input is the REQUEST, which no upstream stage produces.
+    Naming a contract there describes an origin; it is not an unbound reference."""
+    document = {
+        "pipeline": "p",
+        "version": 1,
+        "max_attempts": 1,
+        "stages": [
+            {
+                "id": "create-spec",
+                "kind": "create",
+                "input_contract": "creation-spec",
+                "output_contract": "creation-spec",
+            }
+        ],
+    }
+    verdict = lint(document, PipelineContract())
+    assert verdict.level == Level.PASS
+    assert verdict.findings == []

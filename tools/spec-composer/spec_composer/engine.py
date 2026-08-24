@@ -22,7 +22,7 @@ from spec_linter.frontmatter import FrontmatterError, split_frontmatter
 from .contract import PRODUCING_KINDS, PipelineSpec, Stage, bound_contract_name
 from .emit import EmitError, archive_spec, promote, resolve_archive_dir
 from .generator import StagedArtifactGenerator
-from .judging import JudgeUnavailable, judge_artifact
+from .judging import JudgeUnavailableError, judge_artifact
 from .models import (
     ComposeRequest,
     ComposeResult,
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from spec_judge import Evaluator
 
 _PASS = Verdict.from_findings([])
+_SETTLED = (Level.PASS.name, Level.WARN.name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,13 +111,13 @@ class RunContext:
     def __init__(
         self,
         request: ComposeRequest,
-        pipeline: PipelineSpec,
+        pipeline_contract: PipelineSpec,
         directory: Path,
         log: RunLog,
         archive_dir: Path,
     ) -> None:
         self.request = request
-        self.pipeline = pipeline
+        self.pipeline = pipeline_contract
         self.run_dir = directory
         self.log = log
         self.archive_dir = archive_dir
@@ -128,19 +129,22 @@ class RunContext:
         self.trail: list[StageVerdict] = []
         self.published: dict[str, Path] = {}
         self.last_reason: str | None = None
+        self._payloads: dict[str, Path] = {}
         self._stamps: list[StageRecord] = list(folded.stamps)
         self._epoch_stamps: list[StageRecord] = list(folded.epoch_stamps)
         self._last_spend: StageRecord | None = folded.last_spend
         self._artifact: Path | None = None
 
     @classmethod
-    def open(cls, request: ComposeRequest, pipeline: PipelineSpec) -> RunContext:
+    def open(cls, request: ComposeRequest, pipeline_contract: PipelineSpec) -> RunContext:
         """Resolve the run directory from the target, validate the archive
         template (relative, inside the workspace) BEFORE any stage runs, fold the
         log, and record any approvals this invocation granted."""
-        directory = run_dir(pipeline.pipeline, request.target)
-        archive_dir = resolve_archive_dir(request.name, pipeline.archive)
-        context = cls(request, pipeline, directory, RunLog(directory / "run.jsonl"), archive_dir)
+        directory = run_dir(pipeline_contract.pipeline, request.target)
+        archive_dir = resolve_archive_dir(request.name, pipeline_contract.archive)
+        context = cls(
+            request, pipeline_contract, directory, RunLog(directory / "run.jsonl"), archive_dir
+        )
         context._grant(request.approvals)
         return context
 
@@ -160,11 +164,25 @@ class RunContext:
         return target if target.is_file() else None
 
     def output_path(self, stage: Stage) -> Path:
-        """`create` -> the fixed spec path; `generate` -> the attempt-scoped
-        `<run>/staging/attempt-{n}/{basename}`."""
+        """Where this stage writes when it actually runs: `create` -> the fixed
+        spec path; `generate` -> the attempt-scoped AND stage-scoped
+        `<run>/staging/attempt-{n}/{stage}/{basename}`, so two producing stages in
+        one pipeline can never overwrite each other's output."""
         if stage.kind == "create":
             return self.spec_path
-        return self.run_dir / "staging" / f"attempt-{self.attempt}" / self.request.target.name
+        return (
+            self.run_dir
+            / "staging"
+            / f"attempt-{self.attempt}"
+            / slug(stage.id)
+            / self.request.target.name
+        )
+
+    def payload_path(self, stage: Stage) -> Path:
+        """Where this stage's output actually lives right now: the path recorded
+        on the stamp it was resolved from when the stage skipped, and the path it
+        wrote to otherwise."""
+        return self._payloads.get(stage.id) or self.output_path(stage)
 
     def input_path(self, stage: Stage) -> Path | None:
         if stage.kind == "create":
@@ -176,8 +194,11 @@ class RunContext:
         return self.spec_path if stage.kind == "generate" else None
 
     def subject_path(self, stage: Stage, index: int) -> Path:
-        """`lint` -> the file published under `stage.input_contract`;
-        `judge` / `emit` -> the output of `nearest_producer`."""
+        """What this stage reads: the path PUBLISHED for the contract it consumes,
+        falling back to the producing stage's current output path only when nothing
+        was published. Resolving through the published path is what lets a skipped
+        producer hand a downstream stage the artifact its own stamp certified,
+        rather than an attempt-scoped path that may not exist this run."""
         if stage.kind == "lint":
             path = self.input_path(stage)
             if path is None:
@@ -189,7 +210,11 @@ class RunContext:
         _, producer = nearest_producer(self.pipeline, index)
         if producer is None:
             raise ValueError(f"stage {stage.id!r} has no upstream stage that produces an artifact")
-        return self.output_path(producer)
+        if producer.output_contract:
+            published = self.published.get(producer.output_contract)
+            if published is not None:
+                return published
+        return self.payload_path(producer)
 
     def _subject_bytes(self, stage: Stage, index: int) -> bytes | None:
         if stage.kind == "create":
@@ -232,39 +257,75 @@ class RunContext:
             row.stage == stage.id and row.attempt == self.attempt for row in self._epoch_stamps
         )
 
+    def settled_stamps(self, stage: Stage) -> list[StageRecord]:
+        """This stage's stamps that certify something: PASS or WARN only. A FAIL
+        never certifies, and neither does a row whose verdict is absent or foreign
+        — a torn or hand-edited log must not be able to grant a skip."""
+        return [row for row in self._stamps if row.stage == stage.id and row.verdict in _SETTLED]
+
+    def stamped_payload(self, stage: Stage, expected_input: str) -> Path | None:
+        """The payload a producing stage's own evidence still vouches for: the most
+        recent settled stamp made from THIS input whose recorded path still holds
+        the bytes that stamp certified. Resolving the payload from the stamp — not
+        from the current attempt number — is what lets a finished stage stay
+        finished across epochs."""
+        for row in reversed(self.settled_stamps(stage)):
+            if row.input_hash != expected_input or row.path is None or row.output_hash is None:
+                continue
+            payload = Path(row.path)
+            if not payload.is_file():
+                continue
+            if self.output_digest(stage, payload.read_bytes()) == row.output_hash:
+                return payload
+        return None
+
+    def target_is_stamped(self, stage: Stage) -> bool:
+        """The emit target holds bytes some emit stamp already certified."""
+        target = self.request.target
+        if not target.is_file():
+            return False
+        promoted = self.output_digest(stage, target.read_bytes())
+        return any(row.output_hash == promoted for row in self.settled_stamps(stage))
+
+    def target_was_modified(self, stage: Stage, staged: Path) -> bool:
+        """The emit target holds bytes no emit stamp certifies, and they are not the
+        staged bytes either: the canonical artifact was edited in place after this
+        pipeline last promoted it, or it belongs to something else entirely.
+        Promoting over it would destroy work no evidence accounts for."""
+        if not self.request.target.is_file() or self.target_is_stamped(stage):
+            return False
+        target_bytes = self.request.target.read_bytes()
+        return not staged.is_file() or staged.read_bytes() != target_bytes
+
     def skips(self, stage: Stage, index: int) -> bool:
-        """False for a pending stage. Otherwise: a non-FAIL stamp exists whose
-        digests match what is on disk now."""
+        """False for a pending stage. Otherwise: a settled stamp exists whose
+        digests match what is on disk now. A skipped producing stage also records
+        the payload its stamp resolved to, so `register` publishes that file rather
+        than a path this run never wrote."""
         if self.is_pending(stage):
             return False
-        stamps = [
-            row for row in self._stamps if row.stage == stage.id and row.verdict != Level.FAIL.name
-        ]
-        if not stamps:
+        if not self.settled_stamps(stage):
             return False
         if stage.kind == "emit":
-            target = self.request.target
-            if not target.is_file():
-                return False
-            promoted = self.output_digest(stage, target.read_bytes())
-            return any(row.output_hash == promoted for row in stamps)
+            return self.target_is_stamped(stage)
         expected_input = self.input_digest(stage, index)
         if expected_input is None:
             return False
         if stage.kind in PRODUCING_KINDS:
-            payload = self.output_path(stage)
-            if not payload.is_file():
+            payload = self.stamped_payload(stage, expected_input)
+            if payload is None:
                 return False
-            produced = self.output_digest(stage, payload.read_bytes())
-            return any(
-                row.input_hash == expected_input and row.output_hash == produced for row in stamps
-            )
-        return any(row.input_hash == expected_input for row in stamps)
+            self._payloads[stage.id] = payload
+            return True
+        return any(row.input_hash == expected_input for row in self.settled_stamps(stage))
 
     def is_fresh(self, stage: Stage, output_hash: str) -> bool:
-        """This stage has not already stamped that `output_hash` in this epoch."""
+        """This stage has never stamped that `output_hash` — in ANY epoch. A new
+        epoch resets the budget, never the evidence: re-presenting content a gate
+        already judged would replay a whole spent budget over artifacts that were
+        already rejected."""
         return not any(
-            row.stage == stage.id and row.output_hash == output_hash for row in self._epoch_stamps
+            row.stage == stage.id and row.output_hash == output_hash for row in self._stamps
         )
 
     def feedback_for(self, stage: Stage) -> tuple[Finding, ...]:
@@ -279,20 +340,24 @@ class RunContext:
         loaded = _load_mapping(path)
         return loaded if isinstance(loaded, dict) else {}
 
-    def register(self, stage: Stage, index: int) -> None:
-        """Publish a producing stage's output path under its `output_contract`
-        so downstream `input_contract` references resolve."""
+    def register(self, stage: Stage, _index: int) -> None:
+        """Publish the file a producing stage's output CONTRACT now refers to —
+        the path its stamp resolved to when it skipped, the path it wrote to when
+        it ran — so every downstream `input_contract` reference reads the artifact
+        that was actually certified."""
         if stage.kind in PRODUCING_KINDS and stage.output_contract:
-            self.published[stage.output_contract] = self.output_path(stage)
+            self.published[stage.output_contract] = self.payload_path(stage)
 
     def stamp(
         self, stage: Stage, index: int, verdict: Verdict, output_hash: str | None = None
     ) -> None:
         """Append a `stamp` row and extend the in-memory trail."""
         resolved = output_hash
-        if resolved is None and stage.kind in PRODUCING_KINDS:
+        payload: Path | None = None
+        if stage.kind in PRODUCING_KINDS:
             payload = self.output_path(stage)
-            if payload.is_file():
+            self._payloads[stage.id] = payload
+            if resolved is None and payload.is_file():
                 resolved = self.output_digest(stage, payload.read_bytes())
         record = StageRecord(
             ts=now(),
@@ -305,6 +370,7 @@ class RunContext:
             input_hash=self.input_digest(stage, index),
             output_hash=resolved,
             contract_id=f"{bound_contract_name(stage)}@{self.pipeline.version}",
+            path=str(payload) if payload is not None else None,
             findings=_finding_rows(verdict.findings),
         )
         self.log.append(record)
@@ -477,7 +543,7 @@ class RunContext:
         )
 
 
-def _produce(stage: Stage, index: int, run: RunContext, generator: Generator) -> Step:
+def _produce(stage: Stage, _index: int, run: RunContext, generator: Generator) -> Step:
     output_path = run.output_path(stage)
     input_path = run.input_path(stage)
     input_text = ""
@@ -524,9 +590,11 @@ def _judge(stage: Stage, index: int, run: RunContext, evaluator: Evaluator | Non
             tier=stage.judge_tier or "standard",
             evaluator=evaluator,
         )
-    except JudgeUnavailable:
+    except JudgeUnavailableError:
         return Step(disposition=Disposition.PAUSED, reason="judge-unavailable")
     if verdict.level is Level.FAIL:
+        if any(finding.rule.endswith(".unparseable") for finding in verdict.findings):
+            return Step(verdict=verdict, disposition=Disposition.ERROR, reason="judge-unparseable")
         if stage.judge_tier == "high-assurance":
             return Step(
                 verdict=verdict, disposition=Disposition.BLOCKED, reason="high-assurance-judge-fail"
@@ -540,6 +608,8 @@ def _emit(stage: Stage, index: int, run: RunContext) -> Step:
     if outstanding:
         return Step(disposition=Disposition.PAUSED, reason=f"approval-outstanding:{outstanding[0]}")
     staged = run.subject_path(stage, index)
+    if run.target_was_modified(stage, staged):
+        return Step(disposition=Disposition.PAUSED, reason="target-modified")
     try:
         promote(staged, run.request.target)
     except EmitError as exc:
@@ -575,7 +645,7 @@ def dispatch(
 
 def compose(
     request: ComposeRequest,
-    pipeline: PipelineSpec,
+    pipeline_contract: PipelineSpec,
     *,
     resolver: ContractResolver | None = None,
     generator: Generator | None = None,
@@ -583,11 +653,11 @@ def compose(
 ) -> ComposeResult:
     resolver = resolver or DefaultResolver()
     generator = generator or StagedArtifactGenerator()
-    run = RunContext.open(request, pipeline)
+    run = RunContext.open(request, pipeline_contract)
 
     index = 0
-    while index < len(pipeline.stages):
-        stage = pipeline.stages[index]
+    while index < len(pipeline_contract.stages):
+        stage = pipeline_contract.stages[index]
 
         if run.skips(stage, index):
             run.register(stage, index)
@@ -611,5 +681,5 @@ def compose(
         run.register(stage, index)
         index += 1
 
-    last = pipeline.stages[-1] if pipeline.stages else None
+    last = pipeline_contract.stages[-1] if pipeline_contract.stages else None
     return run.finish(Disposition.EMITTED, last, None, run.artifact, None)

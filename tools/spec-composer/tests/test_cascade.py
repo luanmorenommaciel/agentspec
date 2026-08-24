@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from conftest import REJECTED_AGENT_TEXT, SPEC_TEXT
+from _helpers import REJECTED_AGENT_TEXT, SPEC_TEXT
 from spec_judge.evaluator import EvalRequest, EvalResult
 from spec_linter import Level
 

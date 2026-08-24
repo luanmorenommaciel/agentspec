@@ -11,7 +11,7 @@ from __future__ import annotations
 from spec_linter import AgentSpecContract, Contract, CreationSpecContract
 
 
-class UnresolvedContract(LookupError):
+class UnresolvedContractError(LookupError):
     """A pipeline names a contract that has no binding in this installation.
 
     A configuration defect, not a transient failure: re-running cannot clear it.
@@ -37,6 +37,6 @@ class DefaultResolver:
             return self._bindings[contract_name]
         except KeyError as exc:
             known = ", ".join(sorted(self.known)) or "(none)"
-            raise UnresolvedContract(
+            raise UnresolvedContractError(
                 f"no contract is bound to {contract_name!r} here; bound names: {known}"
             ) from exc
