@@ -41,8 +41,9 @@ deliberately, so the explicit SemVer stays.
 2. On that branch, and only there, raise the version in `plugin/.claude-plugin/plugin.json`.
 3. Run `./build-plugin.sh`. The bump itself produces no build output — the marketplace manifests
    carry no version — so the build is a drift check: `git status` must show no change afterwards. If a
-   tracked file moved, the committed `plugin/` tree had drifted from its sources (`.claude/`,
-   `plugin-extras/`, `tools/`), and that drift is fixed on `develop` first, not on the release branch.
+   tracked file moved, something had drifted — the committed `plugin/` tree from its sources
+   (`.claude/`, `plugin-extras/`, `tools/`), or the generated agent-router from the current agent
+   set — and that drift is fixed on `develop` first, not on the release branch.
    Never hand-edit the generated `plugin/` tree. The exceptions the build preserves are
    `plugin/.claude-plugin/` — both manifests; the root `.claude-plugin/marketplace.json` is generated
    *from* `plugin/.claude-plugin/marketplace.json` — and `plugin/README.md`.
@@ -63,17 +64,20 @@ deliberately, so the explicit SemVer stays.
 7. Merge the release PR with a **merge commit**, never a squash. A squash collapses the commits
    `develop` already carries into one new commit, so the release's commits never become ancestors of
    `main`: the back-merge then reconciles two different commits with the same content, and `main`'s
-   history no longer shows the individual changes the tag points at. The repository allows all three
-   merge methods, so nothing but this rule enforces it; restricting `main` to merge commits is a
+   history no longer shows the individual changes the tag points at. Unless the repository restricts
+   merge methods, nothing but this rule enforces it; restricting `main` to merge commits is a
    repository setting.
-8. Immediately open a PR from `main` into `develop` and merge it, also with a merge commit. It carries
-   the bump, the documentation surfaces and the changelog consolidation — plus anything `main` gained
-   from a hotfix — and it restores the equality the `develop` gate checks. Between the release merge
-   and this back-merge, any pull request against `develop` that is re-evaluated fails the gate — its
-   version is one behind `main`'s — which is why the back-merge is part of the same procedure and not
-   a later chore. `CHANGELOG.md` needs a manual pass whenever `develop` gained `[Unreleased]` entries
-   after the cut: git may report a conflict, or — worse — merge cleanly and file those entries inside
-   the release's `## [X.Y.Z]` section. Either way, before merging, every entry added after the cut
+8. Immediately merge `main` back into `develop`, through a branch — a PR whose head is `main` offers
+   no place to correct anything: `git switch -c chore/back-merge-X.Y.Z --no-track origin/develop &&
+   git merge origin/main`, then open that branch into `develop` and merge it with a merge commit. It
+   carries the bump, the documentation surfaces and the changelog consolidation — plus anything
+   `main` gained from a hotfix — and it restores the equality the `develop` gate checks; it passes
+   that gate by construction, since its version is `main`'s. Between the release merge and this
+   back-merge, any pull request against `develop` that is re-evaluated fails the gate — its version
+   is one behind `main`'s — which is why the back-merge is part of the same procedure and not a later
+   chore. `CHANGELOG.md` needs a manual pass in that merge whenever `develop` gained `[Unreleased]`
+   entries after the cut: git may report a conflict, or — worse — merge cleanly and file those
+   entries inside the release's `## [X.Y.Z]` section. Either way, every entry added after the cut
    goes back under `## [Unreleased]`, and `## [X.Y.Z]` ends up identical to `main`'s. No other file
    should need attention.
 9. Create an annotated tag on the release merge commit (`git tag -a vX.Y.Z <sha>`) and push it, then
@@ -105,7 +109,7 @@ against `origin/main` in both modes.
 | PR base | Rule |
 |---|---|
 | `main` | If anything under `plugin/` or `.claude-plugin/` changed, the version must be **strictly greater** than `main`'s. An unchanged shipped tree is a no-op. Release PRs and hotfix PRs are both checked this way. |
-| `develop` | The version must **equal** `main`'s. `develop` never carries a bump; the release branch is what advances it, and back-merging `main` afterwards restores equality. The back-merge PR passes by construction — its version *is* `main`'s. |
+| `develop` | The version must **equal** `main`'s. `develop` never carries a bump; the release branch is what advances it, and back-merging `main` afterwards restores equality. The back-merge branch passes by construction — its version *is* `main`'s. |
 
 Independently of the mode, the gate asserts that all three manifests are consistent — `plugin.json`
 carries a valid `X.Y.Z`, and neither marketplace manifest declares a version at all. When the PR

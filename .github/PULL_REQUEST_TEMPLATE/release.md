@@ -35,6 +35,6 @@ The authority for this procedure is [`docs/reference/releasing.md`](../../docs/r
 
 ## After merge
 
-- [ ] Back-merge PR `main` → `develop` opened and merged immediately (merge commit); `bump-gate` green on it
+- [ ] Back-merge of `main` into `develop` opened from `chore/back-merge-X.Y.Z` and merged immediately (merge commit); `CHANGELOG.md` checked in that merge; `bump-gate` green on it
 - [ ] Annotated tag `vX.Y.Z` created on the merge commit and pushed; GitHub Release published from it
 - [ ] `release/X.Y.Z` deleted
