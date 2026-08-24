@@ -68,8 +68,9 @@ deliberately, so the explicit SemVer stays.
    merge methods, nothing but this rule enforces it; restricting `main` to merge commits is a
    repository setting.
 8. Immediately merge `main` back into `develop`, through a branch — a PR whose head is `main` offers
-   no place to correct anything: `git switch -c chore/back-merge-X.Y.Z --no-track origin/develop &&
-   git merge origin/main`, then open that branch into `develop` and merge it with a merge commit. It
+   no place to correct anything: `git fetch origin && git switch -c chore/back-merge-X.Y.Z --no-track
+   origin/develop && git merge origin/main`, then push it (`git push -u origin chore/back-merge-X.Y.Z`)
+   and open that branch into `develop`, merging it with a merge commit. It
    carries the bump, the documentation surfaces and the changelog consolidation — plus anything
    `main` gained from a hotfix — and it restores the equality the `develop` gate checks; it passes
    that gate by construction, since its version is `main`'s. Between the release merge and this
@@ -97,7 +98,7 @@ A fix that cannot wait for the next release may target `main` directly. A hotfix
 the gate's `main` mode, so if it touches `plugin/` or `.claude-plugin/` it carries its own patch
 bump plus steps 3–4 above and a new `## [X.Y.Z]` section in `CHANGELOG.md` (`main`'s `[Unreleased]`
 is empty after a release, so there is nothing to rename). Merge `main` back into `develop`
-immediately afterwards, exactly as after a release; that PR passes the `develop` gate by
+immediately afterwards, exactly as after a release; that back-merge passes the `develop` gate by
 construction. Skipping the back-merge leaves `develop` behind `main`, and the next release will
 silently revert the hotfix.
 
