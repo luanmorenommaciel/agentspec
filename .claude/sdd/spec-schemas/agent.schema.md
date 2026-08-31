@@ -23,8 +23,9 @@ but that reconciliation is out of scope for Layer 1.
 ## Spec file location
 
 Filled-in specs live at `.claude/sdd/specs/agents/{agent-name}.spec.md`
-while in progress. (Archival location post-generation is an open question —
-ADR-006 §7.1 defers `spec-archive/` to Lucas/Luan.)
+while in progress. Archival location: `.claude/sdd/archive/specs/{name}/`
+(ADR-004 §3.9, resolving ADR-006 §7.1's deferral — provenance only, graduation
+rule applies before archiving).
 
 ---
 

@@ -137,7 +137,8 @@ spec_lifecycle:
     - "spec authored"       # .claude/sdd/specs/agents/{name}.spec.md, hand-filled against agent.schema.md
     - "generation"          # agent-architect maps spec -> .claude/agents/{category}/{name}.md
     - "router regeneration" # user runs scripts/generate-agent-router.py (not automatic)
-  archive: "undecided — spec-archive/ location deferred to Lucas/Luan (ADR-006 §7.1)"
+    - "archival"            # spec moves to archive path below (not automated in Layer 1)
+  archive: ".claude/sdd/archive/specs/{name}/ — provenance only, never load-bearing; graduation rule applies before archiving (ADR-004 #63 §3.9, resolving ADR-006 §7.1's deferral)"
 
 agent_creation_pipeline:
   schema: ".claude/sdd/spec-schemas/agent.schema.md"

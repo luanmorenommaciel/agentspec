@@ -217,6 +217,16 @@ for skill in "${REPO_LOCAL_SKILLS[@]}"; do
     rm -rf "${PLUGIN_DIR:?}/skills/${skill}"
 done
 
+# Repo-local agents: agent-architect reads .claude/agents/_template.md and
+# .claude/sdd/spec-schemas/agent.schema.md, both excluded from the plugin
+# (see above / Step 4), so it cannot function once installed — repo-local
+# for Layer 1 (feat/spec-schemas), matching the create-skill/create-agent
+# precedent above. Shipping it to consumers is a deliberate later layer.
+REPO_LOCAL_AGENTS=(architect/agent-architect.md)
+for agent in "${REPO_LOCAL_AGENTS[@]}"; do
+    rm -rf "${PLUGIN_DIR:?}/agents/${agent}"
+done
+
 ok "Workspace directories excluded"
 
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────
@@ -235,6 +245,7 @@ ok "Workspace directories excluded"
 #   .claude/sdd/features/  → stays as-is (user's project)
 #   .claude/sdd/reports/   → stays as-is (user's project)
 #   .claude/sdd/archive/   → stays as-is (user's project)
+#   .claude/sdd/specs/     → stays as-is (user's project)
 #   .claude/storage/       → stays as-is (user's project)
 # ─────────────────────────────────────────────────────────────────────────────
 
