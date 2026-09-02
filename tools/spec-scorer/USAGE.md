@@ -38,7 +38,7 @@ means *"could not measure"*, never *"measured badly"*. An artifact the Linter
 ## Reading a ScoreCard
 
 ```
-SCORECARD  (contract 0.1.0, judger_tier=none, sources=artifact)
+SCORECARD  (contract agent-spec 0.1.0, judger_tier=none, sources=artifact)
 — Risk & Governance
   maturity_conformance   0.67  [2/3]
                         declared V2; missing: observability
@@ -48,9 +48,10 @@ SCORECARD  (contract 0.1.0, judger_tier=none, sources=artifact)
   number never floats free of its evidence.
 - `risk_surface` is annotated `(higher = more risk)`: it is a descriptor, not a
   defect. Read it paired with `mitigation_coverage`.
-- The header records provenance. `judger_tier` and `contract_version` are what
-  let you refuse to compare a smoke-tier card with a high-assurance one, or cards
-  scored against different contract versions.
+- The header records provenance. The contract's **name and version** together
+  (`contract_version` alone cannot distinguish two contracts sharing a version)
+  plus `judger_tier` are what let you refuse to compare a smoke-tier card with a
+  high-assurance one, or cards scored against different contracts.
 
 ## Per-topic breakdown (`--explain`)
 

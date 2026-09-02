@@ -48,6 +48,7 @@ def score(
     return ScoreCard(
         dimensions=dimensions,
         measured_at=stamp,
+        contract_name=contract.name,
         contract_version=contract.version,
         judger_tier=judger_tier,
         evidence_sources=sources,

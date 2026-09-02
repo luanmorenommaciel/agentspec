@@ -27,7 +27,7 @@ def test_dimension_is_frozen() -> None:
 
 def test_scorecard_is_frozen() -> None:
     card = ScoreCard(
-        dimensions=[], measured_at="t", contract_version="0.1.0", evidence_sources=["artifact"]
+        dimensions=[], measured_at="t", contract_name="agent-spec", contract_version="0.1.0", evidence_sources=["artifact"]
     )
     with pytest.raises(Exception):
         card.contract_version = "9"  # type: ignore[misc]
@@ -40,7 +40,7 @@ def test_by_family_preserves_first_seen_order() -> None:
         DimensionScore(dimension="c", family="Spec Quality", numerator=1, denominator=1),
     ]
     card = ScoreCard(
-        dimensions=dims, measured_at="t", contract_version="0.1.0", evidence_sources=["artifact"]
+        dimensions=dims, measured_at="t", contract_name="agent-spec", contract_version="0.1.0", evidence_sources=["artifact"]
     )
     grouped = card.by_family()
     assert list(grouped.keys()) == ["Spec Quality", "Risk & Governance"]
@@ -50,7 +50,7 @@ def test_by_family_preserves_first_seen_order() -> None:
 def test_no_composite_score_attribute() -> None:
     """The design forbids a default composite — there is no overall/total field."""
     card = ScoreCard(
-        dimensions=[], measured_at="t", contract_version="0.1.0", evidence_sources=["artifact"]
+        dimensions=[], measured_at="t", contract_name="agent-spec", contract_version="0.1.0", evidence_sources=["artifact"]
     )
     for forbidden in ("overall", "composite", "total", "score"):
         assert not hasattr(card, forbidden)

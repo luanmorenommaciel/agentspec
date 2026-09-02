@@ -61,6 +61,14 @@ def test_contract_version_stamped(valid_spec) -> None:
     assert card.contract_version == "0.1.0"
 
 
+def test_contract_name_stamped(valid_spec) -> None:
+    """Provenance carries the contract's identity, not just its version — two
+    contracts sharing a version string are still distinguishable."""
+    card = score(valid_spec, AgentSpecScoringContract())
+    assert card.contract_name == "agent-spec"
+    assert "agent-spec 0.1.0" in card.render()
+
+
 def test_behavioral_family_present_with_verdict(valid_spec) -> None:
     from spec_linter import Finding, Level, Verdict
 

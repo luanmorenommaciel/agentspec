@@ -105,16 +105,19 @@ class DimensionScore(BaseModel):
 class ScoreCard(BaseModel):
     """The full analytical result: measured dimensions + their provenance.
 
-    The metadata is load-bearing, not decoration. `judger_tier` and
-    `contract_version` are what let a consumer refuse to compare a smoke-tier
-    card against a high-assurance one, or a card scored against a different
-    contract version — the comparability traps the Scorer must not paper over.
+    The metadata is load-bearing, not decoration. `contract_name`,
+    `contract_version`, and `judger_tier` are what let a consumer refuse to
+    compare a smoke-tier card against a high-assurance one, or cards scored
+    against different contracts — `contract_version` alone cannot distinguish two
+    contracts that share a version string, which is why the contract's `name`
+    travels too. These are the comparability traps the Scorer must not paper over.
     """
 
     model_config = ConfigDict(frozen=True)
 
     dimensions: list[DimensionScore]
     measured_at: str
+    contract_name: str
     contract_version: str
     judger_tier: str | None = None
     evidence_sources: list[str]
@@ -132,8 +135,8 @@ class ScoreCard(BaseModel):
         the compact default prints only the ratios and terse detail lines."""
         tier = self.judger_tier or "none"
         header = (
-            f"SCORECARD  (contract {self.contract_version}, judger_tier={tier}, "
-            f"sources={', '.join(self.evidence_sources)})"
+            f"SCORECARD  (contract {self.contract_name} {self.contract_version}, "
+            f"judger_tier={tier}, sources={', '.join(self.evidence_sources)})"
         )
         if not self.dimensions:
             return f"{header}\n  (no dimensions measured)"
