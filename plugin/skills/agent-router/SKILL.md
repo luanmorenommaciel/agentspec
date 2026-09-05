@@ -1,6 +1,6 @@
 ---
 name: agent-router
-description: Intelligent agent routing -- automatically matches tasks to the best specialist agent based on file patterns, intent keywords, and domain context. Loaded every session to give Claude explicit routing rules for all 59 AgentSpec agents.
+description: Intelligent agent routing -- automatically matches tasks to the best specialist agent based on file patterns, intent keywords, and domain context. Loaded every session to give Claude explicit routing rules for all 58 AgentSpec agents.
 ---
 
 <!-- =========================================================================
@@ -14,7 +14,7 @@ description: Intelligent agent routing -- automatically matches tasks to the bes
 
 Explicit routing rules for matching tasks to the correct specialist agent. Generated from each agent's frontmatter, so any change to an agent's `description`, `kb_domains`, or `escalation_rules` flows here automatically.
 
-**Agent count:** 59  |  **Categories:** 8  |  **Content hash:** `328fd464f392`
+**Agent count:** 58  |  **Categories:** 8  |  **Content hash:** `11bcc0754dfd`
 
 ## A. Agents by Category
 
@@ -23,7 +23,6 @@ Explicit routing rules for matching tasks to the correct specialist agent. Gener
 
 | Agent | Tier | Model | KB Domains | Escalates To |
 |-------|------|-------|-----------|--------------|
-| `agent-architect` | T2 | sonnet | — | `user`, `user` |
 | `data-platform-engineer` | T2 | sonnet | `cloud-platforms`, `lakehouse`, `data-modeling` | `lakehouse-architect`, `pipeline-architect`, `schema-designer` |
 | `genai-architect` | T1 | opus | `genai`, `prompt-engineering`, `ai-data-engineering` | — |
 | `kb-architect` | T2 | sonnet | — | `user` |
@@ -157,7 +156,6 @@ Which agents know which domain. Use this when the user names a technology.
 
 Single-sentence purpose per agent, derived from frontmatter `description`.
 
-- **`agent-architect`** — Generates a new agent.md from a filled-in agent.schema.md spec, applying the
 - **`ai-data-engineer`** — AI data engineering specialist for RAG pipelines, vector databases, feature stores, and LLMOps.
 - **`ai-data-engineer-cloud`** — Expert Data Engineer for cloud architectures and AI pipelines. Uses KB + MCP validation for best practices.
 - **`ai-data-engineer-gcp`** — Elite GCP Data Engineering architect for serverless architectures, AI/ML pipelines, and document processing.

@@ -229,6 +229,20 @@ done
 
 ok "Workspace directories excluded"
 
+# ─── Step 3b: Regenerate the agent-router for the shipped tree ───────────────
+# Step 0b's router was generated against .claude/agents/ (59 agents) before
+# the REPO_LOCAL_AGENTS exclusion above ran; copying it as-is would ship a
+# router that dispatches to an agent no longer in the plugin. Regenerate a
+# second time against what plugin/agents/ actually contains, emitting
+# ${CLAUDE_PLUGIN_ROOT}/agents/ paths instead of .claude/agents/ ones.
+
+info "Regenerating agent-router for the shipped plugin tree..."
+python3 "${SCRIPT_DIR}/scripts/generate-agent-router.py" \
+    --agents-dir "${PLUGIN_DIR}/agents" \
+    --output-dir "${PLUGIN_DIR}/skills/agent-router" \
+    --path-prefix '${CLAUDE_PLUGIN_ROOT}/agents/' >/dev/null
+ok "Shipped agent-router regenerated"
+
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────
 #
 # REWRITE (plugin-internal references):
