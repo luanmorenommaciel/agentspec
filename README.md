@@ -214,7 +214,7 @@ agentspec/
 ├── .claude/                 # Source of truth (development)
 │   ├── agents/              # 58 agents across 8 categories
 │   ├── commands/            # 31 slash commands
-│   ├── skills/              # 19 source skills (SDD phases, GitHub workflow, authoring, KB, visuals…)
+│   ├── skills/              # 20 source skills (SDD phases, GitHub workflow, authoring, KB, visuals…)
 │   ├── kb/                  # 24 knowledge base domains
 │   └── sdd/                 # Templates, contracts, features, archive
 │
