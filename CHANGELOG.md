@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`docs/reference/releasing.md`** — the maintainer-only release procedure: branch topology, the version single-source rule, the step-by-step for cutting a release from a `release/X.Y.Z` branch, the hotfix back-merge requirement, and the full doctrine `scripts/bump.sh --check` enforces. Linked from `docs/README.md`.
 - **Bump gate extended to documentation surfaces and `CHANGELOG.md`** (#85) — when a PR carries a shipped change (`plugin/` or `.claude-plugin/`), `scripts/bump.sh --check` now also asserts the README version badge, both `CLAUDE.md` version statements, and the `SECURITY.md` supported-versions row all state the canonical version, and that `CHANGELOG.md` carries a matching `## [X.Y.Z]` section. Surfaces are declared as data in a new `_surface_rows` table, so adding one is a single row; the check is skipped when nothing shipped changes, so a docs-only PR isn't blocked by pre-existing drift.
 - **`.github/PULL_REQUEST_TEMPLATE/release.md`** — opt-in checklist for release PRs (applied via `?template=release.md`) that points at `docs/reference/releasing.md` rather than restating it.
+- **Trust layer V0 for the built plugin** (#84) — new `scripts/generate_manifest.py`, `sign_manifest.sh`, `verify_manifest.py`, and `verify_signature.sh` implement a hash → sign → distribute → verify chain of trust via cosign Sigstore keyless signing; the signed manifest and bundle ship under `plugin-extras/security/` alongside the built payload.
 
 ### Changed
 
