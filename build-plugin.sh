@@ -218,7 +218,31 @@ for skill in "${REPO_LOCAL_SKILLS[@]}"; do
     rm -rf "${PLUGIN_DIR:?}/skills/${skill}"
 done
 
+# Repo-local agents: agent-architect reads .claude/agents/_template.md and
+# .claude/sdd/spec-schemas/agent.schema.md, both excluded from the plugin
+# (see above / Step 4), so it cannot function once installed — repo-local
+# for Layer 1 (feat/spec-schemas), matching the create-skill/create-agent
+# precedent above. Shipping it to consumers is a deliberate later layer.
+REPO_LOCAL_AGENTS=(architect/agent-architect.md)
+for agent in "${REPO_LOCAL_AGENTS[@]}"; do
+    rm -rf "${PLUGIN_DIR:?}/agents/${agent}"
+done
+
 ok "Workspace directories excluded"
+
+# ─── Step 3b: Regenerate the agent-router for the shipped tree ───────────────
+# Step 0b's router was generated against .claude/agents/ (59 agents) before
+# the REPO_LOCAL_AGENTS exclusion above ran; copying it as-is would ship a
+# router that dispatches to an agent no longer in the plugin. Regenerate a
+# second time against what plugin/agents/ actually contains, emitting
+# ${CLAUDE_PLUGIN_ROOT}/agents/ paths instead of .claude/agents/ ones.
+
+info "Regenerating agent-router for the shipped plugin tree..."
+python3 "${SCRIPT_DIR}/scripts/generate-agent-router.py" \
+    --agents-dir "${PLUGIN_DIR}/agents" \
+    --output-dir "${PLUGIN_DIR}/skills/agent-router" \
+    --path-prefix '${CLAUDE_PLUGIN_ROOT}/agents/' >/dev/null
+ok "Shipped agent-router regenerated"
 
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────
 #
@@ -236,6 +260,7 @@ ok "Workspace directories excluded"
 #   .claude/sdd/features/  → stays as-is (user's project)
 #   .claude/sdd/reports/   → stays as-is (user's project)
 #   .claude/sdd/archive/   → stays as-is (user's project)
+#   .claude/sdd/specs/     → stays as-is (user's project)
 #   .claude/storage/       → stays as-is (user's project)
 # ─────────────────────────────────────────────────────────────────────────────
 
