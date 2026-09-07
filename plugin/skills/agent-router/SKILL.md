@@ -14,7 +14,7 @@ description: Intelligent agent routing -- automatically matches tasks to the bes
 
 Explicit routing rules for matching tasks to the correct specialist agent. Generated from each agent's frontmatter, so any change to an agent's `description`, `kb_domains`, or `escalation_rules` flows here automatically.
 
-**Agent count:** 58  |  **Categories:** 8  |  **Content hash:** `d2970b1b988f`
+**Agent count:** 58  |  **Categories:** 8  |  **Content hash:** `11bcc0754dfd`
 
 ## A. Agents by Category
 

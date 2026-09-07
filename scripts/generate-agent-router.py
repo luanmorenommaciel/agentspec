@@ -30,6 +30,18 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _display(path: Path) -> str:
+    """Path for a log line: relative to REPO_ROOT when possible, else as-is.
+
+    --output-dir lets a caller point outside the repo (e.g. a scratch dir);
+    relative_to() raises ValueError there, and a log line isn't worth a crash.
+    """
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 AGENTS_DIR = REPO_ROOT / ".claude" / "agents"
 SKILL_DIR = REPO_ROOT / ".claude" / "skills" / "agent-router"
 SKILL_MD = SKILL_DIR / "SKILL.md"
@@ -146,14 +158,20 @@ def extract_one_liner(description: str) -> str:
 
 # ── Agent discovery ──────────────────────────────────────────────────────────
 
-def discover_agents() -> list[AgentSpec]:
-    """Walk .claude/agents/, parse each agent, return normalized specs."""
+def discover_agents(agents_dir: Path = AGENTS_DIR, path_prefix: str = ".claude/agents/") -> list[AgentSpec]:
+    """Walk ``agents_dir``, parse each agent, return normalized specs.
+
+    ``path_prefix`` controls the emitted ``path`` field, decoupling it from
+    ``agents_dir``'s location on disk — lets a caller regenerate against
+    ``plugin/agents/`` while still emitting ``${CLAUDE_PLUGIN_ROOT}/agents/...``
+    paths, rather than a filesystem-relative path with no meaning at runtime.
+    """
     specs: list[AgentSpec] = []
-    for md in sorted(AGENTS_DIR.rglob("*.md")):
+    for md in sorted(agents_dir.rglob("*.md")):
         if md.name in SKIP_FILES:
             continue
-        rel = md.relative_to(REPO_ROOT)
-        parts = md.relative_to(AGENTS_DIR).parts
+        rel = md.relative_to(agents_dir)
+        parts = rel.parts
         if len(parts) < 2:
             continue  # Not in a category directory
         category = parts[0]
@@ -167,7 +185,7 @@ def discover_agents() -> list[AgentSpec]:
         specs.append(AgentSpec(
             name=str(fm["name"]),
             category=category,
-            path=str(rel),
+            path=f"{path_prefix}{rel}",
             tier=str(fm.get("tier", "T1")),
             model=str(fm.get("model", "sonnet")),
             description=extract_one_liner(str(fm.get("description", ""))),
@@ -325,11 +343,24 @@ def content_hash_for(specs: list[AgentSpec]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate agent-router SKILL.md and routing.json")
     parser.add_argument("--check", action="store_true", help="Fail if generated output differs from on-disk files")
+    parser.add_argument("--agents-dir", default=str(AGENTS_DIR),
+                         help="Directory to scan for agent .md files (default: .claude/agents)")
+    parser.add_argument("--output-dir", default=str(SKILL_DIR),
+                         help="Directory to write SKILL.md/routing.json into (default: .claude/skills/agent-router)")
+    parser.add_argument("--path-prefix", default=".claude/agents/",
+                         help="Prefix for each agent's emitted 'path' field (default: .claude/agents/) — "
+                              "lets a caller regenerate against a different tree (e.g. plugin/agents/) while "
+                              "still emitting the runtime-meaningful path (e.g. ${CLAUDE_PLUGIN_ROOT}/agents/)")
     args = parser.parse_args()
 
-    specs = discover_agents()
+    agents_dir = Path(args.agents_dir)
+    skill_dir = Path(args.output_dir)
+    skill_md_path = skill_dir / "SKILL.md"
+    routing_json_path = skill_dir / "routing.json"
+
+    specs = discover_agents(agents_dir, args.path_prefix)
     if not specs:
-        print("[ERROR] No agents discovered under .claude/agents/", file=sys.stderr)
+        print(f"[ERROR] No agents discovered under {agents_dir}", file=sys.stderr)
         return 2
 
     chash = content_hash_for(specs)
@@ -338,11 +369,11 @@ def main() -> int:
 
     if args.check:
         drift = False
-        for path, content in [(SKILL_MD, skill_md), (ROUTING_JSON, routing_json)]:
+        for path, content in [(skill_md_path, skill_md), (routing_json_path, routing_json)]:
             on_disk = path.read_text(encoding="utf-8") if path.exists() else ""
             if on_disk != content:
                 drift = True
-                print(f"[DRIFT] {path.relative_to(REPO_ROOT)} is out of date", file=sys.stderr)
+                print(f"[DRIFT] {_display(path)} is out of date", file=sys.stderr)
                 diff = difflib.unified_diff(
                     on_disk.splitlines(keepends=True),
                     content.splitlines(keepends=True),
@@ -357,10 +388,10 @@ def main() -> int:
         print(f"[OK] agent-router is up to date ({len(specs)} agents, hash {chash})")
         return 0
 
-    SKILL_DIR.mkdir(parents=True, exist_ok=True)
-    SKILL_MD.write_text(skill_md, encoding="utf-8")
-    ROUTING_JSON.write_text(routing_json, encoding="utf-8")
-    print(f"[OK] Wrote {SKILL_MD.relative_to(REPO_ROOT)} and {ROUTING_JSON.relative_to(REPO_ROOT)}")
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_md_path.write_text(skill_md, encoding="utf-8")
+    routing_json_path.write_text(routing_json, encoding="utf-8")
+    print(f"[OK] Wrote {_display(skill_md_path)} and {_display(routing_json_path)}")
     print(f"     {len(specs)} agents, {len({s.category for s in specs})} categories, hash {chash}")
     return 0
 
