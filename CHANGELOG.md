@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Trust layer V0 for the built plugin** (#84) — new `scripts/generate_manifest.py`, `sign_manifest.sh`, `verify_manifest.py`, and `verify_signature.sh` implement a hash → sign → distribute → verify chain of trust via cosign Sigstore keyless signing; the signed manifest and bundle ship under `plugin-extras/security/` alongside the built payload.
+
 ## [3.5.0] - 2026-07-19
 
 ### Fixed
