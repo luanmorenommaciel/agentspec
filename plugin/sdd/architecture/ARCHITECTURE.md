@@ -362,6 +362,31 @@ Verdict semantics: `PASS` proceeds, `WARN` proceeds with a recorded finding,
 `WORKFLOW_CONTRACTS.yaml` (`contract_enforcement`); operator usage is documented
 in `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/USAGE.md`.
 
+### Orchestration (the Composer)
+
+The gates above each answer one question; the **spec-composer** is the conductor
+that sequences them. It drives a single artifact through a declared
+create -> gate -> generate -> gate -> judge -> emit lifecycle —
+`compose(request, pipeline_contract)` returns a result carrying the emitted
+artifact and the verdict trail — and owns the sequencing policy the enforcement
+engines deliberately do not carry:
+
+- **Cascade order.** The model-based judge runs only after the deterministic gate
+  on its own subject passes, so nothing is paid to the expensive stage for an
+  artifact the cheap stage already rejected. The ordering is a checked rule of the
+  pipeline contract's own schema, not a convention each consumer re-decides.
+- **The repair loop.** A gate `FAIL` returns its structured findings to the nearest
+  preceding producing stage. One budget of generation attempts is shared across
+  both feedback edges, and exhausting it escalates to a human rather than passing.
+- **Archival.** On a successful emit the ephemeral spec is archived as provenance;
+  the emitted artifact's own frontmatter is thereafter the canonical spec. Nothing
+  reads the archive to operate.
+
+The lifecycle itself is data: a pipeline contract the conductor validates before it
+runs it, so a new artifact type is a new contract rather than a new orchestrator.
+Contract definitions and stage bindings live in `WORKFLOW_CONTRACTS.yaml`
+(`orchestration`); operator usage is documented in `tools/spec-composer/USAGE.md`.
+
 ---
 
 ## Spec-Driven Agent Creation (Layer 1 of `feat/spec-schemas`, ADR-006)
@@ -402,6 +427,7 @@ likely, to `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/` — without redesigning th
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.6.0 | 2026-08-23 | Orchestration (the Composer) — the conductor around the existing gates: subject-aware cascade ordering as a checked pipeline-contract rule, one shared generation budget ending at a human, provenance-only archive |
 | 3.3.0 | 2026-06-10 | Contract Enforcement (the Linter) — verdict semantics, contract sources, per-phase consumer bindings; phase agents declare document-validation binding |
 | 2.1.0 | 2026-03-26 | Updated folder structure for 58 agents, 8 categories, 23 KB domains |
 | 2.0.0 | 2026-03-26 | Data engineering pivot |
