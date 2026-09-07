@@ -10,7 +10,7 @@
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet?style=flat-square)](plugin/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/v3.5.0-green?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/v3.6.0-green?style=flat-square)](CHANGELOG.md)
 
 **A single AI agent reviewing your data pipeline will miss things.**<br/>
 **58 specialized agents with 24 knowledge domains will not.**
@@ -214,7 +214,7 @@ agentspec/
 ├── .claude/                 # Source of truth (development)
 │   ├── agents/              # 58 agents across 8 categories
 │   ├── commands/            # 31 slash commands
-│   ├── skills/              # 19 source skills (SDD phases, GitHub workflow, authoring, KB, visuals…)
+│   ├── skills/              # 20 source skills (SDD phases, GitHub workflow, authoring, KB, visuals…)
 │   ├── kb/                  # 24 knowledge base domains
 │   └── sdd/                 # Templates, contracts, features, archive
 │

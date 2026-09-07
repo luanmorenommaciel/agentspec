@@ -285,7 +285,7 @@ All templates live in `.claude/kb/_templates/`:
 
 ---
 
-## Skills (15 core + 1 plugin-only + 4 repo-local)
+## Skills (15 core + 1 plugin-only + 5 repo-local)
 
 Skills are reusable capability packs in `.claude/skills/` that provide templates, references, and scripts for specialized generation tasks.
 
@@ -315,6 +315,7 @@ These skills support contributors working in this repository and are excluded fr
 |-------|-------------|
 | `create-skill` | This repository's conventions for adding a skill — naming, placement tiers, frontmatter pitfalls, ship checklist; defers general skill-writing craft to the upstream `skill-creator` |
 | `create-agent` | This repository's conventions for adding an agent — the frontmatter contract (router-feeding fields), thin-executor default, router regeneration, ship checklist |
+| `github-review-pr` | Grounded pull-request review: canonical-state grounding in the linked issue/ADR, stateless blind + context-verifier reviewer roles, the repository's suites run at the PR head in a throwaway worktree, and one structured review comment — verdict first, items numbered continuously across rounds — handed to a human to post |
 | `meeting-analysis` | Turns a meeting transcript into a validated analysis document (via `meeting-analyst`) plus a channel-ready follow-up message |
 | `standup-report` | Daily standup message (Done / Will do / Blockers) assembled from git history, PRs/issues, and user input |
 

@@ -174,6 +174,7 @@ if [[ -d "${SCRIPT_DIR}/tools/spec-judge" ]]; then
     mkdir -p "${PLUGIN_DIR}/tools"
     cp -r "${SCRIPT_DIR}/tools/spec-judge" "${PLUGIN_DIR}/tools/spec-judge"
     rm -rf "${PLUGIN_DIR}/tools/spec-judge/.venv"
+    rm -f "${PLUGIN_DIR}/tools/spec-judge/uv.lock"   # development lockfile — no consumer in the shipped tree
     rm -rf "${PLUGIN_DIR}/tools/spec-judge/tests"
     find "${PLUGIN_DIR}/tools/spec-judge" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
     find "${PLUGIN_DIR}/tools/spec-judge" -name '.pytest_cache' -type d -exec rm -rf {} + 2>/dev/null || true
@@ -193,6 +194,7 @@ if [[ -d "${EXTRAS_DIR}" ]]; then
     fi
     [[ -d "${EXTRAS_DIR}/hooks" ]] && cp -r "${EXTRAS_DIR}/hooks" "${PLUGIN_DIR}/"
     [[ -d "${EXTRAS_DIR}/scripts" ]] && cp -r "${EXTRAS_DIR}/scripts" "${PLUGIN_DIR}/"
+    [[ -d "${EXTRAS_DIR}/security" ]] && cp -r "${EXTRAS_DIR}/security" "${PLUGIN_DIR}/"
     ok "Plugin-extras copied"
 fi
 
@@ -211,12 +213,36 @@ find "${PLUGIN_DIR:?}/agents" -name '_template.md' -delete 2>/dev/null || true
 # (its own review/communication workflows) and are not part of the
 # distributed plugin. They live in .claude/skills/ so they load for
 # contributors, and are excluded from plugin/skills/ here.
-REPO_LOCAL_SKILLS=(meeting-analysis standup-report create-skill create-agent)
+REPO_LOCAL_SKILLS=(meeting-analysis standup-report create-skill create-agent github-review-pr)
 for skill in "${REPO_LOCAL_SKILLS[@]}"; do
     rm -rf "${PLUGIN_DIR:?}/skills/${skill}"
 done
 
+# Repo-local agents: agent-architect reads .claude/agents/_template.md and
+# .claude/sdd/spec-schemas/agent.schema.md, both excluded from the plugin
+# (see above / Step 4), so it cannot function once installed — repo-local
+# for Layer 1 (feat/spec-schemas), matching the create-skill/create-agent
+# precedent above. Shipping it to consumers is a deliberate later layer.
+REPO_LOCAL_AGENTS=(architect/agent-architect.md)
+for agent in "${REPO_LOCAL_AGENTS[@]}"; do
+    rm -rf "${PLUGIN_DIR:?}/agents/${agent}"
+done
+
 ok "Workspace directories excluded"
+
+# ─── Step 3b: Regenerate the agent-router for the shipped tree ───────────────
+# Step 0b's router was generated against .claude/agents/ (59 agents) before
+# the REPO_LOCAL_AGENTS exclusion above ran; copying it as-is would ship a
+# router that dispatches to an agent no longer in the plugin. Regenerate a
+# second time against what plugin/agents/ actually contains, emitting
+# ${CLAUDE_PLUGIN_ROOT}/agents/ paths instead of .claude/agents/ ones.
+
+info "Regenerating agent-router for the shipped plugin tree..."
+python3 "${SCRIPT_DIR}/scripts/generate-agent-router.py" \
+    --agents-dir "${PLUGIN_DIR}/agents" \
+    --output-dir "${PLUGIN_DIR}/skills/agent-router" \
+    --path-prefix '${CLAUDE_PLUGIN_ROOT}/agents/' >/dev/null
+ok "Shipped agent-router regenerated"
 
 # ─── Step 4: Path rewriting ──────────────────────────────────────────────────
 #
@@ -234,6 +260,7 @@ ok "Workspace directories excluded"
 #   .claude/sdd/features/  → stays as-is (user's project)
 #   .claude/sdd/reports/   → stays as-is (user's project)
 #   .claude/sdd/archive/   → stays as-is (user's project)
+#   .claude/sdd/specs/     → stays as-is (user's project)
 #   .claude/storage/       → stays as-is (user's project)
 # ─────────────────────────────────────────────────────────────────────────────
 

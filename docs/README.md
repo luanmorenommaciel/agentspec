@@ -14,7 +14,8 @@
 | Guide | Description |
 |-------|-------------|
 | [Tutorials](tutorials/) | dbt, star schema, data quality, Spark, streaming, RAG walkthroughs |
-| [Reference](reference/) | Full catalog: 58 agents, 31 commands, 24 KB domains, 20 skills (16 in the plugin + 4 repo-local) |
+| [Reference](reference/) | Full catalog: 58 agents, 31 commands, 24 KB domains, 21 skills (16 in the plugin + 5 repo-local) |
+| [Releasing](reference/releasing.md) | Maintainer procedure: branch topology, version bumps, tags and releases |
 
 ## Data Engineering Quick Links
 
