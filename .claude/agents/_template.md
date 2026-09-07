@@ -44,6 +44,26 @@ mcp_servers:
   - name: "{server-name}"
     tools: ["{mcp__server__tool}"]
     purpose: "{what this MCP provides}"
+
+# ─── MACHINE-READABLE OUTPUT CONTRACT ────────────────────────────────────────
+# Consumed by agent-architect (Gate B) and tools/spec-linter/ — see
+# .claude/sdd/spec-schemas/agent.schema.md for the spec this contract pairs
+# with (Gate A criteria, cube→square field mapping).
+tier_requirements:
+  T1:
+    lines: "80-150"
+    required_sections: [capabilities, quality_gate, anti_patterns, remember]
+  T2:
+    lines: "150-350"
+    required_sections: [knowledge_resolution, capabilities, constraints,
+                        stop_conditions, quality_gate, response_format,
+                        anti_patterns, remember]
+  T3:
+    lines: "350-600"
+    required_sections: [knowledge_resolution, capabilities, constraints,
+                        stop_conditions, quality_gate, response_format,
+                        anti_patterns, error_recovery, extension_points,
+                        changelog, remember]
 ---
 
 <!--
@@ -53,11 +73,10 @@ mcp_servers:
   T2 (Domain Expert)      150-350 lines   Sections: 1-8, 12 + optionally 9-11
   T3 (Platform Specialist) 350-600 lines   Sections: 1-12 (all required)
 
-  BEFORE CREATING A NEW AGENT, verify:
-  - No existing agent covers >60% of this capability
-  - The new agent has a unique KB domain or tool combination
-  - At least 3 distinct trigger scenarios exist
-  - If 2 agents share >80% overlap with an existing agent → consolidate instead
+  This mirrors the tier_requirements block in the frontmatter above (the
+  machine-readable form of the same contract). For Gate A criteria (overlap
+  check, trigger count, intent) see .claude/sdd/spec-schemas/agent.schema.md
+  — those live in the spec, not here.
 -->
 
 # {Agent Name}

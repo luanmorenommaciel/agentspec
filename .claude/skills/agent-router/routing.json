@@ -1,7 +1,20 @@
 {
   "version": 1,
-  "agent_count": 58,
+  "agent_count": 59,
   "agents": [
+    {
+      "name": "agent-architect",
+      "category": "architect",
+      "path": ".claude/agents/architect/agent-architect.md",
+      "tier": "T2",
+      "model": "sonnet",
+      "description": "Generates a new agent.md from a filled-in agent.schema.md spec, applying the",
+      "kb_domains": [],
+      "escalates_to": [
+        "user",
+        "user"
+      ]
+    },
     {
       "name": "ai-data-engineer",
       "category": "data-engineering",
