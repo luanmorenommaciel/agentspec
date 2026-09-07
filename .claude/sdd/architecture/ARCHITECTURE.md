@@ -124,9 +124,9 @@ Each phase's methodology lives in a dedicated skill (`sdd-brainstorm`, `sdd-defi
 |   +-- knowledge/               # 1 KB command
 |   +-- review/                  # 1 review command
 |
-+-- agents/                      # 58 specialized agents
++-- agents/                      # 59 specialized agents
 |   +-- workflow/                # 6 SDD phase agents
-|   +-- architect/               # 8 system-level design
+|   +-- architect/               # 9 system-level design
 |   +-- cloud/                   # 10 AWS, GCP, CI/CD
 |   +-- platform/                # 6 Microsoft Fabric
 |   +-- python/                  # 6 code quality, prompts
@@ -151,8 +151,11 @@ Each phase's methodology lives in a dedicated skill (`sdd-brainstorm`, `sdd-defi
     +-- archive/                 # Shipped features
     +-- templates/               # 5 document templates
     +-- architecture/            # Workflow contracts
-        +-- WORKFLOW_CONTRACTS.yaml
-        +-- ARCHITECTURE.md      # This file
+    |   +-- WORKFLOW_CONTRACTS.yaml
+    |   +-- ARCHITECTURE.md      # This file
+    +-- spec-schemas/            # Spec formats for artifact creation (Layer 1: agent.schema.md)
+    +-- specs/                   # In-progress specs, one subfolder per artifact type
+        +-- agents/              # {name}.spec.md, consumed by agent-architect
 ```
 
 ---
@@ -383,6 +386,40 @@ The lifecycle itself is data: a pipeline contract the conductor validates before
 runs it, so a new artifact type is a new contract rather than a new orchestrator.
 Contract definitions and stage bindings live in `WORKFLOW_CONTRACTS.yaml`
 (`orchestration`); operator usage is documented in `tools/spec-composer/USAGE.md`.
+
+---
+
+## Spec-Driven Agent Creation (Layer 1 of `feat/spec-schemas`, ADR-006)
+
+The first of four artifact-creation pipelines that share a "cube→square"
+shape: an ephemeral spec is mapped onto a fixed output contract by a
+dedicated architect agent. Layers 2-4 (issue #71) repeat this shape for KB
+domains, skills, and SDD phase documents.
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│              AGENT CREATION PIPELINE (Layer 1)                       │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  spec-schemas/agent.schema.md          _template.md                 │
+│  (spec-only fields + cube→square  ┐    (tier_requirements +         │
+│   mapping + documented Gate A/B)  │     required_sections)          │
+│                                    │              │                  │
+│                                    ▼              ▼                  │
+│  specs/agents/{name}.spec.md ──▶ agent-architect ──▶ agents/{cat}/{name}.md │
+│  (hand-filled by a human)         (generation only —                │
+│                                     no Gate A/B self-check)          │
+│                                                                       │
+│  Gate A / Gate B enforcement: documented in agent.schema.md, owned   │
+│  by tools/spec-linter/ (not yet wired to this schema — a follow-up). │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Note the deliberate gap: unlike the phase-document Quality Gates above (which
+the Linter already enforces), Gate A/B for agent creation is spec'd but not
+yet enforced anywhere. `agent-architect` is scoped to generation only so that
+enforcement can be added later — either to `agent-architect` itself or, more
+likely, to `tools/spec-linter/` — without redesigning the generator.
 
 ---
 

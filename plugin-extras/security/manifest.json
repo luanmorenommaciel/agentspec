@@ -1,0 +1,97 @@
+{
+  "algorithm": "sha256",
+  "allowed_extensions": [
+    ".json",
+    ".md",
+    ".toml",
+    ".yaml",
+    ".yml"
+  ],
+  "base_path": "plugin/agents/data-engineering",
+  "created_at": "2026-08-13T21:03:58+00:00",
+  "file_count": 15,
+  "files": [
+    {
+      "path": "ai-data-engineer.md",
+      "sha256": "4a4c7cac34a4a462ec3bbc0673a789f2c0972fdf009419147801f091445ee559",
+      "size_bytes": 8380
+    },
+    {
+      "path": "airflow-specialist.md",
+      "sha256": "f525b20be154bede1d8b971cd0854af95fe420106ca4d04e1a4015efd00f1c57",
+      "size_bytes": 16247
+    },
+    {
+      "path": "dbt-specialist.md",
+      "sha256": "fa7f7cab03e02f0c89d26fa9578dbd8082004d535c287a768be155ec9295ee83",
+      "size_bytes": 7419
+    },
+    {
+      "path": "lakeflow-architect.md",
+      "sha256": "aa28979857dc8a75e2afca0612fb89bd2559d7925992a8ee82ecd633bdb73285",
+      "size_bytes": 14382
+    },
+    {
+      "path": "lakeflow-expert.md",
+      "sha256": "bcb69d675928e4f3156acbcb4a1228c24e43018c787f846b6e43c3ee9563410f",
+      "size_bytes": 13122
+    },
+    {
+      "path": "lakeflow-pipeline-builder.md",
+      "sha256": "83f610c8f0b3c9ceb518326a28972c9ae342221b27be7cba9b68cb4cf85df762",
+      "size_bytes": 14024
+    },
+    {
+      "path": "lakeflow-specialist.md",
+      "sha256": "e1a0a5e761ced52304d53d8274d70c0f81929675497664335c4c11afc7698494",
+      "size_bytes": 3407
+    },
+    {
+      "path": "qdrant-specialist.md",
+      "sha256": "2225e270f5ceeaa532acbbf8d82303a781d1e35dd42a5cfacc614108f91bf076",
+      "size_bytes": 21999
+    },
+    {
+      "path": "spark-engineer.md",
+      "sha256": "e3056772ae6f63c18b827c00b2ab539725d2a955d1398b66d0f9e66f8a3ec092",
+      "size_bytes": 6338
+    },
+    {
+      "path": "spark-performance-analyzer.md",
+      "sha256": "9b71ef24564cdbc3da221f8afbff8accde4c73e80f94935f522f21a17e92cfa8",
+      "size_bytes": 2283
+    },
+    {
+      "path": "spark-specialist.md",
+      "sha256": "61c2c020d478dbb2223b7ec9da2e5150aedfe2089e6a9e5c3cdf8227c7e5b9a8",
+      "size_bytes": 12186
+    },
+    {
+      "path": "spark-streaming-architect.md",
+      "sha256": "792b9af3d70accde3536b182f90e378792ca9c2a70dec58768cecec85ed4a7e3",
+      "size_bytes": 13750
+    },
+    {
+      "path": "spark-troubleshooter.md",
+      "sha256": "3cad8245482cd421fff9de35d9d2a1b59bf30010b2b1024729fa348ac23da1fd",
+      "size_bytes": 2542
+    },
+    {
+      "path": "sql-optimizer.md",
+      "sha256": "8d01ae244c7d39bc7e76cb51a622884a0deef6db679602c5231787732cc5b902",
+      "size_bytes": 7223
+    },
+    {
+      "path": "streaming-engineer.md",
+      "sha256": "411801040acedcacbfdae5f1286ac1eac1df98cee8111bd662885e3dfea327e1",
+      "size_bytes": 7634
+    }
+  ],
+  "generated_by": "generate_manifest.py v1.0",
+  "git": {
+    "git_branch": "feat/pod-d3-trust-layer-scripts",
+    "git_commit": "bae73ece63692916c4ba7b436c447c6790ab2e0d",
+    "git_is_dirty": true
+  },
+  "schema_version": "1.0"
+}

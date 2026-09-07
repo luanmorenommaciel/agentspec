@@ -123,6 +123,37 @@ agent_resolution:
     quick_reference: ".claude/agents/README.md (auto-generated in user project)"
 
 # =============================================================================
+# SPEC-DRIVEN AGENT CREATION (Layer 1 of feat/spec-schemas — ADR-006, #67)
+# =============================================================================
+# Cube->square pattern: an ephemeral spec (agent.schema.md) is mapped onto the
+# _template.md output contract by agent-architect. Gate A/B criteria are
+# documented in the schema but NOT enforced by agent-architect itself (see
+# agent_creation_pipeline.gates below) -- enforcement belongs to
+# tools/spec-linter/, not yet wired to this schema. Layers 2-4 (issue #71)
+# will repeat this shape for KB domains, skills, and SDD phase documents.
+
+spec_lifecycle:
+  stages:
+    - "spec authored"       # .claude/sdd/specs/agents/{name}.spec.md, hand-filled against agent.schema.md
+    - "generation"          # agent-architect maps spec -> .claude/agents/{category}/{name}.md
+    - "router regeneration" # user runs scripts/generate-agent-router.py (not automatic)
+    - "archival"            # spec moves to archive path below (not automated in Layer 1)
+  archive: ".claude/sdd/archive/specs/{name}/ — provenance only, never load-bearing; graduation rule applies before archiving (ADR-004 #63 §3.9, resolving ADR-006 §7.1's deferral)"
+
+agent_creation_pipeline:
+  schema: ".claude/sdd/spec-schemas/agent.schema.md"
+  generator:
+    agent: "agent-architect"
+    path: ".claude/agents/architect/agent-architect.md"
+    scope: "generation only — does not self-check Gate A or Gate B"
+  spec_working_dir: ".claude/sdd/specs/agents/"
+  output_contract: ".claude/agents/_template.md"
+  gates:
+    gate_a: "documented in agent.schema.md — pre-generation (overlap_check, trigger_count, intent, tier); not enforced by agent-architect"
+    gate_b: "documented in agent.schema.md — post-generation (required_sections present, frontmatter fidelity); not enforced by agent-architect"
+    enforcement_owner: "tools/spec-linter/ — its existing agent-spec contract validates generated agent.md separately; extending it (or adding a sibling contract) to check these Gate A/B criteria against a spec file is a follow-up, not part of Layer 1"
+
+# =============================================================================
 # CONTRACT ENFORCEMENT (the Linter — ADR-002)
 # =============================================================================
 # A deterministic contract-validation engine. The engine is pure mechanism
@@ -742,6 +773,17 @@ folder_structure:
       contains:
         - "WORKFLOW_CONTRACTS.yaml"
         - "ARCHITECTURE.md"
+
+    spec_schemas:
+      path: "spec-schemas/"
+      contains:
+        - "agent.schema.md"
+
+    specs:
+      path: "specs/"
+      structure: "{artifact-type}/{name}.spec.md"
+      contains:
+        - "agents/{name}.spec.md"
 
 # =============================================================================
 # NAMING CONVENTIONS
