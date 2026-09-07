@@ -72,7 +72,7 @@ git diff "origin/$BASE...FETCH_HEAD"
 
 The three-dot diff shows what the branch adds, not what the base moved on to — a two-dot diff attributes other people's merged work to this author.
 
-Remove the worktree once the comment is written: `git worktree remove "$WT"` (add `--force` when the suites left artifacts behind), then `git worktree prune`. A worktree left on disk becomes a stale second checkout that the next review silently reads.
+Remove the worktree once the comment is written: `cd "$ROOT"` first — Phase 4 leaves the session standing inside `$WT`, and `git worktree remove` / `git worktree prune` fail when run from inside the directory being removed — then `git worktree remove "$WT"` (add `--force` when the suites left artifacts behind), then `git worktree prune`. A worktree left on disk becomes a stale second checkout that the next review silently reads.
 
 ## Phase 3 — Dispatch the reviewer roles
 
@@ -93,6 +93,7 @@ Every claim in the comment is either reproduced or dropped. The context verifier
 **Bootstrap first, or the exit codes mean nothing.** A detached worktree carries no virtual environments, so the component suites fall back to an interpreter that cannot import them and every exit code becomes noise. Build them **inside the worktree**, where the `Makefile` already prefers them and `**/.venv/` keeps them out of the drift check — and where removing the worktree disposes of them:
 
 ```bash
+ROOT="$PWD"   # remembered so teardown can leave $WT before removing it
 cd "$WT"   # every command in this phase runs here, never in the working checkout
 python3 -m venv tools/spec-linter/.venv && tools/spec-linter/.venv/bin/python -m pip install -e 'tools/spec-linter[dev]'
 python3 -m venv tools/spec-judge/.venv  && tools/spec-judge/.venv/bin/python  -m pip install -e tools/spec-linter -e 'tools/spec-judge[dev]'
@@ -129,7 +130,7 @@ The version rule is a check, not a nit: a pull request into `develop` must leave
 
 ## Phase 5 — Synthesize one comment
 
-Merge the roles' findings into a copy of the skeleton in `assets/review-comment-template.md`, drafted at a scratch path the repository ignores — `"$WT"/review-comment.tmp` — never into the tracked asset itself. Resolve every duplicate; keep every disagreement.
+Merge the roles' findings into a copy of the skeleton in `assets/review-comment-template.md`, drafted at `DRAFT="$(mktemp -t review-comment)"` — outside `$WT`, so Phase 2's teardown cannot delete it — never into the tracked asset itself. Resolve every duplicate; keep every disagreement. Every later reference to the draft uses `"$DRAFT"`.
 
 1. **Heading.** `## Independent review — <one-line scope>`, or `## Independent re-review — <what was verified>` for a later round.
 2. **Verdict line — first sentence, in bold, never buried.** Exactly one of:
