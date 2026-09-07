@@ -29,7 +29,7 @@ Reviewer policy is out of scope: who reviews is decided by the repository, not b
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 [ -n "$REPO" ] || REPO=$(git remote get-url origin | sed -E 's#(git@|https://)github.com[:/]##; s#\.git$##')
-N=<pull request number>
+N="${1:?pull request number}"
 BASE=$(gh pr view "$N" --repo "$REPO" --json baseRefName -q .baseRefName)
 ```
 
@@ -42,7 +42,7 @@ Nothing is assessed until canonical state has been read. In order:
 | # | Read | How |
 |---|---|---|
 | 1 | The tip of the branch the change lands on — `develop` for ordinary work, `main` for release and hotfix pull requests | `git fetch origin && git log --oneline -1 "origin/$BASE"` |
-| 2 | The pull request's own metadata | `gh pr view "$N" --repo "$REPO" --json title,body,baseRefName,headRefName,isDraft,mergeable,mergeStateStatus,files` |
+| 2 | The pull request's own metadata, **including its author** | `gh pr view "$N" --repo "$REPO" --json title,body,author,baseRefName,headRefName,isDraft,mergeable,mergeStateStatus,files` |
 | 2b | The discussion and every prior round — **for the context verifier only** | `gh pr view "$N" --repo "$REPO" --json comments,reviews` |
 | 3 | The record it implements — the `Implements` / `Closes` line of the body | `gh issue view <record> --repo "$REPO"` |
 | 4 | Every ADR the change or the record cites, with its status | `gh issue view <adr> --repo "$REPO"` |
@@ -50,8 +50,9 @@ Nothing is assessed until canonical state has been read. In order:
 
 Design records are GitHub issues in this repository today; if they ever move into repository files, step 3–4 become a file read and nothing else in this phase changes.
 
-Two rules make this phase load-bearing:
+Three rules make this phase load-bearing:
 
+- **The reviewer is not the author.** Compare `author.login` from step 2 against the account this session acts as (`gh api user -q .login`); if they match, stop here and hand the review to someone else. Nothing downstream restores the independence a self-review gives up.
 - **The record is the specification, the pull request is a claim about it.** A change that satisfies its own description while missing a criterion in the record is not done, and reading the criteria from the description would never reveal it.
 - **No anchor, no review.** A pull request that links no issue or ADR and states no acceptance criteria gets `request changes`, with a single blocking item asking for the anchor. A change reviewed against its own claims always passes, which is the same as not reviewing it.
 
@@ -63,7 +64,7 @@ Review the code as it will exist after merge, in isolation from the working chec
 
 ```bash
 git fetch origin "pull/$N/head"
-WT="../$(basename "$PWD")-wt-pr${N}-review"
+WT="$(dirname "$PWD")/$(basename "$PWD")-wt-pr${N}-review"   # absolute: Phase 4 cd's into it
 git worktree add --detach "$WT" FETCH_HEAD
 git -C "$WT" rev-parse --short HEAD          # pin every claim in the comment to this sha
 git diff "origin/$BASE...FETCH_HEAD"
@@ -80,7 +81,7 @@ The roles are **fresh subagents** that know only what this skill hands them. Ses
 | Role | Receives | Never receives | Answers |
 |---|---|---|---|
 | **Blind reviewer** | the three-dot diff, the worktree path, the design records with discussion and author stripped, `references/checklist.md` | `gh`, `git log`, the pull-request discussion, prior review rounds, the author's identity | Does the change do what the record asked, and are the author's judgment calls the right ones? It looks hardest exactly there — the places where a reasonable implementer had to choose. |
-| **Context verifier** | everything the blind reviewer gets, **plus** the pull-request discussion and every prior review round | the orchestrating session's own notes, drafts and conclusions — see "What no role gets" in `references/reviewer-prompts.md`, which binds every role | Is each fix claim true in the code? **It is the role that runs Phase 4** — the suites, the exact commands and exit codes, and the build story. |
+| **Context verifier** | everything the blind reviewer gets, **plus** read-only `gh` (`view`, `checks`, `api` GET — never a call that writes), the pull-request discussion and every prior review round | the orchestrating session's own notes, drafts and conclusions — see "What no role gets" in `references/reviewer-prompts.md`, which binds every role | Is each fix claim true in the code? **It is the role that runs Phase 4** — the suites, the exact commands and exit codes, and the build story. |
 | **Threat modeller** (add only when the change has a security surface: signing, secrets, supply chain, permissions, or anything that widens what runs or who may run it) | the blind reviewer's inputs **plus** a written threat-model brief: what the change is trusted to do, who could abuse it, what an attacker gains | the discussion, prior rounds, the author's identity | What breaks if the input, the environment, or the caller is hostile? |
 
 Independence is the point: agreement between a role that saw the discussion and one that could not is evidence; agreement between two roles fed the same narrative is not. When they disagree, the disagreement goes in the comment — the blind reviewer's finding is not overruled just because the discussion explains it away.
@@ -92,17 +93,22 @@ Every claim in the comment is either reproduced or dropped. The context verifier
 **Bootstrap first, or the exit codes mean nothing.** A detached worktree carries no virtual environments, so the component suites fall back to an interpreter that cannot import them and every exit code becomes noise. Build them **inside the worktree**, where the `Makefile` already prefers them and `**/.venv/` keeps them out of the drift check — and where removing the worktree disposes of them:
 
 ```bash
+cd "$WT"   # every command in this phase runs here, never in the working checkout
 python3 -m venv tools/spec-linter/.venv && tools/spec-linter/.venv/bin/python -m pip install -e 'tools/spec-linter[dev]'
 python3 -m venv tools/spec-judge/.venv  && tools/spec-judge/.venv/bin/python  -m pip install -e tools/spec-linter -e 'tools/spec-judge[dev]'
 ```
 
 Never install these editable into the ambient interpreter: the worktree is removed at the end of the review, and a global editable install is then left pointing at a path that no longer exists. Separately, `make check` needs `pytest` importable by the ambient `python3`, and `make lint` needs `shellcheck` on `PATH`. When `pytest` is not importable, do not reach for `make install-deps` — it installs into the machine's user site. Get the same coverage without mutating anything: `uv run --with pytest python3 -m pytest tests/ -q` followed by `python3 scripts/generate-agent-router.py --check`, or one more throwaway venv inside the worktree. A failure traced to a missing dependency is an environment result, reported as such; only a failure that survives a working environment is a finding about the change.
 
+Every relative path below — the suites, the build, the drift check — resolves against the worktree because of that `cd`. Run them from anywhere else and the drift check reports the state of the working checkout instead of the pull-request head.
+
 | Command | Covers | Read the result with care because |
 |---|---|---|
-| `make check` | the pytest suite (`tests/`) plus `python3 scripts/generate-agent-router.py --check` for agent-router drift — a superset of `make test`, so run this one and not both | — |
+| `make test` | the pytest suite (`tests/`), verbosely — the pipeline's own test step | — |
+| `make check` | that same suite plus `python3 scripts/generate-agent-router.py --check` for agent-router drift | — |
 | `make spec-lint` | the `tools/spec-linter` component tests | needs the editable install above |
 | `make spec-judge` | the `tools/spec-judge` component tests (offline) | needs the editable install above |
+| `tools/spec-judge/spec-judge --selfcheck` | the wrapper's cross-package import into `spec_linter` | `make spec-judge` runs the component tests only; this is the pipeline's separate step, and it never fires on a `develop`-base pull request |
 | `make lint` | shellcheck over three shell scripts | it **exits 0 when shellcheck is not installed** — record its output, not just its exit code — and it does not cover `scripts/bump.sh`, which the pipeline lints separately; shellcheck that file by hand as well (`shellcheck -S warning scripts/bump.sh`) |
 | `./build-plugin.sh && git diff --exit-code plugin/ .claude-plugin/` | plugin-mirror drift — see below | — |
 
@@ -123,7 +129,7 @@ The version rule is a check, not a nit: a pull request into `develop` must leave
 
 ## Phase 5 — Synthesize one comment
 
-Merge the roles' findings into `assets/review-comment-template.md`. Resolve every duplicate; keep every disagreement.
+Merge the roles' findings into a copy of the skeleton in `assets/review-comment-template.md`, drafted at a scratch path the repository ignores — `"$WT"/review-comment.tmp` — never into the tracked asset itself. Resolve every duplicate; keep every disagreement.
 
 1. **Heading.** `## Independent review — <one-line scope>`, or `## Independent re-review — <what was verified>` for a later round.
 2. **Verdict line — first sentence, in bold, never buried.** Exactly one of:

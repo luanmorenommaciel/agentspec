@@ -74,6 +74,7 @@ the component suites would fail on missing imports and every exit code would be 
 Build them INSIDE the worktree, never into the ambient interpreter: the worktree is
 removed when the review ends, and a global editable install would be left pointing at a
 path that no longer exists.
+  cd <the worktree path you were given>   # every command below runs here, never in the working checkout
   python3 -m venv tools/spec-linter/.venv && tools/spec-linter/.venv/bin/python -m pip install -e 'tools/spec-linter[dev]'
   python3 -m venv tools/spec-judge/.venv  && tools/spec-judge/.venv/bin/python  -m pip install -e tools/spec-linter -e 'tools/spec-judge[dev]'
   command -v shellcheck   # `make lint` exits 0 when shellcheck is absent
@@ -82,11 +83,13 @@ If `pytest` is not importable by the ambient python3, do NOT run `make install-d
 
 Then run the repository's suites in the worktree and report the exact command and exit
 code for each:
-  make check        # superset of `make test` — run this one, not both
+  make test
+  make check
   make spec-lint
   make spec-judge
+  tools/spec-judge/spec-judge --selfcheck   # cross-package import; make spec-judge does not cover it
   make lint
-  shellcheck -S warning scripts/bump.sh   # make lint does not cover it
+  shellcheck -S warning scripts/bump.sh     # make lint does not cover it
 
 Report a failure caused by the environment as an environment result, never as a finding
 about the change. Only a failure that survives a working environment is a finding.
@@ -102,6 +105,8 @@ Then check the build story:
 
 Report which CI workflows actually ran on the change and which did not, and why — the
 base branch decides the set, and a change that conflicts with its base runs none of them.
+Read that with `gh`, restricted to read-only calls (`view`, `checks`, `api` GET); no `gh`
+command that writes belongs anywhere in this review.
 
 Output: the claim table, the command/exit-code table, and any finding of your own as
 location, problem, fix, marked blocking or non-blocking.
