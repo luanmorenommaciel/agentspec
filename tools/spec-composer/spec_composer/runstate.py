@@ -15,7 +15,7 @@ import hashlib
 import json
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from .models import StageRecord
@@ -79,7 +79,7 @@ class FoldedState:
     stamps: tuple[StageRecord, ...]
     epoch_stamps: tuple[StageRecord, ...]
     last_spend: StageRecord | None = None
-    stale_waits: dict[str, int] = field(default_factory=dict)
+    stale_waits: tuple[tuple[str, int], ...] = ()
 
 
 class RunLog:
@@ -144,5 +144,5 @@ class RunLog:
             stamps=tuple(row for row in rows if row.kind == "stamp"),
             epoch_stamps=tuple(row for row in current if row.kind == "stamp"),
             last_spend=spends[-1] if spends else None,
-            stale_waits=stale_waits,
+            stale_waits=tuple(stale_waits.items()),
         )
