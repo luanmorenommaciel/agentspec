@@ -104,3 +104,44 @@ def test_epoch_resets_budget_after_blocked(target: Path, shipped_document: dict[
     log = RunLog(second.run_dir / "run.jsonl")
     gate_a_stamps = [row for row in log.records() if row.kind == "stamp" and row.stage == "gate-a"]
     assert len(gate_a_stamps) == 1
+
+
+def test_identical_reemission_after_gate_fail_terminates_at_ceiling(
+    target: Path, shipped_document: dict[str, Any]
+) -> None:
+    """A producer that re-emits byte-identical rejected content after a gate FAIL
+    must not wait forever: two consecutive stale-artifact waits at the same stage
+    terminate at a ceiling, without spending a budget attempt on the stall itself."""
+    pipeline = PipelineSpec.from_mapping(shipped_document)
+
+    def script(request: GenerationRequest) -> str | None:
+        return SPEC_TEXT if request.kind == "create" else REJECTED_AGENT_TEXT
+
+    request = ComposeRequest(name=target.stem, target=target)
+    generator = FakeGenerator(script)
+
+    first = compose(request, pipeline, generator=generator)
+    print(
+        f"run 1: disposition={first.disposition!r} reason={first.reason!r} "
+        f"stage={first.stage!r} attempts_spent={first.attempts_spent}"
+    )
+    assert first.disposition is Disposition.WAITING
+    assert first.reason == "stale-artifact"
+
+    second = compose(request, pipeline, generator=generator)
+    print(
+        f"run 2: disposition={second.disposition!r} reason={second.reason!r} "
+        f"stage={second.stage!r} attempts_spent={second.attempts_spent}"
+    )
+    assert second.disposition is Disposition.BLOCKED
+    assert second.reason == "no-progress"
+    assert second.attempts_spent == 1
+
+    records = RunLog(second.run_dir / "run.jsonl").records()
+    terminal = [(row.kind, row.reason) for row in records if row.kind in ("event", "run-closed")]
+    print(f"event/run-closed rows: {terminal}")
+    assert terminal == [
+        ("event", "stale-artifact"),
+        ("event", "no-progress"),
+        ("run-closed", "no-progress"),
+    ]

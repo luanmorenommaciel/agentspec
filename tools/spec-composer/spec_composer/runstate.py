@@ -15,7 +15,7 @@ import hashlib
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import StageRecord
@@ -79,6 +79,7 @@ class FoldedState:
     stamps: tuple[StageRecord, ...]
     epoch_stamps: tuple[StageRecord, ...]
     last_spend: StageRecord | None = None
+    stale_waits: dict[str, int] = field(default_factory=dict)
 
 
 class RunLog:
@@ -113,9 +114,28 @@ class RunLog:
         current = rows[start:]
         spends = [row for row in current if row.kind == "spend"]
         granted: set[str] = set()
+        stale_waits: dict[str, int] = {}
         for row in current:
             if row.kind == "approval":
                 granted.update(row.approvals)
+            elif row.kind == "stamp":
+                # Evidence of progress at this stage: whatever it stamped, it was
+                # not a repeat of content already stamped (`is_fresh` gates that
+                # before a stamp can happen), so any run of stale-artifact waits
+                # it was accumulating is over. A `spend` row is deliberately NOT
+                # treated as progress here, even though its `route_to` names the
+                # stage about to retry: reaching that gate at all already required
+                # the routed-to stage to have produced fresh content and been
+                # stamped for it (a `pending` stage can only ever re-run, never
+                # skip past, its own `_produce` check), so the qualifying stamp
+                # always precedes the spend and has already reset the counter.
+                # Keying a reset on a spend row would also invite the wrong bug —
+                # a spend's own `stage` is the GATE that failed, not the producer
+                # `route_to` names, so resetting off it risks zeroing the wrong
+                # stage's count.
+                stale_waits[row.stage] = 0
+            elif row.kind == "event" and row.reason == "stale-artifact":
+                stale_waits[row.stage] = stale_waits.get(row.stage, 0) + 1
         return FoldedState(
             epoch=len(closes) + 1,
             attempts_spent=len(spends),
@@ -124,4 +144,5 @@ class RunLog:
             stamps=tuple(row for row in rows if row.kind == "stamp"),
             epoch_stamps=tuple(row for row in current if row.kind == "stamp"),
             last_spend=spends[-1] if spends else None,
+            stale_waits=stale_waits,
         )

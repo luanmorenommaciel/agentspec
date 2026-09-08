@@ -41,6 +41,16 @@ if TYPE_CHECKING:
 _PASS = Verdict.from_findings([])
 _SETTLED = (Level.PASS.name, Level.WARN.name)
 
+# A producing stage that re-emits byte-identical content a gate already rejected
+# is not making progress. The first such wait is left uncapped: per USAGE.md's
+# host-loop guidance, a host may legitimately re-run the identical command
+# without having regenerated anything yet (a slow host, a re-run out of habit),
+# and that costs nothing. The second consecutive one at the same stage means the
+# producer was invoked again and STILL reproduced exactly what was already
+# stamped and rejected — it carries no new information, and waiting a third time
+# cannot change that. Two, not more.
+STALE_WAIT_CEILING = 2
+
 
 @dataclass(frozen=True, slots=True)
 class Step:
@@ -133,6 +143,7 @@ class RunContext:
         self._stamps: list[StageRecord] = list(folded.stamps)
         self._epoch_stamps: list[StageRecord] = list(folded.epoch_stamps)
         self._last_spend: StageRecord | None = folded.last_spend
+        self._stale_waits: dict[str, int] = dict(folded.stale_waits)
         self._artifact: Path | None = None
 
     @classmethod
@@ -342,6 +353,14 @@ class RunContext:
         return not any(
             row.stage == stage.id and row.output_hash == output_hash for row in self._stamps
         )
+
+    def stale_waits(self, stage: Stage) -> int:
+        """Consecutive `stale-artifact` waits this stage has already accumulated
+        in the current epoch, folded from the log — 0 until the first one. Reset
+        by a stamp at this stage (see `RunLog.fold`); `_produce` compares this
+        count against `STALE_WAIT_CEILING` to decide whether one more wait is
+        still warranted or the run must stop instead."""
+        return self._stale_waits.get(stage.id, 0)
 
     def feedback_for(self, stage: Stage) -> tuple[Finding, ...]:
         if self._last_spend is None or self._last_spend.route_to != stage.id:
@@ -580,6 +599,8 @@ def _produce(stage: Stage, _index: int, run: RunContext, generator: Generator) -
         return Step(disposition=Disposition.WAITING, reason="awaiting-artifact", path=output_path)
     produced = run.output_digest(stage, outcome.path.read_bytes())
     if not run.is_fresh(stage, produced):
+        if run.stale_waits(stage) + 1 >= STALE_WAIT_CEILING:
+            return Step(disposition=Disposition.BLOCKED, reason="no-progress", path=output_path)
         return Step(disposition=Disposition.WAITING, reason="stale-artifact", path=output_path)
     return Step(verdict=_PASS)
 
