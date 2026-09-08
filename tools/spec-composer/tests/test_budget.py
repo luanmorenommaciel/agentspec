@@ -316,32 +316,73 @@ def test_no_progress_block_is_a_stable_terminal_state(
     assert target.read_text(encoding="utf-8") == AGENT_TEXT
 
 
-def test_stale_wait_counter_is_scoped_per_stage(target: Path) -> None:
+def test_stale_wait_reset_is_scoped_to_the_stamping_stage(target: Path) -> None:
     """The stale-wait counter must be keyed PER STAGE, not folded across the
-    whole pipeline: a stall at one producing stage must never spend the free
-    wait that belongs to a different producing stage.
+    whole pipeline — AND its reset on a fresh stamp must be scoped to the
+    stamping stage alone. Nothing pinned that second property before this
+    test: a mutation run against `RunLog.fold`'s reset branch still passed the
+    rest of this suite with the branch deleted outright, replaced by one
+    counter shared across every stage, keyed off `spend.route_to` instead of
+    `stamp`, applied to every stage on any stage's stamp, or restricted to
+    `create`-kind stamps.
 
-    `TWO_PRODUCER_PIPELINE` has two producing stages. `refine-agent` always
-    emits content `gate-refined` rejects, so re-presenting it after that gate
-    FAIL is refine-agent's own first (free) stale wait — run 1 below. The spec
-    is then edited: `draft-agent`'s INPUT changes, so its stamp no longer
-    certifies and it re-runs — but it re-emits AGENT_TEXT, which is
-    byte-identical to what `draft-agent` ITSELF already stamped in run 1. That
-    is draft-agent's OWN first stale occurrence. Under correct per-stage
-    keying this is still free (`waiting`); a single global counter would
-    instead read it as the pipeline's SECOND stale occurrence overall
-    (refine-agent's from run 1, plus this one) and wrongly block a stage that
-    has never stalled before."""
+    `TWO_PRODUCER_PIPELINE` has two producing stages. Four runs, with the spec
+    edited before each of the last three so the relevant stage cannot skip:
+
+        run 1  waiting  stale-artifact  refine-agent   its own free wait,
+                                                        after gate-refined
+                                                        rejects it
+        run 2  waiting  stale-artifact  draft-agent    the edit changes
+                                                        draft-agent's input, so
+                                                        it cannot skip, but it
+                                                        re-emits exactly what
+                                                        it stamped in run 1 —
+                                                        ITS OWN first stale
+                                                        wait, scoped apart from
+                                                        refine-agent's
+        run 3  blocked  no-progress     refine-agent   another edit makes
+                                                        draft-agent regenerate
+                                                        again, this time with
+                                                        genuinely new body
+                                                        text, so it clears
+                                                        gate-draft and STAMPS
+                                                        fresh — a DIFFERENT
+                                                        stage's fresh stamp
+                                                        must not refund
+                                                        refine-agent, which
+                                                        still owes its second
+                                                        stale wait and must
+                                                        block on it
+        run 4  waiting  stale-artifact  draft-agent    a third edit forces
+                                                        draft-agent to
+                                                        regenerate once more;
+                                                        it re-emits the SAME
+                                                        body text it just
+                                                        stamped in run 3 —
+                                                        stale — but that stamp
+                                                        reset ITS OWN count, so
+                                                        this wait is free
+                                                        again, not its second
+
+    A global (not per-stage) counter fails at run 3: draft-agent's fresh stamp
+    would zero the shared count, so refine-agent would wait instead of block.
+    Deleting the reset branch, keying it on `spend.route_to`, resetting every
+    stage on any stamp, or resetting only `create`-kind stamps all fail at run
+    4 instead: draft-agent's own count is never actually cleared by its run-3
+    stamp, so its run-4 wait reads as the second one and blocks instead of
+    waiting."""
     pipeline = PipelineSpec.from_mapping(TWO_PRODUCER_PIPELINE)
     request = ComposeRequest(name=target.stem, target=target)
     spec_body = {"text": SPEC_TEXT}
+    draft_body = {"text": AGENT_TEXT}
 
     def script(request: GenerationRequest) -> str | None:
         if request.kind == "create":
             return spec_body["text"]
-        return AGENT_TEXT if request.stage == "draft-agent" else REJECTED_AGENT_TEXT
+        return draft_body["text"] if request.stage == "draft-agent" else REJECTED_AGENT_TEXT
 
     generator = FakeGenerator(script)
+    spec_path = run_dir(pipeline.pipeline, target) / "spec" / f"{slug(target.stem)}.spec.md"
 
     first = compose(request, pipeline, generator=generator)
     print(
@@ -353,9 +394,8 @@ def test_stale_wait_counter_is_scoped_per_stage(target: Path) -> None:
 
     # Genuinely new spec content invalidates create-spec's stamp, which cascades
     # to draft-agent (its INPUT changed) even though draft-agent's own OUTPUT
-    # (AGENT_TEXT) never varies — it re-emits exactly what it stamped in run 1.
+    # never varies yet — it re-emits exactly what it stamped in run 1.
     spec_body["text"] = SPEC_TEXT.replace("overlap_check: 0.21", "overlap_check: 0.22")
-    spec_path = run_dir(pipeline.pipeline, target) / "spec" / f"{slug(target.stem)}.spec.md"
     spec_path.write_text(spec_body["text"], encoding="utf-8")
 
     second = compose(request, pipeline, generator=generator)
@@ -366,3 +406,41 @@ def test_stale_wait_counter_is_scoped_per_stage(target: Path) -> None:
     assert second.disposition is Disposition.WAITING
     assert second.reason == "stale-artifact"
     assert second.stage == "draft-agent"
+
+    # A second edit forces draft-agent to regenerate yet again — and this time
+    # its OUTPUT genuinely changes too, so it clears gate-draft and STAMPS.
+    # That stamp must reset only draft-agent's own count. refine-agent is then
+    # re-visited (the outstanding spend still routes to it) and re-emits its
+    # own already-stamped bytes for the SECOND time this epoch: its folded
+    # count was 1, so this trips the ceiling — unless draft-agent's stamp
+    # (wrongly) refunded it first.
+    spec_body["text"] = SPEC_TEXT.replace("overlap_check: 0.21", "overlap_check: 0.23")
+    spec_path.write_text(spec_body["text"], encoding="utf-8")
+    draft_body["text"] = AGENT_TEXT + "\nRevised body text: a genuinely new stamp for draft-agent.\n"
+
+    third = compose(request, pipeline, generator=generator)
+    print(
+        f"run 3: disposition={third.disposition!r} reason={third.reason!r} "
+        f"stage={third.stage!r} attempts_spent={third.attempts_spent}"
+    )
+    assert third.disposition is Disposition.BLOCKED
+    assert third.reason == "no-progress"
+    assert third.stage == "refine-agent"
+    assert third.attempts_spent == 1
+    assert third.expected_path is not None
+
+    # A third edit forces draft-agent to regenerate once more. It re-emits the
+    # SAME body text it just stamped in run 3 — stale again — but that very
+    # stamp reset its own count to 0, so this is its free wait, not its
+    # second, and must not be blocked.
+    spec_body["text"] = SPEC_TEXT.replace("overlap_check: 0.21", "overlap_check: 0.24")
+    spec_path.write_text(spec_body["text"], encoding="utf-8")
+
+    fourth = compose(request, pipeline, generator=generator)
+    print(
+        f"run 4: disposition={fourth.disposition!r} reason={fourth.reason!r} "
+        f"stage={fourth.stage!r}"
+    )
+    assert fourth.disposition is Disposition.WAITING
+    assert fourth.reason == "stale-artifact"
+    assert fourth.stage == "draft-agent"

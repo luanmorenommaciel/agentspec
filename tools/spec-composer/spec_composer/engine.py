@@ -632,11 +632,15 @@ def _produce(stage: Stage, _index: int, run: RunContext, generator: Generator) -
     produced = run.output_digest(stage, outcome.path.read_bytes())
     if not run.is_fresh(stage, produced):
         if run.stale_waits(stage) + 1 >= STALE_WAIT_CEILING:
-            # Unlike every other WAITING/BLOCKED disposition, there is nothing
-            # for the operator to write here — the stage is stopping BECAUSE
-            # the expected path already holds content, not because it is
-            # missing one. No `path`, so the CLI never prints "expected at:".
-            return Step(disposition=Disposition.BLOCKED, reason="no-progress", path=None)
+            # Unlike every other BLOCKED reason, this one names a path the
+            # operator can act on directly: the file at `output_path` already
+            # holds content a gate rejected, and writing genuinely different
+            # bytes there is exactly what lets the run proceed. The epoch
+            # stays open on a stall (see `finish`), so this is also the ONLY
+            # path a later invocation will ever report again — dropping it
+            # would leave a human with nothing but "BLOCKED (no-progress)"
+            # and no way back in.
+            return Step(disposition=Disposition.BLOCKED, reason="no-progress", path=output_path)
         return Step(disposition=Disposition.WAITING, reason="stale-artifact", path=output_path)
     return Step(verdict=_PASS)
 

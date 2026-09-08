@@ -277,13 +277,27 @@ def test_blocked_reason_distinguishes_budget_from_high_assurance(
     third, payload = _run_json(argv, capsys)
     assert third == 4
     assert payload["reason"] == "stale-artifact"
+    stalled_path = payload["expected_path"]
+    assert stalled_path is not None
 
     # Nothing rewrites the staged artifact between this run and the last: a
     # habitual re-run with no new information at the same attempt-scoped path.
+    # `no-progress` is the only blocked reason whose remedy is "write
+    # different bytes at this path", and it is the last path any invocation
+    # will ever report (the epoch stays open on a stall) — so it MUST still
+    # be named, at the same location gate B's rejection was staged.
     code, no_progress = _run_json(argv, capsys)
     assert code == 1
     assert no_progress["reason"] == "no-progress"
-    assert no_progress["expected_path"] is None
+    assert no_progress["expected_path"] == stalled_path
+
+    # The human-readable surface names it too, with a label that fits a path
+    # that already holds content rather than one still missing.
+    human_code = main(argv)
+    human_out = capsys.readouterr().out
+    assert human_code == 1
+    assert "DISPOSITION: BLOCKED (no-progress)" in human_out
+    assert f"write new content at: {stalled_path}" in human_out
 
 
 def test_approve_flag_clears_pause(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

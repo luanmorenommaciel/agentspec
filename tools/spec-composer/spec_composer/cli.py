@@ -184,7 +184,11 @@ def _emit(result: ComposeResult, as_json: bool) -> None:
     suffix = f" ({result.reason})" if result.reason else ""
     print(f"DISPOSITION: {result.disposition.value.upper()}{suffix}")
     if result.expected_path is not None:
-        print(f"  expected at: {result.expected_path}")
+        # `no-progress` is the one BLOCKED reason where the path already holds
+        # content — a gate's own rejection, re-presented — so "expected at"
+        # would misstate what's there. The label says what to do instead.
+        label = "write new content at" if result.reason == "no-progress" else "expected at"
+        print(f"  {label}: {result.expected_path}")
     if result.artifact is not None:
         print(f"  emitted to: {result.artifact}")
 

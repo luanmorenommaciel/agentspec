@@ -75,7 +75,9 @@ class StageRecord(BaseModel):
     cleared for this content under this rule), `spend` (a gate FAIL charged to
     the shared budget, carrying the derived routing target), `approval` (classes
     an operator granted), `run-closed` (a terminal disposition, which opens the
-    next epoch) and `event` (a pause, a wait, or a recorded operational failure).
+    next epoch — except a `blocked` row whose reason is `no-progress`, which is
+    a stall, not a conclusion, and so stays in the current epoch) and `event`
+    (a pause, a wait, or a recorded operational failure).
     """
 
     model_config = ConfigDict(frozen=True)
