@@ -22,6 +22,7 @@ from spec_composer.cli import main
 _REASONS = (
     "awaiting-artifact",
     "stale-artifact",
+    "no-progress",
     "approval-outstanding",
     "judge-unavailable",
     "budget-exhausted",

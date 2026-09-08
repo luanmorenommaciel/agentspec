@@ -115,7 +115,7 @@ Any code >= 2 means no verdict was reached and must never be read as PASS.
 | Code | Disposition | Meaning |
 |---|---|---|
 | 0 | emitted | Every declared stage cleared and the artifact was promoted |
-| 1 | blocked | A verdict blocked the run — budget exhausted on a gate FAIL, a high-assurance judge FAIL, or a gate FAIL with no stage to route to |
+| 1 | blocked | Budget exhausted on a gate FAIL, a high-assurance judge FAIL, a gate FAIL with no stage to route to, or a producer stalled at the progress ceiling (`no-progress`) — the only one of these four reached with no verdict at all |
 | 2 | error | Operational failure — the run could not start, or could not complete for a reason that is not a verdict |
 | 3 | paused | A bound stage could not run, or a required approval is outstanding. Never PASS |
 | 4 | waiting | A producing stage has no usable output for this attempt; write it and re-run the identical command |
@@ -127,7 +127,8 @@ Every non-zero disposition carries a machine-readable `reason` from one closed v
 | Reason | Disposition | Meaning |
 |---|---|---|
 | `awaiting-artifact` | waiting | The expected output path does not exist yet |
-| `stale-artifact` | waiting | A file exists at the expected path, but this stage already stamped that exact content this epoch — it cannot be accepted again as the new output |
+| `stale-artifact` | waiting | A file exists at the expected path, but this stage already stamped that exact content before — in this epoch or any earlier one — so it cannot be accepted again as the new output. A second consecutive occurrence at the same stage escalates to `no-progress` instead of waiting again |
+| `no-progress` | blocked | Two consecutive `stale-artifact` waits at the same stage within one epoch: the producer was invoked again and reproduced exactly what a gate already rejected, with no new information, so the run stops rather than waiting forever. The budget is deliberately not charged — this is a stall, not a spent generation attempt |
 | `approval-outstanding:<class>` | paused | `require_approval_for` names a class that has not been granted |
 | `judge-unavailable` | paused | The sibling Judger is absent, or a credential, budget, or network failure kept it from running |
 | `target-modified` | paused | The emit target holds bytes no emit stamp certifies and that are not the staged bytes either — it was edited in place, or it belongs to something else. Nothing is written; move the target aside (or delete it) and re-run to promote |
@@ -193,6 +194,8 @@ A new epoch resets the budget; it never resets the **evidence**. Freshness — t
 
 `max_attempts` is the **total** number of generation attempts allowed per artifact — one initial attempt plus up to `max_attempts - 1` repairs — one budget shared across **both** feedback edges (a Gate A FAIL routes back to `create`; a Gate B FAIL routes back to `generate`). The budget is checked at the moment of a gate FAIL, before any route is recorded: if spending one more generation attempt would meet or exceed `max_attempts`, no further repair is recorded at all — the run ends `blocked` with reason `budget-exhausted` instead. Exhaustion escalates to a human; the conductor never retries past it or silently passes. A terminal `emitted` or `blocked` disposition appends a `run-closed` row and opens a new epoch, so a fixed problem gets a full budget again on the next run — `blocked` ends the run, never the artifact, permanently.
 
+A second, independent bound guards against a different failure mode: a producer that keeps re-emitting byte-identical content a gate already rejected. `is_fresh` refuses to accept that content again (above), which turns it into a `stale-artifact` wait rather than a silent skip. The first such wait at a stage, within the current epoch, is free — a host may re-run the identical command before it has regenerated anything at all. A second consecutive one at the *same* stage means the producer ran again and reproduced exactly the same rejected bytes: the run stops `blocked` with reason `no-progress` instead of waiting a third time for information that cannot arrive. This ceiling (`STALE_WAIT_CEILING = 2` in `engine.py`) is a stage-scoped count within the current epoch, reset the moment that stage stamps fresh content, and it is never charged to `attempts_spent` — no generation attempt was spent on a stall.
+
 Staged output is scoped by attempt **and** by stage: `staging/attempt-{n}/{stage-id}/{basename}`. Two producing stages in one pipeline therefore never write to the same file, so neither can overwrite the artifact a gate already cleared for the other.
 
 A new epoch may **overwrite** `staging/attempt-{n}/` left behind by a previous epoch: the run directory is disposable working state, not an archive, and it is excluded from version control. Deleting it is always safe — the next run simply re-pays at most one generation.
@@ -211,7 +214,7 @@ The archive directory is keyed by the artifact **name**, so two artifacts sharin
 
 ## 7. Usage patterns (SUGGESTIONS — consumers choose)
 
-- **Host loop around exit 4 and exit 3.** Drive the conductor from a host session: on `waiting`, produce the reported file and re-run the identical command; on `paused`, clear the cause (grant the approval, or wait out a transient judge outage) and re-run; on `blocked`, stop and escalate to a human — a budget was spent for a reason worth a person's attention.
+- **Host loop around exit 4 and exit 3.** Drive the conductor from a host session: on `waiting`, produce the reported file and re-run the identical command; on `paused`, clear the cause (grant the approval, or wait out a transient judge outage) and re-run; on `blocked`, stop and escalate to a human either way — a budget was spent on a gate FAIL or a high-assurance judge FAIL worth a person's attention, or the producer stalled at the progress ceiling (`no-progress`) with the budget untouched but no path forward without a person looking at it.
 - **`--check` at authoring time.** Validate a new or edited pipeline contract before it is ever run, in CI or locally — `P3.dangling_reference` in particular is useful only here, since it warns about a name that would only fail at run time.
 - **`--selfcheck` as an install or CI smoke test.** Confirms the sibling Linter resolves (required) and reports whether the Judger does (optional), independent of running any pipeline.
 - **A judge-less pipeline for a cheap loop.** Drop the `judge` stage entirely for a fast create/gate/generate/gate/emit cycle when behavioral review is not warranted for every artifact; the ordering rules accept it, since `judge` is not mandatory, only correctly placed when present.

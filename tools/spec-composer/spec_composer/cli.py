@@ -9,7 +9,9 @@ These five codes are the RUN's disposition; any code >= 2 means no verdict was
 reached and must never be read as PASS:
 
   0  EMITTED — every declared stage cleared and the artifact was promoted
-  1  BLOCKED — budget exhausted on a gate FAIL, or a high-assurance judge FAIL
+  1  BLOCKED — budget exhausted on a gate FAIL, a high-assurance judge FAIL, or
+               no-progress (a producer re-emitting identical rejected content
+               past the stale-wait ceiling)
   2  ERROR   — operational failure (bad contract, unresolvable reference, missing
                spec, bad archive template, failed promotion, unparseable judge
                subject, sibling linter absent)
