@@ -41,14 +41,14 @@ if TYPE_CHECKING:
 _PASS = Verdict.from_findings([])
 _SETTLED = (Level.PASS.name, Level.WARN.name)
 
-# A producing stage that re-emits byte-identical content a gate already rejected
-# is not making progress. The first such wait is left uncapped: per USAGE.md's
-# host-loop guidance, a host may legitimately re-run the identical command
-# without having regenerated anything yet (a slow host, a re-run out of habit),
-# and that costs nothing. The second consecutive one at the same stage means the
-# producer was invoked again and STILL reproduced exactly what was already
-# stamped and rejected — it carries no new information, and waiting a third time
-# cannot change that. Two, not more.
+# A producing stage whose expected output is byte-identical to content a gate
+# already rejected is not making progress. The first such wait is left
+# uncapped: per USAGE.md's host-loop guidance, a host may legitimately re-run
+# the identical command without having regenerated anything yet (a slow host,
+# a re-run out of habit), and that costs nothing. A second occurrence at the
+# same stage means it was presented the same already-stamped bytes again, with
+# nothing new in between — that carries no new information, so this one blocks
+# instead of waiting. Two, not more.
 STALE_WAIT_CEILING = 2
 
 
@@ -355,11 +355,14 @@ class RunContext:
         )
 
     def stale_waits(self, stage: Stage) -> int:
-        """Consecutive `stale-artifact` waits this stage has already accumulated
-        in the current epoch, folded from the log — 0 until the first one. Reset
-        by a stamp at this stage (see `RunLog.fold`); `_produce` compares this
-        count against `STALE_WAIT_CEILING` to decide whether one more wait is
-        still warranted or the run must stop instead."""
+        """`stale-artifact` waits this stage has accumulated since its last
+        stamp in the current epoch, folded from the log — 0 until the first
+        one. Not truly "consecutive": an intervening `awaiting-artifact` event
+        at this stage neither resets nor increments the count — only a stamp
+        resets it (see `RunLog.fold`, and the reset kept in step with it inside
+        `stamp`). `_produce` compares this count against `STALE_WAIT_CEILING` to
+        decide whether one more wait is still warranted or the run must stop
+        instead."""
         return self._stale_waits.get(stage.id, 0)
 
     def feedback_for(self, stage: Stage) -> tuple[Finding, ...]:
@@ -385,7 +388,17 @@ class RunContext:
     def stamp(
         self, stage: Stage, index: int, verdict: Verdict, output_hash: str | None = None
     ) -> None:
-        """Append a `stamp` row and extend the in-memory trail."""
+        """Append a `stamp` row, extend the in-memory trail, and reset this
+        stage's stale-wait count to 0 — the same reset `RunLog.fold` applies to
+        a `stamp` row (see there). `_stale_waits` is a snapshot taken once, at
+        `RunContext.__init__`; without this, a stamp appended later in the SAME
+        process (a repair loop that cycles back in-process, e.g. after a Gate A
+        FAIL routes to `create`) would leave that snapshot stale, so a later
+        call to `stale_waits` in this process would read a count the log no
+        longer supports. Keeping `_stale_waits` current here, the way `_stamps`
+        and `_last_spend` already are below, is what keeps this method's
+        contract true: the count `stale_waits` returns must always equal what
+        folding the log fresh would give at that instant, in-process or not."""
         resolved = output_hash
         payload: Path | None = None
         if stage.kind in PRODUCING_KINDS:
@@ -410,6 +423,7 @@ class RunContext:
         self.log.append(record)
         self._stamps.append(record)
         self._epoch_stamps.append(record)
+        self._stale_waits[stage.id] = 0
         self.trail.append(
             StageVerdict(
                 stage=stage.id,
@@ -600,7 +614,11 @@ def _produce(stage: Stage, _index: int, run: RunContext, generator: Generator) -
     produced = run.output_digest(stage, outcome.path.read_bytes())
     if not run.is_fresh(stage, produced):
         if run.stale_waits(stage) + 1 >= STALE_WAIT_CEILING:
-            return Step(disposition=Disposition.BLOCKED, reason="no-progress", path=output_path)
+            # Unlike every other WAITING/BLOCKED disposition, there is nothing
+            # for the operator to write here — the stage is stopping BECAUSE
+            # the expected path already holds content, not because it is
+            # missing one. No `path`, so the CLI never prints "expected at:".
+            return Step(disposition=Disposition.BLOCKED, reason="no-progress", path=None)
         return Step(disposition=Disposition.WAITING, reason="stale-artifact", path=output_path)
     return Step(verdict=_PASS)
 

@@ -216,7 +216,8 @@ def test_exit_code_table_error(
 def test_blocked_reason_distinguishes_budget_from_high_assurance(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Both causes exit 1; only the reason tells an operator which one happened."""
+    """All three causes exit 1; only the reason tells an operator which one
+    happened."""
     argv = [
         str(_write_spec(tmp_path)),
         "--pipeline",
@@ -251,6 +252,38 @@ def test_blocked_reason_distinguishes_budget_from_high_assurance(
     assert code == 1
     assert blocked["reason"] == "high-assurance-judge-fail"
     assert not Path("b/code-reviewer.md").exists()
+
+    # A third blocked reason: a stage kept being presented the same
+    # already-stamped bytes past the stale-wait ceiling. Driven through the
+    # documented host loop end to end, on the shipped StagedArtifactGenerator
+    # (every CLI run's default) rather than a test-only fake.
+    argv = [
+        str(_write_spec(tmp_path)),
+        "--pipeline",
+        str(_pipeline(tmp_path)),
+        "--out",
+        "c/code-reviewer.md",
+    ]
+    first, payload = _run_json(argv, capsys)
+    assert first == 4
+    assert payload["reason"] == "awaiting-artifact"
+    _stage_artifact(payload, REJECTED_AGENT_TEXT)
+
+    second, payload = _run_json(argv, capsys)
+    assert second == 4
+    assert payload["reason"] == "awaiting-artifact"
+    _stage_artifact(payload, REJECTED_AGENT_TEXT)
+
+    third, payload = _run_json(argv, capsys)
+    assert third == 4
+    assert payload["reason"] == "stale-artifact"
+
+    # Nothing rewrites the staged artifact between this run and the last: a
+    # habitual re-run with no new information at the same attempt-scoped path.
+    code, no_progress = _run_json(argv, capsys)
+    assert code == 1
+    assert no_progress["reason"] == "no-progress"
+    assert no_progress["expected_path"] is None
 
 
 def test_approve_flag_clears_pause(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

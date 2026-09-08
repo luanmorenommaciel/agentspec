@@ -407,7 +407,7 @@ orchestration:
   repair_loop:
     budget: "max_attempts is the TOTAL number of generation attempts per artifact — one initial attempt plus up to max_attempts - 1 repairs; default 3. One budget is shared across both feedback edges"
     routing: "a failing gate re-runs the nearest preceding producing stage — derived from stage position, recorded in the evidence log, never declared per stage"
-    escalation: "budget exhaustion escalates to a human (disposition blocked); it never becomes a silent pass"
+    escalation: "budget exhaustion escalates to a human (disposition blocked), and so does a producer stalled at the stale-wait progress ceiling (reason no-progress, budget left untouched); neither becomes a silent pass"
 
   exit_code_contract:
     description: |
@@ -417,7 +417,7 @@ orchestration:
       a visible skip and never assumes PASS.
     codes:
       "0": "EMITTED — every declared stage cleared and the artifact was promoted"
-      "1": "BLOCKED — a gate FAIL with the shared budget exhausted, or a high-assurance judge FAIL pending human review"
+      "1": "BLOCKED — a gate FAIL with the shared budget exhausted, a high-assurance judge FAIL pending human review, a gate FAIL with no stage to route feedback to, or a producer stalled at the stale-wait progress ceiling (no-progress)"
       "2": "ERROR — operational failure (invalid pipeline contract, unresolvable contract reference, missing spec, invalid archive template, failed promotion, unparseable judge subject, sibling linter absent)"
       "3": "PAUSED — a bound stage could not run, an approval named by require_approval_for is outstanding, or the emit target holds bytes no emit stamp accounts for (target-modified); never PASS"
       "4": "WAITING — a producing stage has no usable output for this attempt; the host produces it and re-runs the identical command"
@@ -939,6 +939,7 @@ version_history:
     changes:
       - "Added orchestration (the Composer, ADR-004): the conductor that drives one artifact through a declared create -> gate -> archive lifecycle. The lifecycle is data — an ordered, typed stage list in a pipeline contract that the conductor validates with the Linter before running it, including the subject-aware cheap-before-expensive ordering invariant, which a violating contract FAILs. Binds contract_enforcement at both gates and behavioral_enforcement behind them; carries the shared repair-loop budget, the human-escalation anchor, the five-code exit contract, the run-state invariants and the archive rule."
       - "Added spec_lifecycle and agent_creation_pipeline (spec-driven agent creation, Layer 1, ADR-006): the cube->square shape in which an ephemeral spec, hand-filled against spec-schemas/agent.schema.md under .claude/sdd/specs/agents/, is mapped onto the _template.md output contract by agent-architect and then archived as provenance. spec_lifecycle declares the four stages — spec authored, generation, router regeneration, archival — and the archive path; agent_creation_pipeline declares the schema, the generator and its generation-only scope, the spec working directory, the output contract, and Gate A and Gate B, which the schema documents but agent-architect does not self-check — enforcement is owned by ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/. folder_structure gains the matching spec_schemas (spec-schemas/) and specs (specs/{artifact-type}/{name}.spec.md) entries."
+      - "Added a second, independent progress bound to the Composer's repair loop: a producing stage whose expected output is byte-identical to content a gate already rejected waits once for free, then blocks with reason no-progress — budget left unspent — the next time it is presented the same already-stamped bytes with nothing new in between. Stage-scoped and epoch-scoped, folded from the log and reset by that stage's own next stamp. The five-code exit contract's blocked (1) now covers four reasons (budget-exhausted, high-assurance-judge-fail, no-feedback-target, no-progress) instead of two."
       - "Additive change — no modification to contract_enforcement, behavioral_enforcement, or the existing phase contracts."
 
   - version: "3.5.0"
