@@ -529,9 +529,24 @@ class RunContext:
         path: Path | None,
         verdict: Verdict | None,
     ) -> ComposeResult:
-        """Append the terminal `event`; append `run-closed` for `emitted` and
-        `blocked` only, so a `waiting` or `paused` re-run continues the same epoch
-        with the same budget."""
+        """Append the terminal `event`; append `run-closed` for `emitted` and for
+        `blocked` EXCEPT when the reason is `no-progress`, so a `waiting` or
+        `paused` re-run — and now a stalled `blocked` re-run too — continues the
+        same epoch with the same budget.
+
+        `run-closed` means the run reached a CONCLUSION: `emitted` is one: the
+        artifact was promoted. `budget-exhausted`, `no-feedback-target` and
+        `high-assurance-judge-fail` are ones too: a gate definitively rejected
+        the artifact or the loop ran out of road. A `no-progress` stall is not a
+        conclusion — nothing was resolved, and re-running changes nothing until
+        a human writes genuinely new content — so closing the epoch and handing
+        it a fresh three-attempt budget would be exactly the wrong response to a
+        producer that is not producing. Leaving the epoch open means the stale-
+        wait count that produced this block is never erased by the block
+        itself, so every further invocation against the same stalled stage
+        reads that same count and returns the same `blocked`/`no-progress`
+        answer, instead of resetting to zero and re-running the whole free-wait
+        cycle forever."""
         if (
             verdict is not None
             and stage is not None
@@ -547,7 +562,10 @@ class RunContext:
                 )
             )
         self.event(reason, stage, disposition=disposition.value, path=path)
-        if disposition in (Disposition.EMITTED, Disposition.BLOCKED):
+        closes_run = disposition is Disposition.EMITTED or (
+            disposition is Disposition.BLOCKED and reason != "no-progress"
+        )
+        if closes_run:
             self.log.append(
                 StageRecord(
                     ts=now(),

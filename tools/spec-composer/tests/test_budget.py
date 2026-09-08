@@ -5,13 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from _helpers import REJECTED_AGENT_TEXT, SPEC_TEXT, judge_less_document
+from _helpers import (
+    AGENT_TEXT,
+    REJECTED_AGENT_TEXT,
+    SPEC_TEXT,
+    TWO_PRODUCER_PIPELINE,
+    judge_less_document,
+)
 
 from spec_composer.contract import PipelineSpec
 from spec_composer.engine import compose
 from spec_composer.generator import FakeGenerator
 from spec_composer.models import ComposeRequest, Disposition, GenerationRequest
-from spec_composer.runstate import RunLog
+from spec_composer.runstate import RunLog, run_dir, slug
 
 _BAD_SPEC_TEXT = SPEC_TEXT.replace("overlap_check: 0.21", "overlap_check: 0.95")
 
@@ -141,10 +147,13 @@ def test_identical_reemission_after_gate_fail_terminates_at_ceiling(
     records = RunLog(second.run_dir / "run.jsonl").records()
     terminal = [(row.kind, row.reason) for row in records if row.kind in ("event", "run-closed")]
     print(f"event/run-closed rows: {terminal}")
+    # A `no-progress` block is not a conclusion — nothing was resolved, so the
+    # run must NOT close its epoch here. No `run-closed` row appears; the next
+    # invocation folds the same stale-wait evidence and blocks again (see
+    # test_no_progress_block_is_a_stable_terminal_state below).
     assert terminal == [
         ("event", "stale-artifact"),
         ("event", "no-progress"),
-        ("run-closed", "no-progress"),
     ]
 
 
@@ -234,3 +243,126 @@ def test_reset_after_real_progress_allows_another_stale_wait(
     assert third.disposition is Disposition.WAITING
     assert third.reason == "stale-artifact"
     assert third.attempts_spent == 2
+
+
+def test_no_progress_block_is_a_stable_terminal_state(
+    target: Path, shipped_document: dict[str, Any]
+) -> None:
+    """Once a run reports `blocked`/`no-progress` it must STAY there: repeated
+    identical invocations return the identical answer, on the identical epoch,
+    with no further `spend` or `run-closed` rows piling up. This pins the
+    reviewer's own reported cycle shut — before the fix, the block itself
+    closed the epoch, which erased the very stale-wait evidence that produced
+    it, so the next invocation folded a count of zero, waited again, and
+    blocked again, forever (`waiting / blocked / waiting / blocked ...`,
+    growing the log by four rows every cycle).
+
+    Recovery still works: genuinely new, gate-passing content proceeds on the
+    SAME epoch with the SAME remaining budget, because fresh content is
+    accepted by `is_fresh` before the ceiling is ever consulted."""
+    pipeline = PipelineSpec.from_mapping(judge_less_document())
+
+    def stalled_script(request: GenerationRequest) -> str | None:
+        return SPEC_TEXT if request.kind == "create" else REJECTED_AGENT_TEXT
+
+    request = ComposeRequest(name=target.stem, target=target)
+    generator = FakeGenerator(stalled_script)
+
+    first = compose(request, pipeline, generator=generator)
+    assert first.disposition is Disposition.WAITING
+    assert first.reason == "stale-artifact"
+
+    tripped = compose(request, pipeline, generator=generator)
+    print(f"tripped: disposition={tripped.disposition!r} reason={tripped.reason!r}")
+    assert tripped.disposition is Disposition.BLOCKED
+    assert tripped.reason == "no-progress"
+    assert tripped.epoch == first.epoch
+    assert tripped.attempts_spent == 1
+
+    def row_counts() -> tuple[int, int]:
+        rows = RunLog(tripped.run_dir / "run.jsonl").records()
+        spends = sum(1 for row in rows if row.kind == "spend")
+        closes = sum(1 for row in rows if row.kind == "run-closed")
+        return spends, closes
+
+    spends_at_trip, closes_at_trip = row_counts()
+    assert closes_at_trip == 0
+
+    for invocation in range(1, 4):
+        again = compose(request, pipeline, generator=generator)
+        print(
+            f"stable invocation {invocation}: disposition={again.disposition!r} "
+            f"reason={again.reason!r} epoch={again.epoch} attempts_spent={again.attempts_spent}"
+        )
+        assert again.disposition is Disposition.BLOCKED
+        assert again.reason == "no-progress"
+        assert again.epoch == first.epoch
+        assert again.attempts_spent == tripped.attempts_spent
+        spends_now, closes_now = row_counts()
+        assert spends_now == spends_at_trip
+        assert closes_now == 0
+
+    def recovered_script(request: GenerationRequest) -> str | None:
+        return SPEC_TEXT if request.kind == "create" else AGENT_TEXT
+
+    recovered = compose(request, pipeline, generator=FakeGenerator(recovered_script))
+    print(
+        f"recovery: disposition={recovered.disposition!r} epoch={recovered.epoch} "
+        f"attempts_spent={recovered.attempts_spent}"
+    )
+    assert recovered.disposition is Disposition.EMITTED
+    assert recovered.epoch == first.epoch
+    assert recovered.attempts_spent == tripped.attempts_spent
+    assert target.read_text(encoding="utf-8") == AGENT_TEXT
+
+
+def test_stale_wait_counter_is_scoped_per_stage(target: Path) -> None:
+    """The stale-wait counter must be keyed PER STAGE, not folded across the
+    whole pipeline: a stall at one producing stage must never spend the free
+    wait that belongs to a different producing stage.
+
+    `TWO_PRODUCER_PIPELINE` has two producing stages. `refine-agent` always
+    emits content `gate-refined` rejects, so re-presenting it after that gate
+    FAIL is refine-agent's own first (free) stale wait — run 1 below. The spec
+    is then edited: `draft-agent`'s INPUT changes, so its stamp no longer
+    certifies and it re-runs — but it re-emits AGENT_TEXT, which is
+    byte-identical to what `draft-agent` ITSELF already stamped in run 1. That
+    is draft-agent's OWN first stale occurrence. Under correct per-stage
+    keying this is still free (`waiting`); a single global counter would
+    instead read it as the pipeline's SECOND stale occurrence overall
+    (refine-agent's from run 1, plus this one) and wrongly block a stage that
+    has never stalled before."""
+    pipeline = PipelineSpec.from_mapping(TWO_PRODUCER_PIPELINE)
+    request = ComposeRequest(name=target.stem, target=target)
+    spec_body = {"text": SPEC_TEXT}
+
+    def script(request: GenerationRequest) -> str | None:
+        if request.kind == "create":
+            return spec_body["text"]
+        return AGENT_TEXT if request.stage == "draft-agent" else REJECTED_AGENT_TEXT
+
+    generator = FakeGenerator(script)
+
+    first = compose(request, pipeline, generator=generator)
+    print(
+        f"run 1: disposition={first.disposition!r} reason={first.reason!r} stage={first.stage!r}"
+    )
+    assert first.disposition is Disposition.WAITING
+    assert first.reason == "stale-artifact"
+    assert first.stage == "refine-agent"
+
+    # Genuinely new spec content invalidates create-spec's stamp, which cascades
+    # to draft-agent (its INPUT changed) even though draft-agent's own OUTPUT
+    # (AGENT_TEXT) never varies — it re-emits exactly what it stamped in run 1.
+    spec_body["text"] = SPEC_TEXT.replace("overlap_check: 0.21", "overlap_check: 0.22")
+    spec_path = run_dir(pipeline.pipeline, target) / "spec" / f"{slug(target.stem)}.spec.md"
+    spec_path.write_text(spec_body["text"], encoding="utf-8")
+
+    second = compose(request, pipeline, generator=generator)
+    print(
+        f"run 2: disposition={second.disposition!r} reason={second.reason!r} "
+        f"stage={second.stage!r}"
+    )
+    assert second.disposition is Disposition.WAITING
+    assert second.reason == "stale-artifact"
+    assert second.stage == "draft-agent"
