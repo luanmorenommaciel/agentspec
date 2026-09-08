@@ -32,6 +32,9 @@ plugin/tools/*/uv.lock
 # Judge layer — invocation history (contains model, targets, verdicts)
 .claude/storage/judge-ledger.jsonl
 
+# Composer — run state and staged artifacts (ephemeral, per run)
+.claude/storage/composer/
+
 # Node
 node_modules/
 
