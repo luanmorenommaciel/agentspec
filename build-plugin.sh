@@ -154,6 +154,7 @@ if [[ -d "${SCRIPT_DIR}/tools/spec-linter" ]]; then
     mkdir -p "${PLUGIN_DIR}/tools"
     cp -r "${SCRIPT_DIR}/tools/spec-linter" "${PLUGIN_DIR}/tools/spec-linter"
     rm -rf "${PLUGIN_DIR}/tools/spec-linter/.venv"
+    rm -f "${PLUGIN_DIR}/tools/spec-linter/uv.lock"   # development lockfile — no consumer in the shipped tree
     rm -rf "${PLUGIN_DIR}/tools/spec-linter/tests"
     find "${PLUGIN_DIR}/tools/spec-linter" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
     find "${PLUGIN_DIR}/tools/spec-linter" -name '.pytest_cache' -type d -exec rm -rf {} + 2>/dev/null || true
