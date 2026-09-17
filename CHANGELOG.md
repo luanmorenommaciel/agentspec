@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`creation-spec` contract in the Linter** (`spec_linter.CreationSpecContract`) — the pre-generation gate criteria: an overlap ceiling against the nearest existing sibling, a minimum count of distinct triggers that must agree with the scenarios a spec enumerates, a specific intent, and a known tier. Every threshold is a constructor parameter, so revising a criterion changes call sites rather than code.
 - **`orchestration` contract in `WORKFLOW_CONTRACTS.yaml`** — declares the pipeline contract, its verdict semantics, the stage bindings onto `contract_enforcement` and `behavioral_enforcement`, the shared repair-loop budget and its human-escalation anchor, the exit-code contract, the run-state invariants and the archive rule. `ARCHITECTURE.md` places the Composer as the conductor around the existing gates.
 
-## [3.6.0] - 2026-09-07
+## [3.6.0] - 2026-09-17
 
 ### Added
 
