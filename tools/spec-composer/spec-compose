@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Entry point for the artifact-creation conductor (the Composer).
+#
+# Run dispositions: 0 = emitted, 1 = blocked. Non-verdict "couldn't-run" states:
+# 2 = ERROR/unavailable, 3 = paused, 4 = waiting. Any code >= 2 means no verdict
+# was reached — never an assumed PASS.
+#
+# The Composer reuses the sibling Linter's engine and value objects, so it puts
+# both package dirs on PYTHONPATH and degrades LOUDLY (exit 2) if the Linter is
+# absent. The sibling Judger is optional: its dir is added only when present, and
+# a bound judge stage pauses rather than passing when it cannot run.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LINTER="$(cd "$HERE/../spec-linter" 2>/dev/null && pwd || true)"
+if [ -z "$LINTER" ] || [ ! -d "$LINTER/spec_linter" ]; then
+  echo "ERROR: sibling spec-linter not found next to spec-composer; cannot import spec_linter." >&2
+  exit 2
+fi
+
+PYPATH="$HERE:$LINTER"
+JUDGE="$(cd "$HERE/../spec-judge" 2>/dev/null && pwd || true)"
+if [ -n "$JUDGE" ] && [ -d "$JUDGE/spec_judge" ]; then
+  PYPATH="$PYPATH:$JUDGE"
+fi
+
+for py in "${SPEC_COMPOSER_PYTHON:-}" "$HERE/.venv/bin/python" python3 python; do
+  [ -n "$py" ] || continue
+  command -v "$py" >/dev/null 2>&1 || continue
+  if "$py" -c "import pydantic, yaml" >/dev/null 2>&1; then
+    exec env PYTHONPATH="$PYPATH${PYTHONPATH:+:$PYTHONPATH}" "$py" -m spec_composer.cli "$@"
+  fi
+done
+
+echo "ERROR: spec-compose unavailable — needs python3 with 'pydantic' and 'pyyaml' (or a local .venv)." >&2
+exit 2

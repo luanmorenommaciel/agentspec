@@ -1,0 +1,27 @@
+# A valid contract whose emit stage names an approval class. The first run reaches
+# the emit stage and pauses with `approval-outstanding:publish`; re-running with
+# `--approve publish` grants the class and the artifact is promoted. The approval
+# classes a stage requires are policy and live here; granting one is operator
+# input and lives on the command line.
+pipeline: approval-gated
+version: 1
+max_attempts: 3
+archive: ".claude/sdd/archive/specs/{name}/"
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: generate-agent
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: gate-b
+    kind: lint
+    input_contract: agent-spec
+  - id: emit-agent
+    kind: emit
+    require_approval_for:
+      - publish

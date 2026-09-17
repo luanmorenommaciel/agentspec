@@ -7,6 +7,7 @@ reference contract and its JSON Schema.
 """
 
 from .contracts.agent_spec import AgentSpecContract, emit_json_schema
+from .contracts.creation_spec import CreationSpecContract
 from .contracts.instance import InstanceContract
 from .contracts.sdd_phase import SddPhaseContract
 from .engine import lint
@@ -18,6 +19,7 @@ __all__ = [
     "AgentSpec",
     "AgentSpecContract",
     "Contract",
+    "CreationSpecContract",
     "Finding",
     "InstanceContract",
     "Level",

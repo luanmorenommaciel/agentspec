@@ -1,0 +1,18 @@
+# A deliberately invalid contract: what the generator produced is promoted with no
+# gate between the generate stage and the emit stage.
+pipeline: ungated-emit
+version: 1
+max_attempts: 3
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: generate-agent
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: emit-agent
+    kind: emit

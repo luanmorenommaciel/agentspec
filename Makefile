@@ -16,7 +16,7 @@
 SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
-.PHONY: help build test check lint clean generate plugin install-deps spec-lint spec-judge spec-scorer
+.PHONY: help build test check lint clean generate plugin install-deps spec-lint spec-judge spec-scorer spec-compose
 
 # ----------------------------------------------------------------------------
 # Help
@@ -67,6 +67,13 @@ spec-scorer: ## Run the spec-scorer component test suite (tools/spec-scorer, off
 		( cd tools/spec-scorer && PYTHONPATH="$$PWD:$$PWD/../spec-linter" .venv/bin/python -m pytest -v ); \
 	else \
 		( cd tools/spec-scorer && PYTHONPATH="$$PWD:$$PWD/../spec-linter" python3 -m pytest -v ); \
+	fi
+
+spec-compose: ## Run the spec-composer component test suite (tools/spec-composer, offline)
+	@if [ -x tools/spec-composer/.venv/bin/python ]; then \
+		( cd tools/spec-composer && .venv/bin/python -m pytest -v ); \
+	else \
+		( cd tools/spec-composer && python3 -m pytest -v ); \
 	fi
 
 # ----------------------------------------------------------------------------

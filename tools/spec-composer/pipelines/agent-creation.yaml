@@ -1,0 +1,32 @@
+# The agent-creation pipeline — the concrete lifecycle the conductor drives.
+#
+# Policy lives here as data: which stages, in what order, how many generation
+# attempts they share, which independence tier judges the result, and where the
+# ephemeral spec is archived. max_attempts is the TOTAL number of generation
+# attempts (one initial attempt plus repairs). Validate without running:
+#
+#   spec-compose --check pipelines/agent-creation.yaml
+pipeline: agent-creation
+version: 1
+max_attempts: 3
+archive: ".claude/sdd/archive/specs/{name}/"
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: generate-agent
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: gate-b
+    kind: lint
+    input_contract: agent-spec
+  - id: judge-agent
+    kind: judge
+    judge_tier: standard
+  - id: emit-agent
+    kind: emit
+    require_approval_for: []

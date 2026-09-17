@@ -1,0 +1,20 @@
+# A deliberately invalid contract: emission is not the last thing that happens.
+pipeline: emit-not-last
+version: 1
+max_attempts: 3
+stages:
+  - id: create-spec
+    kind: create
+    output_contract: creation-spec
+  - id: gate-a
+    kind: lint
+    input_contract: creation-spec
+  - id: generate-agent
+    kind: generate
+    input_contract: creation-spec
+    output_contract: agent-spec
+  - id: emit-agent
+    kind: emit
+  - id: gate-b
+    kind: lint
+    input_contract: agent-spec
