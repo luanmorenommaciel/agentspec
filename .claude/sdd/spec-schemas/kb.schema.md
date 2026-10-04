@@ -156,7 +156,7 @@ share a slug, or `agents` names an agent that does not exist),
 
 **Gate B (post-generation — does the artifact set honor the spec):**
 
-Gate B is the `validation:` block of
+Gate B is the `output_contract:` block of
 `.claude/kb/_templates/domain-manifest.yaml.template` — the output contract.
 It is reproduced here for reference; the template is the source of truth.
 
@@ -179,12 +179,12 @@ this gate the first one a deterministic contract can enforce end to end.
 
 `kb-architect` in spec mode runs the **same advisory pre-flight** it already
 runs in manual mode (its Quality Gate section), now reading the thresholds
-from this schema (Gate A) and the template's `validation:` block (Gate B)
+from this schema (Gate A) and the template's `output_contract:` block (Gate B)
 instead of carrying them in prose. That self-check is advisory — it is the
 agent's own quality bar, not a verdict a consumer may rely on.
 
 Normative enforcement belongs to `tools/spec-linter/`: a `kb-domain`
-contract that evaluates the `validation:` block against `_index.yaml` and
+contract that evaluates the `output_contract:` block against `_index.yaml` and
 the filesystem is the follow-up this schema is written to make mechanical,
 not part of Layer 2. Until it lands, "Gate B passed" means "kb-architect
 reported its pre-flight clean", nothing stronger.

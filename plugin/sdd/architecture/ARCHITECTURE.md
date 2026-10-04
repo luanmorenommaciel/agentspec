@@ -438,7 +438,7 @@ the domain knowledge already lived there.
 │                                                                       │
 │  spec-schemas/kb.schema.md        kb/_templates/domain-manifest.yaml.template │
 │  (spec-only fields + 1-to-many ┐   (entry block = manifest shape;    │
-│   mapping + Gate A criteria)   │    validation: block = Gate B)      │
+│   mapping + Gate A criteria)   │    output_contract: = Gate B)       │
 │                                 │              │                      │
 │                                 ▼              ▼                      │
 │  specs/kb/{key}.spec.md ──▶ kb-architect ──▶ kb/{key}/index.md        │

@@ -169,8 +169,8 @@ File-size limits come from `${CLAUDE_PLUGIN_ROOT}/kb/_index.yaml` → `limits:` 
 3. Gate A pre-flight (advisory, thresholds from the schema): `overlap_check` < 0.60; `concept_count` >= 3 and equal to `len(concepts)`; same for patterns; `out_of_scope` non-empty; `domain_key` not already under `domains:` in `_index.yaml`. Any failure → stop with the findings; do not generate.
 4. Query MCP sources (the spec's `sources` first) for every concept and pattern — the confidence matrix above applies exactly as in manual mode. Spec mode changes *what* is generated, not the evidence bar.
 5. Apply the cube→square mapping from the schema: copy the 1:1 fields (`domain_key`, `domain_name`, `description`, slugs, purposes, `agents`) verbatim into their targets; generate the concept and pattern bodies, the `quick-reference.md` tables and the manifest `confidence` values. Never let a spec-only field (`intent`, `overlap_check`, `domain_scope`, …) land in any generated file.
-6. Fan out: write `index.md`, `quick-reference.md`, `concepts/{name}.md` × N, `patterns/{name}.md` × M, then append the manifest entry to `_index.yaml` — additively, copying only the entry block from `domain-manifest.yaml.template`, never its `validation:` contract block.
-7. Gate B pre-flight (advisory): run Capability 2's path checks against the new entry, reading the rules from the template's `validation:` block — required fields present, entry points and every listed path on disk, minimums met, key registered. Any failure → correct and re-check; report what was corrected.
+6. Fan out: write `index.md`, `quick-reference.md`, `concepts/{name}.md` × N, `patterns/{name}.md` × M, then append the manifest entry to `_index.yaml` — additively, copying only the entry block from `domain-manifest.yaml.template`, never its `output_contract:` block.
+7. Gate B pre-flight (advisory): run Capability 2's path checks against the new entry, reading the rules from the template's `output_contract:` block — required fields present, entry points and every listed path on disk, minimums met, key registered. Any failure → correct and re-check; report what was corrected.
 8. Tell the user the spec is ready to archive to `.claude/sdd/archive/specs/{domain-key}/` (this agent does not move it — the archive step is the Composer's, per ADR-004 §3.9).
 
 **Output:** The five artifact types plus a mapping summary (which fields were copied vs. generated) and the two pre-flight results, so the user can review before archiving the spec.
@@ -201,7 +201,7 @@ PRE-FLIGHT CHECK
 ├─ [ ] _index.yaml updated
 ├─ [ ] MCP validation dates on files
 ├─ [ ] All internal links resolve
-└─ [ ] Spec mode: Gate A + Gate B pre-flight clean (kb.schema.md / template `validation:` block)
+└─ [ ] Spec mode: Gate A + Gate B pre-flight clean (kb.schema.md / template `output_contract:` block)
 ```
 
 The pre-flight is this agent's own quality bar, not a verdict a consumer may rely on. Normative Gate A/B enforcement for spec mode belongs to `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/` (a `kb-domain` contract is the follow-up); until it lands, "Gate B passed" means this pre-flight reported clean, nothing stronger.
@@ -214,7 +214,7 @@ The pre-flight is this agent's own quality bar, not a verdict a consumer may rel
 | Exceed line limits | Breaks atomicity | Split into files |
 | Skip manifest update | Untracked KB | Update _index.yaml |
 | Missing validation date | No recency info | Add MCP date header |
-| Copy the template's `validation:` block into `_index.yaml` | It is contract metadata, not a manifest field | Copy only the domain entry |
+| Copy the template's `output_contract:` block into `_index.yaml` | It is contract metadata, not a manifest field | Copy only the domain entry |
 | Let a spec-only field land in a generated file | Breaks cube→square fidelity | Spec-only fields inform generation; they never ship |
 | Guess a missing spec field or an ambiguous mapping | Produces a plausible but ungrounded domain | Stop and name the field / ambiguity |
 

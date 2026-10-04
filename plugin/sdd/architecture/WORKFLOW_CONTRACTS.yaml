@@ -162,14 +162,14 @@ kb_creation_pipeline:
     path: "${CLAUDE_PLUGIN_ROOT}/agents/architect/kb-architect.md"
     scope: "existing agent extended with a spec-aware path (Capability 4); manual path unchanged. Runs its own advisory Gate A/B pre-flight in spec mode — the same quality bar it already applies in manual mode — which is not a verdict a consumer may rely on"
   spec_working_dir: ".claude/sdd/specs/kb/"
-  output_contract: "${CLAUDE_PLUGIN_ROOT}/kb/_templates/domain-manifest.yaml.template — its validation: block is the machine-readable Gate B; the entry block is the shape that lands in _index.yaml"
+  output_contract: "${CLAUDE_PLUGIN_ROOT}/kb/_templates/domain-manifest.yaml.template — its output_contract: block is the machine-readable Gate B; the entry block is the shape that lands in _index.yaml"
   fan_out:
     shape: "1-to-many — one spec produces index.md, quick-reference.md, concepts/*.md (>= 3), patterns/*.md (>= 3) and one additive _index.yaml entry"
     registry: "${CLAUDE_PLUGIN_ROOT}/kb/_index.yaml"
   gates:
     gate_a: "documented in kb.schema.md — pre-generation (overlap_check < 0.60 against nearest_domain, concept_count and pattern_count >= 3 and equal to their lists, out_of_scope non-empty, specific intent, unregistered domain_key); advisory self-check by kb-architect"
-    gate_b: "declared in the template's validation: block — post-generation (required manifest fields, entry points and every listed path on disk, minimums, key registered); every rule but fidelity is a filesystem/YAML check; advisory self-check by kb-architect"
-    enforcement_owner: "${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/ — a kb-domain contract evaluating the validation: block against _index.yaml and the filesystem is the follow-up this layer makes mechanical, not part of Layer 2"
+    gate_b: "declared in the template's output_contract: block — post-generation (required manifest fields, entry points and every listed path on disk, minimums, key registered); every rule but fidelity is a filesystem/YAML check; advisory self-check by kb-architect"
+    enforcement_owner: "${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/ — a kb-domain contract evaluating the output_contract: block against _index.yaml and the filesystem is the follow-up this layer makes mechanical, not part of Layer 2"
 
 # =============================================================================
 # CONTRACT ENFORCEMENT (the Linter — ADR-002)
