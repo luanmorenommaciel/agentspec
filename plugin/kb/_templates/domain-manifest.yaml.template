@@ -1,9 +1,33 @@
 # Add this section to .claude/kb/_index.yaml under 'domains:'
+#
+# Everything below `validation:` is the MANIFEST ENTRY — copy it (filled in)
+# into _index.yaml, additively, never rewriting existing entries.
+#
+# ─── MACHINE-READABLE OUTPUT CONTRACT (Gate B) ──────────────────────────────
+# Contract metadata for the spec-driven KB pipeline — consumed by
+# kb-architect's pre-flight (spec mode) and, going forward, by
+# tools/spec-linter/. See .claude/sdd/spec-schemas/kb.schema.md for the spec
+# this contract pairs with (Gate A criteria, cube→square mapping).
+# NOT part of the manifest entry: do not copy this block into _index.yaml.
+validation:
+  required_fields: [name, description, path, entry_points]
+  optional_fields: [mcp_validated, specs, reference, examples]
+  minimums:
+    concepts: 3
+    patterns: 3
+  gate_b_checks:
+    - "entry_points.index exists on disk under path"
+    - "entry_points.quick_reference exists on disk under path"
+    - "every concepts[].path exists on disk under path"
+    - "every patterns[].path exists on disk under path"
+    - "domain key registered under domains: in _index.yaml"
+# ─── END OUTPUT CONTRACT ─────────────────────────────────────────────────────
 
 {{DOMAIN_KEY}}:
   name: {{DOMAIN_DISPLAY_NAME}}
   description: {{DOMAIN_DESCRIPTION}}
   path: {{DOMAIN_KEY}}/
+  mcp_validated: "{{VALIDATION_DATE}}"
   entry_points:
     index: index.md
     quick_reference: quick-reference.md

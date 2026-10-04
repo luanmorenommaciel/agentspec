@@ -153,9 +153,10 @@ Each phase's methodology lives in a dedicated skill (`sdd-brainstorm`, `sdd-defi
     +-- architecture/            # Workflow contracts
     |   +-- WORKFLOW_CONTRACTS.yaml
     |   +-- ARCHITECTURE.md      # This file
-    +-- spec-schemas/            # Spec formats for artifact creation (Layer 1: agent.schema.md)
+    +-- spec-schemas/            # Spec formats for artifact creation (agent.schema.md, kb.schema.md)
     +-- specs/                   # In-progress specs, one subfolder per artifact type
         +-- agents/              # {name}.spec.md, consumed by agent-architect
+        +-- kb/                  # {domain-key}.spec.md, consumed by kb-architect (spec mode)
 ```
 
 ---
@@ -389,12 +390,14 @@ Contract definitions and stage bindings live in `WORKFLOW_CONTRACTS.yaml`
 
 ---
 
-## Spec-Driven Agent Creation (Layer 1 of `feat/spec-schemas`, ADR-006)
+## Spec-Driven Artifact Creation (`feat/spec-schemas`, ADR-006 / ADR-007)
 
-The first of four artifact-creation pipelines that share a "cube→square"
-shape: an ephemeral spec is mapped onto a fixed output contract by a
-dedicated architect agent. Layers 2-4 (issue #71) repeat this shape for KB
-domains, skills, and SDD phase documents.
+Four artifact-creation pipelines share a "cube→square" shape: an ephemeral
+spec is mapped onto a fixed output contract by a generator agent. Layer 1
+(agents) and Layer 2 (KB domains) are in place below; Layers 3-4 (issue #71)
+repeat the shape for skills and SDD phase documents.
+
+### Layer 1 — agents (ADR-006)
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -420,6 +423,46 @@ the Linter already enforces), Gate A/B for agent creation is spec'd but not
 yet enforced anywhere. `agent-architect` is scoped to generation only so that
 enforcement can be added later — either to `agent-architect` itself or, more
 likely, to `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/` — without redesigning the generator.
+
+### Layer 2 — KB domains (ADR-007)
+
+The same shape, with two differences: the mapping is **1-to-many** (one spec
+fans out into five output types), and the generator is the **existing**
+`kb-architect`, which gains a spec-aware path rather than being duplicated —
+the domain knowledge already lived there.
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│              KB DOMAIN CREATION PIPELINE (Layer 2)                   │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  spec-schemas/kb.schema.md        kb/_templates/domain-manifest.yaml.template │
+│  (spec-only fields + 1-to-many ┐   (entry block = manifest shape;    │
+│   mapping + Gate A criteria)   │    validation: block = Gate B)      │
+│                                 │              │                      │
+│                                 ▼              ▼                      │
+│  specs/kb/{key}.spec.md ──▶ kb-architect ──▶ kb/{key}/index.md        │
+│  (hand-filled by a human)   (spec mode:      kb/{key}/quick-reference.md │
+│                              generate +      kb/{key}/concepts/*.md (>=3) │
+│                              advisory        kb/{key}/patterns/*.md  (>=3) │
+│                              Gate A/B        kb/_index.yaml entry (additive) │
+│                              pre-flight)                              │
+│                                                                       │
+│  Gate B is filesystem + YAML checks only (paths exist, key registered,│
+│  minimums) — enforceable end to end by a deterministic contract.      │
+│  Normative enforcement: ${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/ (kb-domain contract, a     │
+│  follow-up). kb-architect's pre-flight is advisory, as in manual mode.│
+│  Repo-local: spec-schemas/ is not shipped, so spec mode is for         │
+│  contributors; the manual path is what the plugin ships.              │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Layer 1 made its generator generation-only because Gate B for agents hinges
+on matching `required_sections` keys to Markdown headings — a judgement the
+agent should not adjudicate. Layer 2's Gate B has no such step: every rule
+but fidelity is a path or registry check `kb-architect` already performs in
+its audit capability, so the pre-flight stays in the agent as the advisory
+bar it always was. The normative owner is unchanged: `${CLAUDE_PLUGIN_ROOT}/tools/spec-linter/`.
 
 ---
 
