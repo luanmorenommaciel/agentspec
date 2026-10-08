@@ -7,16 +7,32 @@ name: e2e
 on:
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - 'assets/**'
+      - 'presentation/**'
+      - 'README.md'
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'assets/**'
+      - 'presentation/**'
+      - 'README.md'
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   install-runtime:
     name: Install runtime simulation
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -224,6 +240,7 @@ jobs:
   fleet-lint:
     name: Fleet-lint conformance counter (report-only)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

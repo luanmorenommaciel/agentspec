@@ -16,9 +16,14 @@ on:
       - 'build-plugin.sh'
       - 'plugin/.claude-plugin/**'
 
+concurrency:
+  group: plugin-validate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
