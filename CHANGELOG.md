@@ -13,6 +13,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`orchestration` contract in `WORKFLOW_CONTRACTS.yaml`** — declares the pipeline contract, its verdict semantics, the stage bindings onto `contract_enforcement` and `behavioral_enforcement`, the shared repair-loop budget and its human-escalation anchor, the exit-code contract, the run-state invariants and the archive rule. `ARCHITECTURE.md` places the Composer as the conductor around the existing gates.
 - **Spec-driven KB domain creation (Layer 2 of `feat/spec-schemas`, #71; ADR-007, #68)** — `kb.schema.md` defines the creation-time spec for a KB domain (spec-only fields `intent`/`domain_scope`/`overlap_check`/`nearest_domain`/`concept_count`/`pattern_count`/`sources`, mapped fields, and the 1-to-many cube→square mapping onto the five domain outputs); `domain-manifest.yaml.template` gains a machine-readable `output_contract:` block (required fields, minimums, filesystem and registry checks — the Gate B for KB domains) kept apart from the entry block that lands in `_index.yaml`; `kb-architect` gains a spec-aware path (Capability 4) alongside its unchanged manual path, running its existing advisory pre-flight against the schema's Gate A and the template's Gate B. Normative enforcement stays with `tools/spec-linter/` (a `kb-domain` contract is the follow-up). In-progress specs live under `.claude/sdd/specs/kb/`; `WORKFLOW_CONTRACTS.yaml` gains `kb_creation_pipeline` and generalises `spec_lifecycle` across artifact types. Repo-local: `spec-schemas/` is not shipped, so spec mode is for contributors.
 
+### Changed
+
+- **`spec_lifecycle` stage 3 renamed `router regeneration` → `registration`** (`WORKFLOW_CONTRACTS.yaml`) — the stage now covers both pipelines: agents still regenerate the router by hand, KB domains append their `_index.yaml` entry. The 3.6.0 `version_history` row still names the old stage; the `version_history` row for the next release cut must record this rename alongside `kb_creation_pipeline`.
+- **`agent_creation_pipeline` declares `distribution: repo-local`, and its enforcement owner is stated in the future tense** — `agent-architect`, `_template.md` and `spec-schemas/` are not shipped, so the block's paths are repository paths; `build-plugin.sh` (Step 4b) no longer rewrites them into `${CLAUDE_PLUGIN_ROOT}/` paths that point at files the build deletes. Gate A's owner is the Linter's `creation-spec` contract (#93); Gate B's tier-section contract is the next follow-up (#103 items 10 and 13).
+- **`agent.schema.md` — `trigger_count` must equal `len(trigger_scenarios)`**, and Gate A cross-checks the two (#103 item 7(i)); the Enforcement section no longer claims the `agent-spec` contract gates generated `agent.md` files today (#103 item 13).
+
+### Fixed
+
+- **`lakeflow` manifest entry registers all five concept files** (`cdc-fundamentals`, `deployment-model`, `expectations-model` were on disk but missing from `_index.yaml` and `index.md`), so the domain meets the `output_contract:` minimum of 3 concepts — the one FAIL in the Layer 2 fleet audit.
+- **`kb-architect` Gate A pre-flight enumerates all six schema checks**, adding `intent` specificity and the `domain_key` lowercase-kebab format.
+- **`ARCHITECTURE.md` Layer 2 box reflowed to its border**, including in the plugin mirror (no `tools/spec-linter/` path inside the box for the build to expand).
+
 ## [3.6.0] - 2026-09-17
 
 ### Added

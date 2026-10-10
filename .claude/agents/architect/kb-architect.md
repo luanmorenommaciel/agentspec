@@ -31,7 +31,7 @@ model: sonnet
 stop_conditions:
   - "Task outside KB architecture scope -- escalate to appropriate specialist"
   - "Spec mode: a spec-only or mapped field required by kb.schema.md is missing -- surface which field, do not generate a partial domain"
-  - "Spec mode: Gate A pre-flight fails (overlap, counts, missing exclusions, key already registered) -- surface the findings, do not generate"
+  - "Spec mode: Gate A pre-flight fails (overlap, counts, missing exclusions, non-specific intent, domain_key malformed or already registered) -- surface the findings, do not generate"
   - "Spec mode: kb.schema.md is not present in this installation -- spec mode is repo-local; offer the manual path instead"
 escalation_rules:
   - trigger: "Task outside KB domain expertise"
@@ -166,7 +166,7 @@ File-size limits come from `.claude/kb/_index.yaml` → `limits:` (the single so
 
 1. Read `.claude/sdd/spec-schemas/kb.schema.md` fresh — it is the contract; do not assume a remembered version. If the file is absent, stop: spec mode is repo-local (the schema is not shipped in the plugin) and the manual path is the one available here.
 2. Read the spec. Confirm every spec-only field (`intent`, `domain_scope.out_of_scope`, `overlap_check`, `nearest_domain`, `concept_count`, `pattern_count`, `sources`) and every mapped field (`domain_key`, `domain_name`, `description`, `concepts`, `patterns`, `agents`) is present. Missing → stop and name the field.
-3. Gate A pre-flight (advisory, thresholds from the schema): `overlap_check` < 0.60; `concept_count` >= 3 and equal to `len(concepts)`; same for patterns; `out_of_scope` non-empty; `domain_key` not already under `domains:` in `_index.yaml`. Any failure → stop with the findings; do not generate.
+3. Gate A pre-flight (advisory, thresholds from the schema) — all six rows of the schema's Gate A table: `overlap_check` < 0.60; `concept_count` >= 3 and equal to `len(concepts)`; same for patterns; `out_of_scope` non-empty; `intent` non-empty and specific (not a restatement of `domain_name`); `domain_key` lowercase-kebab and not already under `domains:` in `_index.yaml`. Any failure → stop with the findings; do not generate.
 4. Query MCP sources (the spec's `sources` first) for every concept and pattern — the confidence matrix above applies exactly as in manual mode. Spec mode changes *what* is generated, not the evidence bar.
 5. Apply the cube→square mapping from the schema: copy the 1:1 fields (`domain_key`, `domain_name`, `description`, slugs, purposes, `agents`) verbatim into their targets; generate the concept and pattern bodies, the `quick-reference.md` tables and the manifest `confidence` values. Never let a spec-only field (`intent`, `overlap_check`, `domain_scope`, …) land in any generated file.
 6. Fan out: write `index.md`, `quick-reference.md`, `concepts/{name}.md` × N, `patterns/{name}.md` × M, then append the manifest entry to `_index.yaml` — additively, copying only the entry block from `domain-manifest.yaml.template`, never its `output_contract:` block.

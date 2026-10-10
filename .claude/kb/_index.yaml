@@ -697,6 +697,15 @@ domains:
       - name: getting-started
         path: concepts/getting-started.md
         confidence: 0.90
+      - name: cdc-fundamentals
+        path: concepts/cdc-fundamentals.md
+        confidence: 0.90
+      - name: deployment-model
+        path: concepts/deployment-model.md
+        confidence: 0.90
+      - name: expectations-model
+        path: concepts/expectations-model.md
+        confidence: 0.90
     patterns:
       - name: bronze-ingestion
         path: patterns/bronze-ingestion.md

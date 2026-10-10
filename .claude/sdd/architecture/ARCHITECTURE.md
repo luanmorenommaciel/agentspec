@@ -435,25 +435,28 @@ the domain knowledge already lived there.
 ┌──────────────────────────────────────────────────────────────────────┐
 │              KB DOMAIN CREATION PIPELINE (Layer 2)                   │
 ├──────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  spec-schemas/kb.schema.md        kb/_templates/domain-manifest.yaml.template │
-│  (spec-only fields + 1-to-many ┐   (entry block = manifest shape;    │
-│   mapping + Gate A criteria)   │    output_contract: = Gate B)       │
-│                                 │              │                      │
-│                                 ▼              ▼                      │
-│  specs/kb/{key}.spec.md ──▶ kb-architect ──▶ kb/{key}/index.md        │
-│  (hand-filled by a human)   (spec mode:      kb/{key}/quick-reference.md │
-│                              generate +      kb/{key}/concepts/*.md (>=3) │
-│                              advisory        kb/{key}/patterns/*.md  (>=3) │
-│                              Gate A/B        kb/_index.yaml entry (additive) │
-│                              pre-flight)                              │
-│                                                                       │
-│  Gate B is filesystem + YAML checks only (paths exist, key registered,│
-│  minimums) — enforceable end to end by a deterministic contract.      │
-│  Normative enforcement: tools/spec-linter/ (kb-domain contract, a     │
-│  follow-up). kb-architect's pre-flight is advisory, as in manual mode.│
-│  Repo-local: spec-schemas/ is not shipped, so spec mode is for         │
-│  contributors; the manual path is what the plugin ships.              │
+│                                                                      │
+│  spec-schemas/kb.schema.md       kb/_templates/                      │
+│  (spec-only fields + 1-to-many    domain-manifest.yaml.template      │
+│   mapping + Gate A criteria) ┐   (entry block = manifest shape;      │
+│                              │    output_contract: = Gate B)         │
+│                              │               │                       │
+│                              ▼               ▼                       │
+│  specs/kb/{key}.spec.md ──▶ kb-architect ──▶ kb/{key}/               │
+│  (hand-filled by a human)   (spec mode:       index.md               │
+│                              generate +       quick-reference.md     │
+│                              advisory         concepts/*.md (>=3)    │
+│                              Gate A/B         patterns/*.md (>=3)    │
+│                              pre-flight)     kb/_index.yaml entry    │
+│                                               (additive)             │
+│                                                                      │
+│  Gate B is filesystem + YAML checks only (paths exist, key           │
+│  registered, minimums) — enforceable end to end by a deterministic   │
+│  contract. Content checks are the Judger's, not Gate B's.            │
+│  Normative enforcement: the spec-linter (kb-domain contract, a       │
+│  follow-up). kb-architect's pre-flight is advisory, as in manual     │
+│  mode. Repo-local: spec-schemas/ is not shipped, so spec mode is     │
+│  for contributors; the manual path is what the plugin ships.         │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 

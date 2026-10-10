@@ -173,6 +173,12 @@ Every Gate B rule except fidelity is a filesystem or YAML check — no
 heading matching, no prose judgement. That is deliberate: it is what makes
 this gate the first one a deterministic contract can enforce end to end.
 
+Content checks — whether the concept and pattern bodies are correct, complete
+or well written — are deliberately out of Gate B. They need judgement and
+tokens, which makes them the Judger's domain (ADR-003, `behavioral_enforcement`
+in `WORKFLOW_CONTRACTS.yaml`), not the Linter's. Gate B stays scoped to what a
+deterministic contract can check.
+
 ---
 
 ## Enforcement
