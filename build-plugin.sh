@@ -286,6 +286,25 @@ done < <(find "${PLUGIN_DIR}" \( -name "*.md" -o -name "*.yaml" -o -name "*.yml"
 
 ok "Paths rewritten"
 
+# ─── Step 4b: Keep repo-local pipeline paths as repository paths ─────────────
+# Step 4 rewrites every .claude/agents/ path, including the ones in
+# WORKFLOW_CONTRACTS.yaml's agent_creation_pipeline that name files Step 3
+# deletes (REPO_LOCAL_AGENTS and _template.md). A ${CLAUDE_PLUGIN_ROOT}/ path
+# to a file the plugin does not ship is a dangling pointer; the block declares
+# distribution: repo-local, so its paths stay repository paths in the mirror.
+
+info "Restoring repo-local pipeline paths in the shipped contracts..."
+CONTRACTS_FILE="${PLUGIN_DIR}/sdd/architecture/WORKFLOW_CONTRACTS.yaml"
+REPO_LOCAL_CONTRACT_PATHS=("${REPO_LOCAL_AGENTS[@]}" _template.md)
+if [[ -f "${CONTRACTS_FILE}" ]]; then
+    for rel in "${REPO_LOCAL_CONTRACT_PATHS[@]}"; do
+        tmp="${CONTRACTS_FILE}.tmp"
+        sed -e "s|\${CLAUDE_PLUGIN_ROOT}/agents/${rel}|.claude/agents/${rel}|g" \
+            "${CONTRACTS_FILE}" > "$tmp" && mv "$tmp" "${CONTRACTS_FILE}" || { rm -f "$tmp"; exit 1; }
+    done
+fi
+ok "Repo-local pipeline paths kept as repository paths"
+
 # ─── Step 5: Rewrite hardcoded absolute paths ────────────────────────────────
 # After Step 4, some paths may look like:
 #   /Users/username/GitHub/agentspec/${CLAUDE_PLUGIN_ROOT}/skills/...
@@ -370,6 +389,7 @@ _stale_filter() {
         | grep -v 'CLAUDE\.md' \
         | grep -v '\.claude/plans' \
         | grep -v '\.claude/memory' \
+        | grep -v 'WORKFLOW_CONTRACTS\.yaml:.*\.claude/agents/\(architect/agent-architect\|_template\)\.md' \
         | grep -v '^[[:space:]]*#' \
         || true
 }

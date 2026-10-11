@@ -13,6 +13,9 @@
 |------|---------|
 | [concepts/core-concepts.md](concepts/core-concepts.md) | Streaming tables, materialized views, Lakeflow fundamentals |
 | [concepts/getting-started.md](concepts/getting-started.md) | Tutorial for first pipeline |
+| [concepts/cdc-fundamentals.md](concepts/cdc-fundamentals.md) | Change Data Capture with APPLY CHANGES |
+| [concepts/deployment-model.md](concepts/deployment-model.md) | Deployment modes, configuration, lifecycle with DABs |
+| [concepts/expectations-model.md](concepts/expectations-model.md) | Data quality constraints on records flowing through a pipeline |
 
 ### Patterns (Code-focused, < 200 lines)
 

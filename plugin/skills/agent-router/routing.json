@@ -488,6 +488,7 @@
       "description": "Knowledge base architect for creating validated, structured KB domains.",
       "kb_domains": [],
       "escalates_to": [
+        "user",
         "user"
       ]
     },

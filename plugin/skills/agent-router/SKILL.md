@@ -14,7 +14,7 @@ description: Intelligent agent routing -- automatically matches tasks to the bes
 
 Explicit routing rules for matching tasks to the correct specialist agent. Generated from each agent's frontmatter, so any change to an agent's `description`, `kb_domains`, or `escalation_rules` flows here automatically.
 
-**Agent count:** 58  |  **Categories:** 8  |  **Content hash:** `11bcc0754dfd`
+**Agent count:** 58  |  **Categories:** 8  |  **Content hash:** `f550db8ce22b`
 
 ## A. Agents by Category
 
@@ -25,7 +25,7 @@ Explicit routing rules for matching tasks to the correct specialist agent. Gener
 |-------|------|-------|-----------|--------------|
 | `data-platform-engineer` | T2 | sonnet | `cloud-platforms`, `lakehouse`, `data-modeling` | `lakehouse-architect`, `pipeline-architect`, `schema-designer` |
 | `genai-architect` | T1 | opus | `genai`, `prompt-engineering`, `ai-data-engineering` | — |
-| `kb-architect` | T2 | sonnet | — | `user` |
+| `kb-architect` | T2 | sonnet | — | `user`, `user` |
 | `lakehouse-architect` | T2 | sonnet | `lakehouse`, `spark`, `data-modeling` | `data-platform-engineer`, `spark-engineer`, `schema-designer` |
 | `medallion-architect` | T1 | sonnet | `medallion`, `data-modeling`, `lakehouse`, `data-quality` | — |
 | `pipeline-architect` | T2 | sonnet | `airflow`, `data-quality`, `dbt` | `dbt-specialist`, `spark-engineer`, `streaming-engineer` |
