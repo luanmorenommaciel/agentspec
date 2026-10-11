@@ -73,6 +73,7 @@ jobs:
             | grep -v 'CLAUDE\.md' \
             | grep -v '\.claude/plans' \
             | grep -v '\.claude/memory' \
+            | grep -v 'WORKFLOW_CONTRACTS\.yaml:.*\.claude/agents/\(architect/agent-architect\|_template\)\.md' \
             | grep -v '^[[:space:]]*#' \
             || true)
 
