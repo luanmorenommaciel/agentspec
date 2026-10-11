@@ -142,6 +142,7 @@ spec_lifecycle:
 
 agent_creation_pipeline:
   schema: ".claude/sdd/spec-schemas/agent.schema.md"
+  distribution: "repo-local — agent-architect, _template.md and spec-schemas/ are excluded from the plugin (build-plugin.sh REPO_LOCAL_AGENTS and the _template.md deletion), so every path in this block is a repository path, not a plugin path; spec-driven agent creation is available to contributors only"
   generator:
     agent: "agent-architect"
     path: ".claude/agents/architect/agent-architect.md"
