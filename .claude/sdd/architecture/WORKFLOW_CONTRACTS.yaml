@@ -128,8 +128,9 @@ agent_resolution:
 # Cube->square pattern: an ephemeral spec ({type}.schema.md) is mapped onto a
 # fixed output contract by a generator agent. Gate A/B criteria are documented
 # in each schema but NOT normatively enforced by the generator (see each
-# pipeline's gates below) -- enforcement belongs to tools/spec-linter/, not yet
-# wired to these schemas. Layer 1 (agents) and Layer 2 (KB domains) are
+# pipeline's gates below) -- enforcement belongs to tools/spec-linter/; the
+# Composer binds it for agents (orchestration.stage_bindings), but no host
+# drives the Composer yet. Layer 1 (agents) and Layer 2 (KB domains) are
 # declared; Layers 3-4 (issue #71) repeat this shape for skills and SDD phase
 # documents.
 
@@ -153,7 +154,7 @@ agent_creation_pipeline:
   gates:
     gate_a: "documented in agent.schema.md — pre-generation (overlap_check, trigger_count, intent, tier); not enforced by agent-architect"
     gate_b: "documented in agent.schema.md — post-generation (required_sections present, frontmatter fidelity); not enforced by agent-architect"
-    enforcement_owner: "tools/spec-linter/ — will own both gates; not wired to this pipeline yet. Gate A: the creation-spec contract (#93, spec_linter.CreationSpecContract) encodes the criteria above, including the trigger_count == len(trigger_scenarios) cross-check. Gate B: a tier-section contract is the named next follow-up (#93). The existing agent-spec contract is a reference implementation (tools/spec-linter/USAGE.md) that the fleet does not pass today; it does not validate generated agent.md files as a gate"
+    enforcement_owner: "tools/spec-linter/, sequenced by the Composer — the agent-creation pipeline (tools/spec-composer/pipelines/agent-creation.yaml; orchestration.stage_bindings below) binds creation-spec at gate-a (#93, spec_linter.CreationSpecContract — the criteria above, including the trigger_count == len(trigger_scenarios) cross-check) and agent-spec at gate-b. No host drives the Composer yet, so neither binding runs in today's practice. agent-spec does not yet accept _template.md-shaped agents (tracked separately, raised in the #113 review), so gate-b would reject generated agents once a host does; a tier-section contract is planned as an additional gate-b stage after agent-spec, not a replacement"
 
 kb_creation_pipeline:
   schema: ".claude/sdd/spec-schemas/kb.schema.md"
@@ -169,8 +170,8 @@ kb_creation_pipeline:
     registry: ".claude/kb/_index.yaml"
   gates:
     gate_a: "documented in kb.schema.md — pre-generation (overlap_check < 0.60 against nearest_domain, concept_count and pattern_count >= 3 and equal to their lists, out_of_scope non-empty, specific intent, unregistered domain_key); advisory self-check by kb-architect"
-    gate_b: "declared in the template's output_contract: block — post-generation (required manifest fields, entry points and every listed path on disk, minimums, key registered); every rule but fidelity is a filesystem/YAML check; advisory self-check by kb-architect"
-    enforcement_owner: "tools/spec-linter/ — a kb-domain contract evaluating the output_contract: block against _index.yaml and the filesystem is the follow-up this layer makes mechanical, not part of Layer 2"
+    gate_b: "declared in the template's output_contract: block, which takes two inputs — the _index.yaml entry and, in spec mode, the spec — post-generation: gate_b_checks (required manifest fields, entry points and every listed path on disk, minimums, key registered) and spec_fidelity (counts and slugs equal to the spec's, no unregistered file, 1:1 fields equal, no spec-only leak); every rule is a filesystem, YAML-comparison or verbatim-substring check; advisory self-check by kb-architect"
+    enforcement_owner: "tools/spec-linter/ — a kb-domain contract evaluating the output_contract: block against the spec, _index.yaml and the filesystem is the follow-up this layer makes mechanical, not part of Layer 2"
 
 # =============================================================================
 # CONTRACT ENFORCEMENT (the Linter — ADR-002)

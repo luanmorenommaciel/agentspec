@@ -27,9 +27,13 @@ progress. Archival location: `.claude/sdd/archive/specs/{domain-key}/`
 (ADR-004 §3.9 — provenance only, never load-bearing; the graduation rule
 applies before archiving).
 
-A spec file is a Markdown file whose body carries exactly one ` ```yaml `
-fenced block holding the fields below; prose outside the block is free-form
-notes for the human and is ignored by generation and gates.
+A spec file is a Markdown file whose **YAML frontmatter** (between the
+opening and closing `---` lines) holds the fields below; the body is
+free-form notes for the human and is ignored by generation and gates. This
+matches agent specs and ADR-001 ("frontmatter is the spec"), and it is the
+shape the Composer reads a gate subject from (frontmatter or a whole-YAML
+document) — a fenced block in the body would load as a string, not a
+mapping.
 
 ---
 
@@ -54,21 +58,14 @@ and Gate B checks the *set* of outputs rather than a single file.
 
 ## Spec-only fields
 
-These fields exist only in the spec. They inform generation and (eventually)
-gate enforcement, but are never copied into any generated file:
+These fields exist only in the spec. They inform generation and gate
+enforcement, but are never copied into any generated file:
 
 ```yaml
 intent: >
   # Why this KB domain is being created — one specific sentence naming the
   # gap. Example: "No registered domain covers Redis caching patterns;
   # cloud-platforms mentions Redis only as a managed-service line item."
-
-domain_scope:
-  in_scope:
-    - "{topic this domain covers}"
-    - "{another topic}"
-  out_of_scope:               # REQUIRED — an empty list fails Gate A
-    - "{adjacent topic deliberately excluded, and which domain owns it}"
 
 overlap_check: 0.0            # Fraction (0.0-1.0) of in_scope covered by
                               # the nearest domain registered in _index.yaml.
@@ -98,6 +95,13 @@ domain_key: "{lowercase-kebab}"          # directory name + _index.yaml key
 domain_name: "{Display Name}"
 description: "{one line — what the domain covers, as _index.yaml shows it}"
 
+domain_scope:                            # graduates into the entry's scope:
+  in_scope:
+    - "{topic this domain covers}"
+    - "{another topic}"
+  out_of_scope:                          # REQUIRED — an empty list fails Gate A
+    - "{adjacent topic deliberately excluded, and which domain owns it}"
+
 concepts:                                # length == concept_count
   - name: "{concept-slug}"
     purpose: "{one line — what the reader learns}"
@@ -119,6 +123,7 @@ agents:                                  # which agents should list this
 | `domain_key` | `_index.yaml` key, `path: {domain_key}/`, directory name | copied 1:1 |
 | `domain_name` | `_index.yaml` `name`; `index.md` title; `quick-reference.md` title | copied 1:1 |
 | `description` | `_index.yaml` `description`; `index.md` Purpose line | copied 1:1 |
+| `domain_scope` | `_index.yaml` `scope` (`in_scope`, `out_of_scope`) | copied 1:1 |
 | `concepts[].name` | `_index.yaml` `concepts[].path`; `concepts/{name}.md` filename; `index.md` Concepts table | copied 1:1 |
 | `concepts[].purpose` | `concepts/{name}.md` Purpose line; `index.md` Concepts table | copied 1:1 |
 | `patterns[].name` / `.purpose` | same shape as concepts, under `patterns/` | copied 1:1 |
@@ -127,6 +132,11 @@ agents:                                  # which agents should list this
 | concept / pattern **bodies** | `concepts/*.md`, `patterns/*.md` | **generated** by `kb-architect` from validated sources, following `concept.md.template` / `pattern.md.template` |
 | `quick-reference.md` tables | `quick-reference.md` | **generated** from the concept/pattern bodies |
 | `_index.yaml` `concepts[].confidence` | `_index.yaml` entry | **generated** from the validation confidence matrix |
+
+`domain_scope` is mapped rather than spec-only because the boundary is
+needed after the spec is archived: the next spec's `overlap_check` against
+this domain reads it from the manifest entry (ADR-001's graduation rule — a
+fact something needs later moves to a versioned home before archiving).
 
 `index.md` and `quick-reference.md` are always produced, from `domain_name`
 + `description` + the two lists — there is no spec field that opts out of
@@ -150,7 +160,7 @@ share a slug, or `agents` names an agent that does not exist),
 | `overlap_check` | < 0.60 against `nearest_domain` |
 | `concept_count` | >= 3, and equal to `len(concepts)` |
 | `pattern_count` | >= 3, and equal to `len(patterns)` |
-| `domain_scope.out_of_scope` | non-empty — a domain with no declared exclusions has no boundary to lint |
+| `domain_scope.out_of_scope` | non-empty — it graduates into the entry's `scope.out_of_scope`, the boundary later specs' `overlap_check` is measured against |
 | `intent` | non-empty and specific (not a restatement of `domain_name`) |
 | `domain_key` | lowercase-kebab, not already a key in `_index.yaml` |
 
@@ -159,19 +169,30 @@ share a slug, or `agents` names an agent that does not exist),
 Gate B is the `output_contract:` block of
 `.claude/kb/_templates/domain-manifest.yaml.template` — the output contract.
 It is reproduced here for reference; the template is the source of truth.
+The block declares two inputs: the `_index.yaml` entry (with the files under
+its `path`) and, in spec mode, the spec. The fidelity rows compare the two,
+so they apply only when a spec exists; a domain created by the manual path
+is checked against the entry rows alone.
 
-| Check | Rule |
-|---|---|
-| Required manifest fields | `name`, `description`, `path`, `entry_points` present on the `_index.yaml` entry |
-| Entry points exist | `entry_points.index` and `entry_points.quick_reference` resolve to files on disk under `path` |
-| Listed paths exist | every `concepts[].path` and `patterns[].path` resolves to a file on disk under `path` |
-| Minimums | `len(concepts) >= 3`, `len(patterns) >= 3` |
-| Registered | `domain_key` is a key under `domains:` in `_index.yaml` |
-| Fidelity | 1:1-mapped fields match the spec exactly; the spec-only fields appear in no generated file |
+| Check | Rule | Input |
+|---|---|---|
+| Required manifest fields | `name`, `description`, `path`, `entry_points` present on the `_index.yaml` entry | entry |
+| Entry points exist | `entry_points.index` and `entry_points.quick_reference` resolve to files on disk under `path` | entry |
+| Listed paths exist | every `concepts[].path` and `patterns[].path` resolves to a file on disk under `path` | entry |
+| Minimums | `len(concepts) >= 3`, `len(patterns) >= 3` | entry |
+| Registered | `domain_key` is a key under `domains:` in `_index.yaml` | entry |
+| Fan-out fidelity | `len(concepts) == spec.concept_count` and the slugs equal the spec's, in order; the same for patterns; no `.md` file under `concepts/` or `patterns/` that the entry does not list | entry + spec |
+| Field fidelity | key, `path`, `name`, `description` and `scope` equal the spec's 1:1 fields; every concept and pattern `purpose` appears verbatim in its file and in `index.md`; every `agents` name appears in `index.md` | entry + spec |
+| No spec-only leak | no generated file, and not the entry, contains a spec-only key or the text of `intent` (`sources` is consumed, not copied, so its URLs may be cited) | entry + spec |
 
-Every Gate B rule except fidelity is a filesystem or YAML check — no
-heading matching, no prose judgement. That is deliberate: it is what makes
-this gate the first one a deterministic contract can enforce end to end.
+A spec declaring `concept_count: 4` whose fan-out generated and registered
+three concepts passes every entry row — three is the minimum — and fails
+fan-out fidelity. That is the case ADR-007 §6 requires Gate B to catch.
+
+Every Gate B rule is a filesystem check, a YAML comparison or a verbatim
+substring check — no heading matching, no prose judgement. That is
+deliberate: it is what makes this gate the first one a deterministic contract
+can enforce end to end.
 
 Content checks — whether the concept and pattern bodies are correct, complete
 or well written — are deliberately out of Gate B. They need judgement and
@@ -185,13 +206,14 @@ deterministic contract can check.
 
 `kb-architect` in spec mode runs the **same advisory pre-flight** it already
 runs in manual mode (its Quality Gate section), now reading the thresholds
-from this schema (Gate A) and the template's `output_contract:` block (Gate B)
-instead of carrying them in prose. That self-check is advisory — it is the
+from this schema (Gate A) and the template's `output_contract:` block (Gate B,
+evaluated with both inputs it declares — the new entry and the spec) instead of
+carrying them in prose. That self-check is advisory — it is the
 agent's own quality bar, not a verdict a consumer may rely on.
 
 Normative enforcement belongs to `tools/spec-linter/`: a `kb-domain`
-contract that evaluates the `output_contract:` block against `_index.yaml` and
-the filesystem is the follow-up this schema is written to make mechanical,
+contract that evaluates the `output_contract:` block against the spec,
+`_index.yaml` and the filesystem is the follow-up this schema is written to make mechanical,
 not part of Layer 2. Until it lands, "Gate B passed" means "kb-architect
 reported its pre-flight clean", nothing stronger.
 
@@ -199,7 +221,8 @@ reported its pre-flight clean", nothing stronger.
 
 ## Example (abbreviated)
 
-```yaml
+```markdown
+---
 intent: >
   No registered domain covers Redis caching patterns; cloud-platforms names
   Redis only as a managed-service line item and supabase covers Postgres.
@@ -227,4 +250,8 @@ patterns:
   - { name: write-through,     purpose: "Keep cache and store in sync on write" }
   - { name: hot-key-mitigation, purpose: "Spread load off a single hot key" }
 agents: [data-platform-engineer]
+---
+
+Notes for the reviewer: why cloud-platforms is the nearest domain, which
+sources were rejected. Free-form; ignored by generation and gates.
 ```

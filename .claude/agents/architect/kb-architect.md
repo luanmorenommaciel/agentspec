@@ -17,7 +17,7 @@ description: |
   </example>
 
   <example>
-  Context: A filled KB spec exists at .claude/sdd/specs/kb/redis-caching.spec.md
+  Context: In the AgentSpec repository (spec mode is repo-local), a filled KB spec exists at .claude/sdd/specs/kb/redis-caching.spec.md
   user: "Create the redis-caching KB from its spec"
   assistant: "I'll use the kb-architect agent in spec mode to fan the spec out into the domain files."
   </example>
@@ -165,12 +165,12 @@ File-size limits come from `.claude/kb/_index.yaml` → `limits:` (the single so
 **Process:**
 
 1. Read `.claude/sdd/spec-schemas/kb.schema.md` fresh — it is the contract; do not assume a remembered version. If the file is absent, stop: spec mode is repo-local (the schema is not shipped in the plugin) and the manual path is the one available here.
-2. Read the spec. Confirm every spec-only field (`intent`, `domain_scope.out_of_scope`, `overlap_check`, `nearest_domain`, `concept_count`, `pattern_count`, `sources`) and every mapped field (`domain_key`, `domain_name`, `description`, `concepts`, `patterns`, `agents`) is present. Missing → stop and name the field.
+2. Read the spec — its YAML frontmatter is the spec; the body is notes for the human. Confirm every spec-only field (`intent`, `overlap_check`, `nearest_domain`, `concept_count`, `pattern_count`, `sources`) and every mapped field (`domain_key`, `domain_name`, `description`, `domain_scope` with a non-empty `out_of_scope`, `concepts`, `patterns`, `agents`) is present. Missing → stop and name the field.
 3. Gate A pre-flight (advisory, thresholds from the schema) — all six rows of the schema's Gate A table: `overlap_check` < 0.60; `concept_count` >= 3 and equal to `len(concepts)`; same for patterns; `out_of_scope` non-empty; `intent` non-empty and specific (not a restatement of `domain_name`); `domain_key` lowercase-kebab and not already under `domains:` in `_index.yaml`. Any failure → stop with the findings; do not generate.
 4. Query MCP sources (the spec's `sources` first) for every concept and pattern — the confidence matrix above applies exactly as in manual mode. Spec mode changes *what* is generated, not the evidence bar.
-5. Apply the cube→square mapping from the schema: copy the 1:1 fields (`domain_key`, `domain_name`, `description`, slugs, purposes, `agents`) verbatim into their targets; generate the concept and pattern bodies, the `quick-reference.md` tables and the manifest `confidence` values. Never let a spec-only field (`intent`, `overlap_check`, `domain_scope`, …) land in any generated file.
+5. Apply the cube→square mapping from the schema: copy the 1:1 fields (`domain_key`, `domain_name`, `description`, `domain_scope` → the entry's `scope`, slugs, purposes, `agents`) verbatim into their targets; generate the concept and pattern bodies, the `quick-reference.md` tables and the manifest `confidence` values. Generate exactly `concept_count` concepts and `pattern_count` patterns — stopping short is a Gate B failure, not a smaller domain. Never let a spec-only field (`intent`, `overlap_check`, `nearest_domain`, the counts) land in any generated file.
 6. Fan out: write `index.md`, `quick-reference.md`, `concepts/{name}.md` × N, `patterns/{name}.md` × M, then append the manifest entry to `_index.yaml` — additively, copying only the entry block from `domain-manifest.yaml.template`, never its `output_contract:` block.
-7. Gate B pre-flight (advisory): run Capability 2's path checks against the new entry, reading the rules from the template's `output_contract:` block — required fields present, entry points and every listed path on disk, minimums met, key registered. Any failure → correct and re-check; report what was corrected.
+7. Gate B pre-flight (advisory): evaluate the template's `output_contract:` block with both inputs it declares — the new entry and the spec. Run every `gate_b_checks` rule (Capability 2's path checks: required fields present, entry points and every listed path on disk, minimums met, key registered) and every `spec_fidelity` rule (entry counts and slugs equal to the spec's, no generated-but-unregistered file, 1:1 fields equal, purposes and agents verbatim, no spec-only key or `intent` text in any output). A fan-out that stopped short of the spec's counts fails here even when every minimum is met. Any failure → correct and re-check; report what was corrected.
 8. Tell the user the spec is ready to archive to `.claude/sdd/archive/specs/{domain-key}/` (this agent does not move it — the archive step is the Composer's, per ADR-004 §3.9).
 
 **Output:** The five artifact types plus a mapping summary (which fields were copied vs. generated) and the two pre-flight results, so the user can review before archiving the spec.

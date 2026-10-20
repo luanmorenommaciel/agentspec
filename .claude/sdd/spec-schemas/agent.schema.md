@@ -124,14 +124,24 @@ These are **documented here as the contract**, not enforced by
 
 `agent-architect` (`.claude/agents/architect/agent-architect.md`) is scoped
 to **generation only** — it does not self-check Gate A or Gate B. This is a
-deliberate Layer 1 scope decision, not an oversight: gate enforcement will be
-`tools/spec-linter/`'s job, and is not wired to this pipeline yet. For Gate A,
-the Linter's `creation-spec` contract (#93, `spec_linter.CreationSpecContract`)
-encodes the criteria above, including the count-vs-list cross-check; for
-Gate B, a tier-section contract is the named next follow-up (#93). The
-existing `agent-spec` contract is a reference implementation
-(`tools/spec-linter/USAGE.md`) that the current fleet does not pass — it is
-not a gate on generated `agent.md` files today.
+deliberate Layer 1 scope decision, not an oversight: gate enforcement is the
+Linter's job, sequenced by the Composer.
+
+The binding is declared: the Composer's agent-creation pipeline
+(`tools/spec-composer/pipelines/agent-creation.yaml`, recorded in
+`WORKFLOW_CONTRACTS.yaml` `orchestration.stage_bindings`) binds the Linter's
+`creation-spec` contract (#93, `spec_linter.CreationSpecContract`) at
+`gate-a` — the criteria above, including the count-vs-list cross-check — and
+the `agent-spec` contract at `gate-b`. No host drives the Composer yet, so
+neither binding runs in today's practice.
+
+The conflict that fires first once one does: `agent-spec` does not yet
+accept `_template.md`-shaped agents (it requires `id`, `maturity` and
+`output_contract`, and string `escalation_rules`), so `gate-b` would reject
+what `agent-architect` generates — tracked separately, raised in the #113
+review. A tier-section contract is planned as an **additional** `gate-b` lint
+stage after `agent-spec`, not a replacement (`tools/spec-composer/USAGE.md`
+§8).
 
 ---
 

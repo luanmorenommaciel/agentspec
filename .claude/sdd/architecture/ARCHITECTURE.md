@@ -413,16 +413,23 @@ repeat the shape for skills and SDD phase documents.
 │  (hand-filled by a human)         (generation only —                │
 │                                     no Gate A/B self-check)          │
 │                                                                       │
-│  Gate A / Gate B enforcement: documented in agent.schema.md, owned   │
-│  by tools/spec-linter/ (not yet wired to this schema — a follow-up). │
+│  Gate A / Gate B: documented in agent.schema.md; the Composer binds  │
+│  creation-spec (gate-a) and agent-spec (gate-b), not yet driven by a │
+│  host. agent-spec does not yet accept _template.md-shaped agents.    │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 Note the deliberate gap: unlike the phase-document Quality Gates above (which
-the Linter already enforces), Gate A/B for agent creation is spec'd but not
-yet enforced anywhere. `agent-architect` is scoped to generation only so that
-enforcement can be added later — either to `agent-architect` itself or, more
-likely, to `tools/spec-linter/` — without redesigning the generator.
+the Linter already enforces), Gate A/B for agent creation is bound but not yet
+exercised. The Composer's agent-creation pipeline binds the Linter's
+`creation-spec` contract at `gate-a` and `agent-spec` at `gate-b`
+(`orchestration.stage_bindings` in `WORKFLOW_CONTRACTS.yaml`), but no host
+drives the Composer yet. Once one does, `gate-b` fails first: `agent-spec`
+does not yet accept `_template.md`-shaped agents (tracked separately, raised
+in the #113 review). A tier-section contract is planned as an additional
+`gate-b` stage after `agent-spec`, not a replacement. `agent-architect` stays
+scoped to generation only, so enforcement lives in the Linter and the
+Composer without redesigning the generator.
 
 ### Layer 2 — KB domains (ADR-007)
 
@@ -450,9 +457,10 @@ the domain knowledge already lived there.
 │                              pre-flight)     kb/_index.yaml entry    │
 │                                               (additive)             │
 │                                                                      │
-│  Gate B is filesystem + YAML checks only (paths exist, key           │
-│  registered, minimums) — enforceable end to end by a deterministic   │
-│  contract. Content checks are the Judger's, not Gate B's.            │
+│  Gate B: filesystem + YAML checks on the entry (paths exist, key     │
+│  registered, minimums) and, in spec mode, against the spec (counts,  │
+│  slugs and 1:1 fields equal, no spec-only leak) — enforceable end to │
+│  end by a deterministic contract. Content checks are the Judger's.   │
 │  Normative enforcement: the spec-linter (kb-domain contract, a       │
 │  follow-up). kb-architect's pre-flight is advisory, as in manual     │
 │  mode. Repo-local: spec-schemas/ is not shipped, so spec mode is     │
@@ -462,9 +470,10 @@ the domain knowledge already lived there.
 
 Layer 1 made its generator generation-only because Gate B for agents hinges
 on matching `required_sections` keys to Markdown headings — a judgement the
-agent should not adjudicate. Layer 2's Gate B has no such step: every rule
-but fidelity is a path or registry check `kb-architect` already performs in
-its audit capability, so the pre-flight stays in the agent as the advisory
+agent should not adjudicate. Layer 2's Gate B has no such step: its entry rules
+are the path and registry checks `kb-architect` already performs in its audit
+capability, and its fidelity rules compare the output with the spec by YAML
+equality and verbatim substring, so the pre-flight stays in the agent as the advisory
 bar it always was. The normative owner is unchanged: `tools/spec-linter/`.
 
 ---
