@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.6.1] - 2026-10-11
+
+### Fixed
+
+- **Shipped `WORKFLOW_CONTRACTS.yaml` no longer points at files the plugin does not ship** (#103 item 10). The build rewrote `agent_creation_pipeline`'s `generator.path` and `output_contract` into `${CLAUDE_PLUGIN_ROOT}/agents/architect/agent-architect.md` and `${CLAUDE_PLUGIN_ROOT}/agents/_template.md`, two files the same build deletes. The block now declares `distribution: repo-local`, and `build-plugin.sh` (Step 4b) keeps its paths as repository paths in the mirror; the stale-path check excludes exactly those two. No runtime behavior changes — nothing executes these paths.
+
 ## [3.6.0] - 2026-09-17
 
 ### Added
