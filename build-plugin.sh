@@ -49,6 +49,10 @@ Usage:
   ./build-plugin.sh           Build the plugin
   ./build-plugin.sh --help    Show this help
 
+Environment:
+  AGENTSPEC_STRICT_STALE=1    Fail (exit 1) when Step 6 finds stale .claude/
+                              paths instead of warning (used by CI)
+
 Output: plugin/ directory ready for `claude --plugin-dir ./plugin`
 EOF
     exit 0
@@ -286,6 +290,25 @@ done < <(find "${PLUGIN_DIR}" \( -name "*.md" -o -name "*.yaml" -o -name "*.yml"
 
 ok "Paths rewritten"
 
+# ─── Step 4b: Keep repo-local pipeline paths as repository paths ─────────────
+# Step 4 rewrites every .claude/agents/ path, including the ones in
+# WORKFLOW_CONTRACTS.yaml's agent_creation_pipeline that name files Step 3
+# deletes (REPO_LOCAL_AGENTS and _template.md). A ${CLAUDE_PLUGIN_ROOT}/ path
+# to a file the plugin does not ship is a dangling pointer; the block declares
+# distribution: repo-local, so its paths stay repository paths in the mirror.
+
+info "Restoring repo-local pipeline paths in the shipped contracts..."
+CONTRACTS_FILE="${PLUGIN_DIR}/sdd/architecture/WORKFLOW_CONTRACTS.yaml"
+REPO_LOCAL_CONTRACT_PATHS=("${REPO_LOCAL_AGENTS[@]}" _template.md)
+if [[ -f "${CONTRACTS_FILE}" ]]; then
+    for rel in "${REPO_LOCAL_CONTRACT_PATHS[@]}"; do
+        tmp="${CONTRACTS_FILE}.tmp"
+        sed -e "s|\${CLAUDE_PLUGIN_ROOT}/agents/${rel}|.claude/agents/${rel}|g" \
+            "${CONTRACTS_FILE}" > "$tmp" && mv "$tmp" "${CONTRACTS_FILE}" || { rm -f "$tmp"; exit 1; }
+    done
+fi
+ok "Repo-local pipeline paths kept as repository paths"
+
 # ─── Step 5: Rewrite hardcoded absolute paths ────────────────────────────────
 # After Step 4, some paths may look like:
 #   /Users/username/GitHub/agentspec/${CLAUDE_PLUGIN_ROOT}/skills/...
@@ -355,6 +378,23 @@ ok "Root .claude-plugin/marketplace.json synced"
 
 info "Verifying path migration..."
 
+# Repo-local pipeline paths stay repository paths in WORKFLOW_CONTRACTS.yaml
+# (Step 4b), so they are expected there. The exception is built from the same
+# REPO_LOCAL_CONTRACT_PATHS array Step 4b uses — a new repo-local agent needs
+# one edit, not two lists kept in agreement.
+_repo_local_contract_pattern() {
+    local rel escaped alternation=""
+    for rel in "${REPO_LOCAL_CONTRACT_PATHS[@]}"; do
+        escaped=$(printf '%s' "${rel}" | sed 's/[][\\.*^$]/\\&/g')
+        if [[ -n "${alternation}" ]]; then
+            alternation="${alternation}\\|"
+        fi
+        alternation="${alternation}${escaped}"
+    done
+    printf 'WORKFLOW_CONTRACTS\\.yaml:.*\\.claude/agents/\\(%s\\)' "${alternation}"
+}
+REPO_LOCAL_CONTRACT_PATTERN=$(_repo_local_contract_pattern)
+
 # Collect stale references (grep returns 1 on no match — use || true)
 _stale_filter() {
     grep -r '\.claude/' "${PLUGIN_DIR}" \
@@ -370,6 +410,7 @@ _stale_filter() {
         | grep -v 'CLAUDE\.md' \
         | grep -v '\.claude/plans' \
         | grep -v '\.claude/memory' \
+        | grep -v "${REPO_LOCAL_CONTRACT_PATTERN}" \
         | grep -v '^[[:space:]]*#' \
         || true
 }
@@ -382,6 +423,10 @@ if [[ "${STALE_COUNT}" -gt 0 ]]; then
     printf '%s\n' "${STALE_OUTPUT}" | head -20
     echo ""
     warn "Review the above references — some may be intentional (workspace paths)."
+    if [[ "${AGENTSPEC_STRICT_STALE:-0}" == "1" ]]; then
+        error "AGENTSPEC_STRICT_STALE=1: unrewritten .claude/ references in plugin output"
+        exit 1
+    fi
 else
     ok "No stale .claude/ paths found"
 fi

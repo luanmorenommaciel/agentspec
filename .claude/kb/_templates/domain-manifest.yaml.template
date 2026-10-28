@@ -1,9 +1,53 @@
 # Add this section to .claude/kb/_index.yaml under 'domains:'
+#
+# Everything below the END OUTPUT CONTRACT marker is the MANIFEST ENTRY — copy it
+# (filled in) into _index.yaml, additively, never rewriting existing entries.
+#
+# ─── MACHINE-READABLE OUTPUT CONTRACT (Gate B) ──────────────────────────────
+# Contract metadata for the spec-driven KB pipeline — consumed by
+# kb-architect's pre-flight (spec mode) and, going forward, by
+# tools/spec-linter/. See .claude/sdd/spec-schemas/kb.schema.md for the spec
+# this contract pairs with (Gate A criteria, cube→square mapping).
+# A rule set, not a value — unrelated to each entry's `mcp_validated` date stamp.
+# NOT part of the manifest entry: do not copy this block into _index.yaml.
+output_contract:
+  inputs:
+    entry: "the domain's block under domains: in _index.yaml, and the files under its path"
+    spec: ".claude/sdd/specs/kb/{domain_key}.spec.md (YAML frontmatter) — spec mode only; a domain created by the manual path has no spec and spec_fidelity does not apply to it"
+  required_fields: [name, description, path, entry_points]
+  optional_fields: [mcp_validated, scope, specs, reference, examples]
+  minimums:
+    concepts: 3
+    patterns: 3
+  gate_b_checks:
+    - "entry_points.index exists on disk under path"
+    - "entry_points.quick_reference exists on disk under path"
+    - "every concepts[].path exists on disk under path"
+    - "every patterns[].path exists on disk under path"
+    - "domain key registered under domains: in _index.yaml"
+  # Spec-relative rules (ADR-007 §6 fan-out fidelity): they compare the output
+  # with the spec, so they need inputs.spec. `sources` is consumed, not copied —
+  # its URLs may be cited in generated files, so it is not part of the leak check.
+  spec_fidelity:
+    - "domain key == spec.domain_key, and path == spec.domain_key + '/'"
+    - "name == spec.domain_name, and description == spec.description"
+    - "len(concepts) == spec.concept_count, and [c.name for c in concepts] == [c.name for c in spec.concepts]"
+    - "len(patterns) == spec.pattern_count, and [p.name for p in patterns] == [p.name for p in spec.patterns]"
+    - "the .md files under path/concepts/ and path/patterns/ are exactly the listed concepts[].path and patterns[].path (nothing generated but unregistered)"
+    - "scope.in_scope == spec.domain_scope.in_scope, and scope.out_of_scope == spec.domain_scope.out_of_scope"
+    - "every spec.concepts[].purpose appears verbatim in concepts/{name}.md and in index.md; the same for patterns under patterns/"
+    - "every name in spec.agents appears in index.md"
+    - "no generated file, and not the entry, contains a spec-only key (intent:, overlap_check:, nearest_domain:, concept_count:, pattern_count:) or the text of spec.intent"
+# ─── END OUTPUT CONTRACT ─────────────────────────────────────────────────────
 
 {{DOMAIN_KEY}}:
   name: {{DOMAIN_DISPLAY_NAME}}
   description: {{DOMAIN_DESCRIPTION}}
   path: {{DOMAIN_KEY}}/
+  mcp_validated: "{{VALIDATION_DATE}}"
+  scope:                         # optional; spec mode copies the spec's domain_scope here
+    in_scope: [{{IN_SCOPE_1}}]
+    out_of_scope: [{{OUT_OF_SCOPE_1}}]
   entry_points:
     index: index.md
     quick_reference: quick-reference.md

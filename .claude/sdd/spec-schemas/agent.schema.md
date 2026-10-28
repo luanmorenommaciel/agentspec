@@ -53,7 +53,9 @@ overlap_check: 0.0   # Fraction (0.0-1.0) of scope covered by the nearest
                       # existing agent. Gate A input.
 
 trigger_count: 0      # Number of distinct trigger scenarios declared below.
-                       # Gate A input.
+                       # Gate A input. Must equal len(trigger_scenarios) —
+                       # a count that outruns its list is the claim Gate A
+                       # exists to test, so enforcement cross-checks the two.
 
 trigger_scenarios:
   - "{distinct scenario 1 that should invoke this agent}"
@@ -105,7 +107,7 @@ These are **documented here as the contract**, not enforced by
 | Check | Threshold |
 |---|---|
 | `overlap_check` | < 0.60 |
-| `trigger_count` | >= 3 |
+| `trigger_count` | >= 3, and equal to `len(trigger_scenarios)` |
 | `intent` | non-empty and specific (not a restatement of the agent's name) |
 | `tier` | one of `T1`, `T2`, `T3` |
 
@@ -122,11 +124,24 @@ These are **documented here as the contract**, not enforced by
 
 `agent-architect` (`.claude/agents/architect/agent-architect.md`) is scoped
 to **generation only** — it does not self-check Gate A or Gate B. This is a
-deliberate Layer 1 scope decision, not an oversight: gate enforcement is
-`tools/spec-linter/`'s job (it already runs the `agent-spec` contract against
-generated `agent.md` files today; extending it — or a sibling contract — to
-check this schema's Gate A/B criteria against a spec file is a follow-up, not
-part of Layer 1).
+deliberate Layer 1 scope decision, not an oversight: gate enforcement is the
+Linter's job, sequenced by the Composer.
+
+The binding is declared: the Composer's agent-creation pipeline
+(`tools/spec-composer/pipelines/agent-creation.yaml`, recorded in
+`WORKFLOW_CONTRACTS.yaml` `orchestration.stage_bindings`) binds the Linter's
+`creation-spec` contract (#93, `spec_linter.CreationSpecContract`) at
+`gate-a` — the criteria above, including the count-vs-list cross-check — and
+the `agent-spec` contract at `gate-b`. No host drives the Composer yet, so
+neither binding runs in today's practice.
+
+The conflict that fires first once one does: `agent-spec` does not yet
+accept `_template.md`-shaped agents (it requires `id`, `maturity` and
+`output_contract`, and string `escalation_rules`), so `gate-b` would reject
+what `agent-architect` generates — tracked separately, raised in the #113
+review. A tier-section contract is planned as an **additional** `gate-b` lint
+stage after `agent-spec`, not a replacement (`tools/spec-composer/USAGE.md`
+§8).
 
 ---
 

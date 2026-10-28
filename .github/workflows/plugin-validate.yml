@@ -54,33 +54,11 @@ jobs:
           print(f'Valid: {data[\"name\"]} with {len(data[\"plugins\"])} plugin(s)')
           "
 
-      - name: Build plugin
-        run: bash build-plugin.sh
-
-      - name: Check for stale paths
-        run: |
-          echo "Checking for unrewritten .claude/ paths in plugin output..."
-          STALE=$(grep -r '\.claude/' plugin/ \
-            --include="*.md" --include="*.yaml" --include="*.yml" \
-            | grep -v 'CLAUDE_PLUGIN_ROOT' \
-            | grep -v '\.claude/sdd/features' \
-            | grep -v '\.claude/sdd/reports' \
-            | grep -v '\.claude/sdd/archive' \
-            | grep -v '\.claude/sdd/' \
-            | grep -v '\.claude/storage' \
-            | grep -v '\.claude-plugin' \
-            | grep -v '\.claude/settings' \
-            | grep -v 'CLAUDE\.md' \
-            | grep -v '\.claude/plans' \
-            | grep -v '\.claude/memory' \
-            | grep -v '^[[:space:]]*#' \
-            || true)
-
-          if [ -n "$STALE" ]; then
-            echo "::error::Found unrewritten .claude/ references in plugin output:"
-            echo "$STALE" | head -20
-            exit 1
-          fi
+      # Step 6 of build-plugin.sh owns the stale-path filter (its repo-local
+      # exception is derived from the same array Step 4b uses); strict mode
+      # turns its warning into a failure, so CI carries no copy of the filter.
+      - name: Build plugin and check for stale paths
+        run: AGENTSPEC_STRICT_STALE=1 bash build-plugin.sh
 
       - name: Verify agent count
         run: |
