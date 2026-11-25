@@ -1,0 +1,13 @@
+# Code owners: GitHub requests review from these owners, and with
+# "Require review from Code Owners" on main their approval is required.
+# Scope: CI/workflows, security / PII / crypto / keys, contracts and release config.
+# Everything else stays with the crew (one approval + green CI).
+
+/.github/                    @luanmorenommaciel
+/plugin/security/            @luanmorenommaciel
+/plugin-extras/security/     @luanmorenommaciel
+/plugin/.claude-plugin/      @luanmorenommaciel
+/SECURITY.md                 @luanmorenommaciel
+/CHANGELOG.md                @luanmorenommaciel
+/build-plugin.sh             @luanmorenommaciel
+/LICENSE                     @luanmorenommaciel
