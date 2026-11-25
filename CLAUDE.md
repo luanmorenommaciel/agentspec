@@ -19,7 +19,7 @@
 
 New logic goes to the layer that owns it — the `component-model` skill walks the decision; the SDD workflow components are the reference implementation.
 
-**Current Status:** v3.6.0 shipped (trust layer V0 for the built plugin, spec-driven agent creation pipeline + agent-architect, artifact scoring layer, `github-review-pr` repo-local review skill, single-source `plugin.json` version and release-branch flow). Linear is the project tracker (source of truth).
+**Current Status:** v3.6.1 shipped (trust layer V0 for the built plugin, spec-driven agent creation pipeline + agent-architect, artifact scoring layer, `github-review-pr` repo-local review skill, single-source `plugin.json` version and release-branch flow). Linear is the project tracker (source of truth).
 
 ---
 
@@ -286,6 +286,6 @@ Data engineering example:
 
 ## Version
 
-- **Version:** 3.6.0
+- **Version:** 3.6.1
 - **Status:** Release
-- **Last Updated:** 2026-09-17
+- **Last Updated:** 2026-10-11
